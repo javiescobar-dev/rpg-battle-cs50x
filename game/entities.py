@@ -102,15 +102,19 @@ class Hero(Character):
 class Enemy(Character):
     """AI-controlled enemy."""
 
-    def __init__(self, name, hp, mp, attack, defense, speed, spell_name="spell"):
-        super().__init__(name, hp, mp, attack, defense, speed, spell_name)
-
-
     # Method to choose the enemy's action based on weighted probabilities
     def choose_action(self):
         actions = ["attack", "spell", "guard"]
         weights = [ENEMY_ATTACK_WEIGHT, ENEMY_SPELL_WEIGHT, ENEMY_GUARD_WEIGHT]
         action = random.choices(actions, weights=weights)[0]
-        if action in ("spell", "guard") and self.mp < SKILLS[self.spell_name]["cost"]:
+        if action in ("spell", "guard") and self.mp < SKILLS[action]["cost"]:
             action = "attack"  # Fallback to attack if not enough mana
         return action
+
+
+# Factory helpers to create hero and enemy instances with predefined stats
+def make_hero():
+    return Hero("Hero", HERO_HP, HERO_MP, HERO_ATTACK, HERO_DEFENSE, HERO_SPEED, spell_name=HERO_SPELL_NAME)
+
+def make_enemy():
+    return Enemy("Enemy", ENEMY_HP, ENEMY_MP, ENEMY_ATTACK, ENEMY_DEFENSE, ENEMY_SPEED, spell_name=ENEMY_SPELL_NAME)
