@@ -23,13 +23,21 @@ ENEMY_SPEED      = 10
 
 # Skills
 ## costs
-FIREBALL_COST          = 8
+SPELL_COST             = 8
 GUARD_COST             = 4
 HEAL_COST              = 6
 ## multipliers
-FIREBALL_MULTIPLIER    = 1.8    # multiplier for damage formula
+SPELL_MULTIPLIER       = 1.8    # multiplier for damage formula
 GUARD_MITIGATION       = 0.5    # percentage of damage mitigated
 HEAL_AMOUNT            = 30     # amount of HP restored
+## skill definitions
+SKILLS = {
+    "spell": {"cost": SPELL_COST, "multiplier": SPELL_MULTIPLIER},
+    "guard": {"cost": GUARD_COST, "mitigation": GUARD_MITIGATION},
+    "heal":  {"cost": HEAL_COST,  "amount": HEAL_AMOUNT},
+}
+HERO_SPELL_NAME = "Fireball"
+ENEMY_SPELL_NAME = "Shadow Bolt"
 
 # Items
 POTION_AMOUNT     = 25    # amount of HP restored
@@ -47,7 +55,7 @@ FLEE_MAX             = 0.90    # maximum flee chance
 
 # Enemy AI weights (sum = 1.0 = 100%)
 ENEMY_ATTACK_WEIGHT      = 0.5     # weight for choosing attack
-ENEMY_FIREBALL_WEIGHT    = 0.3     # weight for choosing fireball
+ENEMY_SPELL_WEIGHT       = 0.3     # weight for choosing spell
 ENEMY_GUARD_WEIGHT       = 0.2     # weight for choosing guard
 
 # Battle result states
