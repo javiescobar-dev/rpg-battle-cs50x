@@ -97,3 +97,20 @@ class Hero(Character):
             self.potions -= 1
             return POTION_AMOUNT
         return False  # No potions left
+
+
+class Enemy(Character):
+    """AI-controlled enemy."""
+
+    def __init__(self, name, hp, mp, attack, defense, speed, spell_name="spell"):
+        super().__init__(name, hp, mp, attack, defense, speed, spell_name)
+
+
+    # Method to choose the enemy's action based on weighted probabilities
+    def choose_action(self):
+        actions = ["attack", "spell", "guard"]
+        weights = [ENEMY_ATTACK_WEIGHT, ENEMY_SPELL_WEIGHT, ENEMY_GUARD_WEIGHT]
+        action = random.choices(actions, weights=weights)[0]
+        if action in ("spell", "guard") and self.mp < SKILLS[self.spell_name]["cost"]:
+            action = "attack"  # Fallback to attack if not enough mana
+        return action
