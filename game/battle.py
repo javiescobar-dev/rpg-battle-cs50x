@@ -60,9 +60,9 @@ class Battle:
         damage, is_crit = self.calculate_damage(raw_damage, defender)
 
         # apply the damage to the defender
-        defender.take_damage(damage)
+        damage_dealt = defender.take_damage(damage)  # apply the damage and get the actual damage taken (after guard mitigation)
         crit_text = " (CRITICAL HIT!)" if is_crit else ""
-        self.log.append(f"{attacker.name} {action_text} for {damage} damage{crit_text}.")
+        self.log.append(f"{attacker.name} {action_text} for {damage_dealt} damage{crit_text}.")
 
         # check if the defender is still alive after taking damage
         if not defender.is_alive:
