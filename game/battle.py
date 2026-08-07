@@ -3,9 +3,9 @@
 
 """Turn-based battle engine. Pure logic with no rendering.
 
-Will hold: the Battle class that resolves player and enemy turns, the damage
-formulas, skill casting, potions, defending and fleeing, and the end
-conditions (victory / defeat / fled).
+The Battle class orchestrates player and enemy turns: the damage formula
+(with defense, randomness and critical hits), skill casting, guard,
+potions, fleeing, and the end conditions (victory / defeat / fled).
 """
 
 import random
@@ -26,6 +26,9 @@ class Battle:
         self.turns = 0      # Count of turns taken in the battle
 
 
+    # use decorator @property to make is_finished a read-only property, like a getter method,
+    # so that it can be accessed as an attribute without parentheses.
+    @property
     def is_finished(self):
         """Check if the battle is finished based on the result."""
         return self.result is not None
@@ -100,3 +103,75 @@ class Battle:
             self.log.append(f"{self.hero.name} casts Heal and restores {heal_amount} HP.")
 
         return True  # Skill casting succeeded
+
+
+    def player_use_potion(self):
+        """Handle the player's potion usage action."""
+
+        value = self.hero.use_potion() # return POTION_AMOUNT if potion was used, or False if no potions left
+        if value:
+            self.log.append(f"{self.hero.name} uses a potion and restores {value} HP.")
+        else:
+            self.log.append(f"{self.hero.name} tried to use a potion, but has none left.")
+
+
+    def player_flee(self):
+        """Handle the player's attempt to flee from battle."""
+
+        # calculate flee chance based on speed difference
+        speed_diff = self.hero.speed - self.enemy.speed
+        chance = FLEE_BASE + (speed_diff * FLEE_SPEED_WEIGHT)
+        flee_chance = max(FLEE_MIN, min(FLEE_MAX, chance))  # clamp between min and max
+
+        if random.random() < flee_chance:
+            self.log.append(f"{self.hero.name} successfully fled from battle!")
+            self.result = RESULT_FLED
+            return True  # Flee successful
+        else:
+            self.log.append(f"{self.hero.name} failed to flee from battle.")
+            return False  # Flee failed
+
+
+    def player_turn(self, action, skill_name=None):
+        """Handle the player's turn based on the chosen action."""
+
+        if self.is_finished:  # Only allow actions if the battle is not finished
+            return
+
+        if action == "attack":
+            self.player_attack()
+        elif action == "skill" and skill_name:
+            self.player_cast_skill(skill_name)
+        elif action == "potion":
+            self.player_use_potion()
+        elif action == "flee":
+            self.player_flee()
+        else:
+            self.log.append(f"{self.hero.name} did nothing this turn.")
+
+        # increment the turn counter after the player's action
+        self.turns += 1
+
+        # set turn to enemy if the battle is not finished
+        if not self.is_finished:
+            self.enemy_turn()
+
+
+    def enemy_turn(self):
+        """Handle the enemy's turn, choosing an action based on weighted probabilities."""
+
+        # choose an action based on weights
+        action = self.enemy.choose_action()  # returns "attack", "spell", or "guard"
+
+        if action == "attack":
+            raw_damage = self.enemy.attack
+            action_text = f"attacks {self.hero.name}"
+            self.deal_damage(self.enemy, self.hero, raw_damage, action_text)
+        elif action == "spell":
+            self.enemy.spend_mana(SKILLS["spell"]["cost"])  # spend mana for the spell
+            raw_damage = self.enemy.attack * SKILLS["spell"]["multiplier"]
+            action_text = f"casts {self.enemy.spell_name} on {self.hero.name}"
+            self.deal_damage(self.enemy, self.hero, raw_damage, action_text)
+        elif action == "guard":
+            self.enemy.guard = True  # Set guard state
+            self.log.append(f"{self.enemy.name} is guarding and will mitigate damage of the next attack.")
