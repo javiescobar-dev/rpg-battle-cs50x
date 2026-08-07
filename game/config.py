@@ -44,8 +44,11 @@ POTION_AMOUNT     = 25    # amount of HP restored
 POTION_START      = 3     # starting number of potions
 
 # Damage formula
-DAMAGE_BASE      = 0.5    # base damage multiplier (defense reduces damage)
-DAMAGE_RANDOM    = 5      # random damage range
+DAMAGE_BASE         = 0.5    # base damage multiplier (defense reduces damage)
+DAMAGE_RANDOM       = 5      # random damage range
+# Critical hits
+CRIT_CHANCE         = 0.1    # 10% chance of a critical hit
+CRIT_MULTIPLIER     = 1.5    # damage multiplied on a crit
 
 # Fleeing
 FLEE_BASE            = 0.5     # base flee chance
