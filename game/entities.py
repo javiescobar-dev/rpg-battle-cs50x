@@ -56,6 +56,7 @@ class Character:
         if self.mp >= cost:
             self.mp -= cost
             return True
+
         return False
 
 
@@ -96,6 +97,7 @@ class Hero(Character):
             self.heal(POTION_AMOUNT)
             self.potions -= 1
             return POTION_AMOUNT
+
         return False  # No potions left
 
 
@@ -109,6 +111,7 @@ class Enemy(Character):
         action = random.choices(actions, weights=weights)[0]
         if action in ("spell", "guard") and self.mp < SKILLS[action]["cost"]:
             action = "attack"  # Fallback to attack if not enough mana
+
         return action
 
 
