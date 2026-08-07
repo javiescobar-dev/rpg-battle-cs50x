@@ -43,7 +43,9 @@ class Character:
         if self.guard:
             amount = int(amount * (1 - GUARD_MITIGATION))  # Apply guard mitigation
             self.guard = False  # Reset guard state after taking damage
-        self.hp = max(0, self.hp - amount)
+        amount = min(amount, self.hp)  # Ensure damage does not exceed current HP
+        self.hp -= amount  # Reduce HP by the damage amount
+        return amount  # Return the actual damage taken
 
 
     # Method to heal, increasing HP but not exceeding max HP
