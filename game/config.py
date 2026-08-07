@@ -52,7 +52,7 @@ CRIT_MULTIPLIER     = 1.5    # damage multiplied on a crit
 
 # Fleeing
 FLEE_BASE            = 0.5     # base flee chance
-FLEE_SPEED_WEIGHT    = 2       # weight of speed difference in flee chance
+FLEE_SPEED_WEIGHT    = 0.05    # weight of speed difference in flee chance
 FLEE_MIN             = 0.25    # minimum flee chance
 FLEE_MAX             = 0.90    # maximum flee chance
 
