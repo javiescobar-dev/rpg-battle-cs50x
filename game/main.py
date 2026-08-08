@@ -41,3 +41,71 @@ def choose_skill(hero):
 
     # Return the corresponding action or None if invalid
     return mapping.get(choice)
+
+
+def play_battle():
+    """Main loop for playing a battle, handling user input and battle resolution."""
+
+    # create a new battle instance with a hero and an enemy
+    battle = Battle(make_hero(), make_enemy())
+
+    # loop until the battle is finished
+    while not battle.is_finished:
+        print_status(battle)  # display the current status of the battle
+        print_menu()          # display the action menu
+
+        # get the player's action choice
+        choice = input("> ").strip()
+
+        # store the previous log length to determine if new messages were added
+        prev_log_length = len(battle.log)
+
+        # handle the player's action choice
+        if choice == "1":
+            battle.player_turn("attack")
+        elif choice == "2":
+            skill = choose_skill(battle.hero)
+            if skill:
+                battle.player_turn("skill", skill)
+            else:
+                print("Invalid skill choice.")
+                continue  # skip to the next iteration to re-prompt
+        elif choice == "3":
+            battle.player_turn("potion")
+        elif choice == "4":
+            battle.player_turn("flee")
+        else:
+            print("Invalid action.")
+            continue  # skip to the next iteration to re-prompt
+
+        # iterate over the new log messages and print them to the console
+        for line in battle.log[prev_log_length:]:  # print only new log messages
+            print(line)
+
+        # check battle result and print the outcome if finished
+        if battle.is_finished:
+            if battle.result == RESULT_VICTORY:
+                print(f"\nVictory! {battle.hero.name} has defeated {battle.enemy.name}!")
+            elif battle.result == RESULT_DEFEAT:
+                print(f"\nDefeat! {battle.hero.name} has been defeated by {battle.enemy.name}.")
+            elif battle.result == RESULT_FLED:
+                print(f"\n{battle.hero.name} has fled from battle against {battle.enemy.name}.")
+
+            # record the battle result in the scores file
+            add_result(
+                result=battle.result,
+                turns=battle.turns,
+                hero_hp_left=battle.hero.hp,
+                hero_hp_max=battle.hero.max_hp,
+                enemy_name=battle.enemy.name
+            )
+
+            # display a summary of all battle results
+            stats = summary()
+            print("\nBattle Summary:")
+            print(f"Total Battles: {stats['total_battles']}")
+            print(f"Victories: {stats['victories']}")
+            print(f"Defeats: {stats['defeats']}")
+            print(f"Flees: {stats['flees']}")
+            if stats['most_common_enemy']:
+                print(f"Most Common Enemy: {stats['most_common_enemy']}")
