@@ -8,7 +8,9 @@ JSON file in this repository. Final project for CS50x 2026.
 
 > Documented incrementally as each feature is implemented.
 
-### Turn-based battle engine (Phase 1, console logic)
+### Turn-based battle engine (Phase 1 — console logic)
+
+Playable in the terminal with `python -m game.main`.
 
 - Hero vs Enemy turn-based combat: physical attack, three mana-consuming
   rune skills (Spell, Guard, Heal) inspired by Suikoden II, potions, and a
@@ -18,10 +20,10 @@ JSON file in this repository. Final project for CS50x 2026.
   report the actual damage dealt (after mitigation).
 - Weighted enemy AI (attack / spell / guard) that falls back to attack when out
   of mana.
-- Tested in the console (`python -m game.main` once Phase 1 is complete).
-
-*Pending within Phase 1: score recording (`score.py`) and the console menu
-loop (`main.py`).*
+- Persistent score history stored in `game/scores.json` (ignored by git): each
+  battle records date, result, turns, hero HP left/max and enemy name; a
+  statistics view shows wins/losses/flees and the most common enemy.
+- Main menu loop: play a battle, view statistics, or quit.
 
 ## Repository structure
 
