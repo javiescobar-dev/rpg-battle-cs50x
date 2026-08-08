@@ -8,6 +8,7 @@ the damage formula, fleeing, enemy AI weights and battle result states.
 Phase 2 will add window/FPS/color constants for pygame.
 """
 
+## Battle configuration
 # Stats base
 HERO_HP          = 100
 HERO_MP          = 30
@@ -65,3 +66,38 @@ ENEMY_GUARD_WEIGHT       = 0.2     # weight for choosing guard
 RESULT_VICTORY    = "victory"
 RESULT_DEFEAT     = "defeat"
 RESULT_FLED       = "fled"
+
+
+## User interface configuration (pygame)
+# Window and FPS settings
+SCREEN_WIDTH     = 960
+SCREEN_HEIGHT    = 640
+FPS              = 60
+
+# Colors (RGB)
+COLOR_BG        = (20, 20, 30)      # dark blue-grey background
+COLOR_TEXT      = (230, 230, 230)   # light grey text
+COLOR_HP_BAR    = (70, 200, 70)     # green
+COLOR_MP_BAR    = (70, 130, 220)    # blue
+COLOR_BAR_BG    = (50, 50, 60)      # empty part of a bar
+COLOR_BORDER    = (230, 230, 230)   # bar and panel borders
+
+# Fonts
+FONT_NAME          = "Arial"  # pygame will fall back if missing
+FONT_TITLE_SIZE    = 48
+FONT_MENU_SIZE     = 28
+FONT_LOG_SIZE      = 20
+FONT_HUD_SIZE      = 18
+
+# Layout (positions in pixels)
+ARENA_Y      = 260   # vertical center of the fighters (height of characters positions)
+HERO_X       = 260   # hero position
+ENEMY_X      = 700   # enemy position
+MENU_RECT    = (40, 430, 560, 160)   # (x, y, width, height) action menu panel
+LOG_RECT     = (620, 430, 300, 160)  # battle log panel
+
+# Animation durations (seconds)
+LUNGE_DURATION     = 0.25   # attacker moves forward
+FLASH_DURATION     = 0.15   # impact flash on the defender
+RECOIL_DURATION    = 0.15   # defender knocked back
+FLOAT_DURATION     = 0.80   # damage number rising and fading
