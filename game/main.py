@@ -9,134 +9,44 @@ recording and statistics. Will be rewritten in phase 2 to launch a pygame
 window.
 """
 
-from game.battle import Battle
-from game.config import RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED
-from game.entities import make_hero, make_enemy
-from game.score import add_result, summary
-
-def print_status(battle):
-    """Print the current status of the hero and enemy, including HP and MP."""
-    hero = battle.hero
-    enemy = battle.enemy
-    print(f"\n{hero.name}: HP {hero.hp}/{hero.max_hp}, MP {hero.mp}/{hero.max_mp}, Potions {hero.potions}")
-    print(f"{enemy.name}: HP {enemy.hp}/{enemy.max_hp}, MP {enemy.mp}/{enemy.max_mp}\n")
-
-
-def print_menu():
-    """Print the action menu for the player."""
-    print("\n[1] Attack  [2] Skill  [3] Potion  [4] Flee")
-
-
-def choose_skill(hero):
-    """Prompt the player to choose a skill and return the corresponding action."""
-    print(f"[1] {hero.spell_name}  [2] Guard  [3] Heal")
-
-    # get the player's choice and map it to the corresponding action
-    choice = input("> ").strip()  # strip whitespace from the input
-    mapping = {
-        "1": "spell",
-        "2": "guard",
-        "3": "heal"
-    }
-
-    # Return the corresponding action or None if invalid
-    return mapping.get(choice)
-
-
-def format_summary(stats):
-    """Format the summary dict into a printable message."""
-    message = "\nBattle Summary:\n"
-    message += f"Total Battles: {stats['total_battles']}\n"
-    message += f"Victories: {stats['victories']}\n"
-    message += f"Defeats: {stats['defeats']}\n"
-    message += f"Flees: {stats['flees']}\n"
-    if stats['most_common_enemy']:
-        message += f"Most Common Enemy: {stats['most_common_enemy']}\n"
-    return message
-
-
-def play_battle():
-    """Main loop for playing a battle, handling user input and battle resolution."""
-
-    # create a new battle instance with a hero and an enemy
-    battle = Battle(make_hero(), make_enemy())
-
-    # loop until the battle is finished
-    while not battle.is_finished:
-        print_status(battle)  # display the current status of the battle
-        print_menu()          # display the action menu
-
-        # get the player's action choice
-        choice = input("> ").strip()
-
-        # store the previous log length to determine if new messages were added
-        prev_log_length = len(battle.log)
-
-        # handle the player's action choice
-        if choice == "1":
-            battle.player_turn("attack")
-        elif choice == "2":
-            skill = choose_skill(battle.hero)
-            if skill:
-                battle.player_turn("skill", skill)
-            else:
-                print("Invalid skill choice.")
-                continue  # skip to the next iteration to re-prompt
-        elif choice == "3":
-            battle.player_turn("potion")
-        elif choice == "4":
-            battle.player_turn("flee")
-        else:
-            print("Invalid action.")
-            continue  # skip to the next iteration to re-prompt
-
-        # iterate over the new log messages and print them to the console
-        for line in battle.log[prev_log_length:]:  # print only new log messages
-            print(line)
-
-        # check battle result and print the outcome if finished
-        if battle.is_finished:
-            if battle.result == RESULT_VICTORY:
-                print(f"\nVictory! {battle.hero.name} has defeated {battle.enemy.name}!")
-            elif battle.result == RESULT_DEFEAT:
-                print(f"\nDefeat! {battle.hero.name} has been defeated by {battle.enemy.name}.")
-            elif battle.result == RESULT_FLED:
-                print(f"\n{battle.hero.name} has fled from battle against {battle.enemy.name}.")
-
-            # record the battle result in the scores file
-            add_result(
-                result=battle.result,
-                turns=battle.turns,
-                hero_hp_left=battle.hero.hp,
-                hero_hp_max=battle.hero.max_hp,
-                enemy_name=battle.enemy.name
-            )
-
-            # display a summary of all battle results
-            print(format_summary(summary()))
-
+import pygame
+from game.config import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG
 
 def main():
-    """Main entry point for the game."""
+    """Run the pygame window main loop."""
 
-    while True:
-        # show the main menu and handle user input for playing battles or viewing statistics
-        print("\n=== RPG Battle ===")
-        print("[1] Play  [2] Statistics  [3] Quit")
+    # initialize pygame (events, video, audio, etc.)
+    pygame.init()
 
-        # get the player's choice and handle it accordingly
-        choice = input("> ").strip()  # strip whitespace from the input
-        if choice == "1":
-            play_battle()  # start a new battle
-        elif choice == "2":
-            print(format_summary(summary()))  # display battle statistics
-        elif choice == "3":
-            print("Thanks for playing!")
-            break
-        else:
-            print("Invalid option. Please try again.")
+    # set up the display window
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
+    # set the window title
+    pygame.display.set_caption("RPG Battle")
 
-# run the main function if this script is executed directly
+    # create a clock to manage the frame rate (limit game to 60 FPS and return the time since the last frame in seconds)
+    clock = pygame.time.Clock()
+
+    # set the running flag to True to enter the main loop
+    running = True
+
+    while running:
+        # update the clock
+        dt = clock.tick(FPS) / 1000.0  # seconds since last frame
+
+        # handle events, including quitting the game
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        # fill the screen with the background color
+        screen.fill(COLOR_BG)
+
+        # update the display
+        pygame.display.flip()
+
+    # quit pygame when the main loop ends
+    pygame.quit()
+
 if __name__ == "__main__":
     main()
