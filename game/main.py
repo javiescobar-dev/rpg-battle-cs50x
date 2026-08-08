@@ -43,6 +43,18 @@ def choose_skill(hero):
     return mapping.get(choice)
 
 
+def format_summary(stats):
+    """Format the summary dict into a printable message."""
+    message = "\nBattle Summary:\n"
+    message += f"Total Battles: {stats['total_battles']}\n"
+    message += f"Victories: {stats['victories']}\n"
+    message += f"Defeats: {stats['defeats']}\n"
+    message += f"Flees: {stats['flees']}\n"
+    if stats['most_common_enemy']:
+        message += f"Most Common Enemy: {stats['most_common_enemy']}\n"
+    return message
+
+
 def play_battle():
     """Main loop for playing a battle, handling user input and battle resolution."""
 
@@ -101,11 +113,30 @@ def play_battle():
             )
 
             # display a summary of all battle results
-            stats = summary()
-            print("\nBattle Summary:")
-            print(f"Total Battles: {stats['total_battles']}")
-            print(f"Victories: {stats['victories']}")
-            print(f"Defeats: {stats['defeats']}")
-            print(f"Flees: {stats['flees']}")
-            if stats['most_common_enemy']:
-                print(f"Most Common Enemy: {stats['most_common_enemy']}")
+            print(format_summary(summary()))
+
+
+def main():
+    """Main entry point for the game."""
+
+    while True:
+        # show the main menu and handle user input for playing battles or viewing statistics
+        print("\n=== RPG Battle ===")
+        print("[1] Play  [2] Statistics  [3] Quit")
+
+        # get the player's choice and handle it accordingly
+        choice = input("> ").strip()  # strip whitespace from the input
+        if choice == "1":
+            play_battle()  # start a new battle
+        elif choice == "2":
+            print(format_summary(summary()))  # display battle statistics
+        elif choice == "3":
+            print("Thanks for playing!")
+            break
+        else:
+            print("Invalid option. Please try again.")
+
+
+# run the main function if this script is executed directly
+if __name__ == "__main__":
+    main()
