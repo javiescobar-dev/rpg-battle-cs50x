@@ -53,20 +53,30 @@ class Battle:
         return (damage, is_crit)
 
 
-    def deal_damage(self, attacker, defender, raw_damage, action_text):
+    def deal_damage(self, attacker, defender, raw_damage, action):
         """Deal damage from attacker to defender and log the action."""
 
         # get the final damage and whether it was a critical hit
         damage, is_crit = self.calculate_damage(raw_damage, defender)
 
         # apply the damage to the defender
+        was_guarding = defender.guard  # check if the defender was guarding
         damage_dealt = defender.take_damage(damage)  # apply the damage and get the actual damage taken (after guard mitigation)
-        crit_text = " (CRITICAL HIT!)" if is_crit else ""
-        self.log.append(f"{attacker.name} {action_text} for {damage_dealt} damage{crit_text}.")
+
+        # log the action in the battle log
+        self.log.append({
+            "action": action,
+            "attacker": attacker,
+            "defender": defender,
+            "damage": damage_dealt,
+            "is_crit": is_crit,
+            "was_guarding": was_guarding
+        })
 
         # check if the defender is still alive after taking damage
         if not defender.is_alive:
-            self.log.append(f"{defender.name} has been defeated!")
+            # log the defeat in the battle log and set the result of the battle
+            self.log.append({ "action": "defeated", "defender": defender })
             if defender is self.enemy:
                 self.result = RESULT_VICTORY
             else:
@@ -75,9 +85,7 @@ class Battle:
 
     def player_attack(self):
         """Handle the player's attack action."""
-        raw_damage = self.hero.attack
-        action_text = f"attacks {self.enemy.name}"
-        self.deal_damage(self.hero, self.enemy, raw_damage, action_text)
+        self.deal_damage(self.hero, self.enemy, self.hero.attack, "attack")
 
 
     def player_cast_skill(self, skill_name):
@@ -88,19 +96,18 @@ class Battle:
 
         # check if the skill exists and if the hero has enough mana to cast it
         if not value:
-            self.log.append(f"{self.hero.name} tried to cast {skill_name}, but failed (not enough mana).")
+            self.log.append({ "action": "mana_fail", "actor": self.hero, "skill": skill_name })
             return False  # Skill casting failed
 
         if skill_name == "spell":
             raw_damage = value  # is attack * multiplier
-            action_text = f"casts {self.hero.spell_name} on {self.enemy.name}"
-            self.deal_damage(self.hero, self.enemy, raw_damage, action_text)
+            self.deal_damage(self.hero, self.enemy, raw_damage, "spell")
         elif skill_name == "guard":
             # hero guard is set to True in cast_skill, so we just log the action here
-            self.log.append(f"{self.hero.name} is guarding and will mitigate damage next turn.")
+            self.log.append({ "action": "guard", "actor": self.hero })
         elif skill_name == "heal":
             heal_amount = value  # is the amount healed
-            self.log.append(f"{self.hero.name} casts Heal and restores {heal_amount} HP.")
+            self.log.append({ "action": "heal", "actor": self.hero, "amount": heal_amount })
 
         return True  # Skill casting succeeded
 
@@ -110,9 +117,9 @@ class Battle:
 
         value = self.hero.use_potion() # return POTION_AMOUNT if potion was used, or False if no potions left
         if value:
-            self.log.append(f"{self.hero.name} uses a potion and restores {value} HP.")
+            self.log.append({ "action": "potion", "actor": self.hero, "amount": value })
         else:
-            self.log.append(f"{self.hero.name} tried to use a potion, but has none left.")
+            self.log.append({ "action": "potion_fail", "actor": self.hero })
 
 
     def player_flee(self):
@@ -124,11 +131,11 @@ class Battle:
         flee_chance = max(FLEE_MIN, min(FLEE_MAX, chance))  # clamp between min and max
 
         if random.random() < flee_chance:
-            self.log.append(f"{self.hero.name} successfully fled from battle!")
+            self.log.append({ "action": "flee_success", "actor": self.hero })
             self.result = RESULT_FLED
             return True  # Flee successful
         else:
-            self.log.append(f"{self.hero.name} failed to flee from battle.")
+            self.log.append({ "action": "flee_fail", "actor": self.hero })
             return False  # Flee failed
 
 
@@ -146,8 +153,6 @@ class Battle:
             self.player_use_potion()
         elif action == "flee":
             self.player_flee()
-        else:
-            self.log.append(f"{self.hero.name} did nothing this turn.")
 
         # increment the turn counter after the player's action
         self.turns += 1
@@ -165,13 +170,11 @@ class Battle:
 
         if action == "attack":
             raw_damage = self.enemy.attack
-            action_text = f"attacks {self.hero.name}"
-            self.deal_damage(self.enemy, self.hero, raw_damage, action_text)
+            self.deal_damage(self.enemy, self.hero, raw_damage, "attack")
         elif action == "spell":
             self.enemy.spend_mana(SKILLS["spell"]["cost"])  # spend mana for the spell
             raw_damage = self.enemy.attack * SKILLS["spell"]["multiplier"]
-            action_text = f"casts {self.enemy.spell_name} on {self.hero.name}"
-            self.deal_damage(self.enemy, self.hero, raw_damage, action_text)
+            self.deal_damage(self.enemy, self.hero, raw_damage, "spell")
         elif action == "guard":
             self.enemy.guard = True  # Set guard state
-            self.log.append(f"{self.enemy.name} is guarding and will mitigate damage of the next attack.")
+            self.log.append({ "action": "guard", "actor": self.enemy })
