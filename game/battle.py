@@ -178,3 +178,42 @@ class Battle:
         elif action == "guard":
             self.enemy.guard = True  # Set guard state
             self.log.append({ "action": "guard", "actor": self.enemy })
+
+
+def format_event(event):
+    """Format a battle event into a human-readable string for logging."""
+
+    action = event.get("action")
+    actor = event.get("actor")
+    attacker = event.get("attacker")
+    defender = event.get("defender")
+    damage = event.get("damage")
+    crit = " (CRITICAL HIT!)" if event.get("is_crit") else ""  # only show crit message if it was a critical hit
+    amount = event.get("amount", 0)
+    skill = event.get("skill")
+
+    log_message = ""
+    if action == "attack":
+        log_message = f"{attacker.name} attacks {defender.name} for {damage} damage{crit}."
+    elif action == "spell":
+        log_message = f"{attacker.name} casts {attacker.spell_name} on {defender.name} for {damage} damage{crit}."
+    elif action == "guard":
+        log_message = f"{actor.name} is guarding and will mitigate damage of the next attack."
+    elif action == "heal":
+        log_message = f"{actor.name} casts Heal and restores {amount} HP."
+    elif action == "potion":
+        log_message = f"{actor.name} uses a potion and restores {amount} HP."
+    elif action == "mana_fail":
+        log_message = f"{actor.name} tried to cast {skill}, but failed (not enough mana)."
+    elif action == "potion_fail":
+        log_message = f"{actor.name} tried to use a potion, but has none left."
+    elif action == "flee_success":
+        log_message = f"{actor.name} successfully fled from battle!"
+    elif action == "flee_fail":
+        log_message = f"{actor.name} failed to flee from battle."
+    elif action == "defeated":
+        log_message = f"{defender.name} has been defeated!"
+    else:
+        log_message = str(event)  # fallback to string representation of the event if action is unrecognized
+
+    return log_message
