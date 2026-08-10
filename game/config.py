@@ -82,6 +82,10 @@ COLOR_MP_BAR    = (70, 130, 220)    # blue
 COLOR_BAR_BG    = (50, 50, 60)      # empty part of a bar
 COLOR_BORDER    = (230, 230, 230)   # bar and panel borders
 
+# Colors for the placeholder characters
+COLOR_HERO      = (90, 140, 210)    # bluish knight
+COLOR_ENEMY     = (200, 90, 90)     # reddish
+
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
 FONT_TITLE_SIZE    = 48
