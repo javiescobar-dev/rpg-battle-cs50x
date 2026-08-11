@@ -100,6 +100,10 @@ ENEMY_X      = 700   # enemy position
 MENU_RECT    = (40, 430, 560, 160)   # (x, y, width, height) action menu panel
 LOG_RECT     = (620, 430, 300, 160)  # battle log panel
 
+# Bar dimensions
+BAR_WIDTH  = 80   # width of the HP/MP bars
+BAR_HEIGHT = 12   # height of the HP/MP bars
+
 # Animation durations (seconds)
 LUNGE_DURATION     = 0.25   # attacker moves forward
 FLASH_DURATION     = 0.15   # impact flash on the defender
