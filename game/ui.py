@@ -49,9 +49,9 @@ class LogPanel:
     def draw(self, surface, font):
         pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)  # TODO: see if need update color
         pygame.draw.rect(surface, COLOR_BORDER, self.rect, 2)
-        # calculate height position of first line
+        # Calculate height position of first line
         y = self.rect.top + 8
-        # iterate al messages in queue and print it
+        # Iterate over the messages in the queue and print it
         for text in self.messages:
             line = font.render(text, True, COLOR_TEXT)
             surface.blit(line, (self.rect.left + 8, y))
