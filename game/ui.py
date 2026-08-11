@@ -6,8 +6,10 @@ The UI class is responsible for displaying the battle state, including health ba
 It also captures user input for actions like attack, spell casting, guarding, using potions, and fleeing."""
 
 import pygame
+from collections import deque
 from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_WIDTH, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR
 
+# Base class for sprite of characters
 class CharacterSprite:
     """Wraps a Character and draws it as a placeholder built with primitives."""
     def __init__(self, character, x, y, color):
@@ -30,6 +32,33 @@ class CharacterSprite:
         pygame.draw.circle(surface, COLOR_TEXT, (x + 10, self.y - 22), 4)  # Draw the character's eye (right)
 
 
+# class to display battle log
+class LogPanel:
+    """Displays the last N battle log messages inside a panel."""
+
+    def __init__(self, rect, max_messages=6):
+        self.rect = pygame.Rect(rect)
+        # deque = queue with maximum length, removes the old value when a new one exceeds the maximum length limit
+        self.messages = deque(maxlen=max_messages)
+
+    # method to add message to the queue
+    def add(self, text):
+        self.messages.append(text)
+
+    # method to draw the box of the log and show messages of the battle
+    def draw(self, surface, font):
+        pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)  # TODO: see if need update color
+        pygame.draw.rect(surface, COLOR_BORDER, self.rect, 2)
+        # calculate height position of first line
+        y = self.rect.top + 8
+        # iterate al messages in queue and print it
+        for text in self.messages:
+            line = font.render(text, True, COLOR_TEXT)
+            surface.blit(line, (self.rect.left + 8, y))
+            y += line.get_height() + 4
+
+
+# methods to draw HUD
 def draw_bar(surface, x, y, width, height, current_value, max_value, color):
     """Draw a proportional fill bar with background and border."""
     # Draw the background of the bar
