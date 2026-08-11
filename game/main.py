@@ -1,12 +1,8 @@
 # RPG Battle - CS50x Final Project
 # Developed with the assistance of an AI coding assistant (opencode).
 
-"""Console entry point for Phase 1.
-
-Runs a playable turn-based battle in the terminal: main menu, battle UI with
-a hybrid log (only new messages plus an always-visible status line), score
-recording and statistics. Will be rewritten in phase 2 to launch a pygame
-window.
+"""
+Run a playable turn-based battle with simple graphics.
 """
 
 import pygame

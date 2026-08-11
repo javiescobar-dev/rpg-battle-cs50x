@@ -1,9 +1,13 @@
 # RPG Battle - CS50x Final Project
 # Developed with the assistance of an AI coding assistant (opencode).
 
-"""User interface: handles rendering and user input.
-The UI class is responsible for displaying the battle state, including health bars, mana bars, and action menus.
-It also captures user input for actions like attack, spell casting, guarding, using potions, and fleeing."""
+"""pygame entry point for the game.
+
+Opens the game window and runs the main loop with the classic
+events -> update -> draw cycle. This version shows a static battle
+preview; step 4 replaces it with the MENU/BATTLE/ANIM/END/STATS
+state machine.
+"""
 
 import pygame
 from collections import deque
@@ -45,17 +49,52 @@ class LogPanel:
     def add(self, text):
         self.messages.append(text)
 
+    # method to wrap text into lines that fit within max_width pixels
+    def _wrap(self, font, text, max_width):
+        """Split text into lines that fit within max_width pixels."""
+        lines = []
+        current = ""
+        # iterate over the words in the text
+        for word in text.split(" "):
+            candidate = current + " " + word if current else word
+            # if the candidate text fits within max_width pixels, update the current text
+            if font.size(candidate)[0] <= max_width:
+                current = candidate
+            # if the candidate text does not fit within max_width pixels, add the current text to the lines and update the current text
+            else:
+                lines.append(current)
+                current = word
+        # if the current text is not empty, add it to the lines
+        if current:
+            lines.append(current)
+        return lines
+
     # method to draw the box of the log and show messages of the battle
     def draw(self, surface, font):
-        pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)  # TODO: see if need update color
+        # draw the box of the log
+        pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)
+        # draw the border of the log
         pygame.draw.rect(surface, COLOR_BORDER, self.rect, 2)
-        # Calculate height position of first line
-        y = self.rect.top + 8
-        # Iterate over the messages in the queue and print it
-        for text in self.messages:
-            line = font.render(text, True, COLOR_TEXT)
-            surface.blit(line, (self.rect.left + 8, y))
-            y += line.get_height() + 4
+        # calculate max width for the lines
+        max_width = self.rect.width - 10
+        # create a list of wrapped lines from the messages in the queue (top to bottom)
+        lines = [wrapped for text in self.messages
+                for wrapped in self._wrap(font, text, max_width)]
+        # calculate height position of first line
+        y = self.rect.bottom - 8
+        # iterate over the lines of messages (in reverse order) so the last message is at the bottom
+        for line in reversed(lines):
+            # get height of the line
+            height = font.get_height()
+            # stop rendering if we run out of panel height
+            if y - height < self.rect.top + 8:
+                break
+            # render each line
+            rendered = font.render(line, True, COLOR_TEXT)
+            # blit the line on the surface
+            surface.blit(rendered, (self.rect.left + 8, y - height))
+            # update height position of next line
+            y -= height + 4
 
 
 # methods to draw HUD
@@ -80,6 +119,6 @@ def draw_hud(surface, sprite, font):
     # get name with render style
     name = font.render(char.name, True, COLOR_TEXT)
     # Draw the character's name above the sprite
-    surface.blit(name, (sprite.x - name.get_width() // 2, sprite.y - 48))
-    draw_bar(surface, x, sprite.y - 62, BAR_WIDTH, BAR_HEIGHT, char.hp, char.max_hp, COLOR_HP_BAR)
-    draw_bar(surface, x, sprite.y - 78, BAR_WIDTH, BAR_HEIGHT, char.mp, char.max_mp, COLOR_MP_BAR)
+    surface.blit(name, (sprite.x - name.get_width() // 2, sprite.y - 100))
+    draw_bar(surface, x, sprite.y - 78, BAR_WIDTH, BAR_HEIGHT, char.hp, char.max_hp, COLOR_HP_BAR)
+    draw_bar(surface, x, sprite.y - 62, BAR_WIDTH, BAR_HEIGHT, char.mp, char.max_mp, COLOR_MP_BAR)

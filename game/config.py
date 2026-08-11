@@ -97,8 +97,9 @@ FONT_HUD_SIZE      = 18
 ARENA_Y      = 260   # vertical center of the fighters (height of characters positions)
 HERO_X       = 260   # hero position
 ENEMY_X      = 700   # enemy position
-MENU_RECT    = (40, 430, 560, 160)   # (x, y, width, height) action menu panel
-LOG_RECT     = (620, 430, 300, 160)  # battle log panel
+# Battle menu and log
+MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
+LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
 
 # Bar dimensions
 BAR_WIDTH  = 80   # width of the HP/MP bars
