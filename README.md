@@ -25,6 +25,21 @@ Playable in the terminal with `python -m game.main`.
   statistics view shows wins/losses/flees and the most common enemy.
 - Main menu loop: play a battle, view statistics, or quit.
 
+### Pygame UI (Phase 2 — in progress)
+
+Launched with `python -m game.main`. A Suikoden II-style battle screen on top of
+the Phase 1 engine (unchanged battle logic).
+
+- 960x640 window at 60 FPS with structured battle events: the engine log now
+  stores dicts (attack / spell / guard / heal / potion / mana/potion failures /
+  flee / defeated) and a `format_event()` renders the same messages as Phase 1,
+  keeping the visual log and the semantics identical.
+- Placeholder hero and enemy sprites drawn with primitives (rounded body + face)
+  above their own HP/MP bars, and a scrolling combat log panel showing the last
+  six `format_event` messages with word wrapping.
+- Battle actions, menus and animations (state machine, lunge / flash / recoil /
+  floating damage numbers) are the next step.
+
 ## Repository structure
 
 - `game/` — the Pygame battle game.
