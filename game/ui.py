@@ -1,17 +1,16 @@
 # RPG Battle - CS50x Final Project
 # Developed with the assistance of an AI coding assistant (opencode).
 
-"""pygame entry point for the game.
+"""Rendering layer for the battle screen.
 
-Opens the game window and runs the main loop with the classic
-events -> update -> draw cycle. This version shows a static battle
-preview; step 4 replaces it with the MENU/BATTLE/ANIM/END/STATS
-state machine.
+CharacterSprite draws a character placeholder and its HP/MP bars,
+and LogPanel renders the formatted battle log. Step 5 adds the
+animation classes here.
 """
 
 import pygame
 from collections import deque
-from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_WIDTH, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR
+from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_WIDTH, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT
 
 # Base class for sprite of characters
 class CharacterSprite:
@@ -22,7 +21,6 @@ class CharacterSprite:
         self.y = y
         self.color = color  # Color to represent the character (for placeholder purposes)
         self.offset = 0     # Offset for simple animation
-
 
     def draw(self, surface):
         """Draw the character as a placeholder rectangle with a border and a head."""
@@ -95,6 +93,96 @@ class LogPanel:
             surface.blit(rendered, (self.rect.left + 8, y - height))
             # update height position of next line
             y -= height + 4
+
+
+# class menu (with methods to draw options and manage keyboard/mouse input)
+class Menu:
+    """Show menu options, manage selection and highlight"""
+    def __init__(self, rect, options, font):
+        self.rect = pygame.Rect(rect)  # panel for menu
+        self.options = options  # list of options (attack, skill, etc)
+        self.font = font  # font to render options
+        self.cursor = 0  # index of the currently selected option
+        self.hover = None  # mouse cursor over an option, or None if not over any option
+
+    def move_cursor(self, delta):
+        """Move cursor up or down, wrapping around the ends.
+
+        Args:
+            delta: +1 to move down, -1 to move up
+        """
+        # store the current selection, module (%) is used to wrap around the ends
+        # (if cursor > options, it goes to the end; if cursor < 0, it goes to the begining)
+        self.cursor = (self.cursor + delta) % len(self.options)
+
+    def index_at(self, pos):
+        """Convert a pixel position into an option index (0-based), or return None if outside the menu area.
+
+        Args:
+            pos: (x, y) tuple of screen coordinates
+
+        Returns:
+            The index of the option at the given position, or None if outside the menu area.
+        """
+        # convert screen coordinates to coordinates relative to the menu's top-left corner
+        x, y = pos
+
+        # height of each row (option)
+        row_height = self.font.get_height() + 8
+
+        # check if pos is inside the menu area
+        if not self.rect.collidepoint(x, y):
+            return None
+
+        # calculate the row index, rect.top convert to local coords of the panel
+        index = (y - self.rect.top) // row_height
+
+        # check if index is within the range of the options
+        if 0 <= index < len(self.options):
+            return index
+
+        return None
+
+    def handle_click(self, pos):
+        """Handle a mouse click on the menu.
+
+        Args:
+            pos: (x, y) tuple of screen coordinates
+
+        Returns:
+            The index of the option clicked, or None if no option was clicked.
+        """
+
+        # by now only return the index of the option, later can be used to implement click logic
+        return self.index_at(pos)
+
+    def draw(self, surface):
+        """Draw menu options on a panel at the bottom right of the screen.
+
+        Args:
+            surface: pygame surface to draw on
+        """
+
+        # Draw the background of the menu panel
+        pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)
+        # Draw the border of the menu panel
+        pygame.draw.rect(surface, COLOR_BORDER, self.rect, 2)
+
+        # get the height of each row (option)
+        row_height = self.font.get_height() + 8
+
+        # iterate over every option
+        for i, option in enumerate(self.options):
+            # calculate the rectangle for each option
+            row_rect = pygame.Rect(self.rect.left, self.rect.top + i * row_height, self.rect.width, row_height)
+
+            # highlight row if cursor is on it (is the current option selected by keyboard or mouse)
+            if i == self.cursor or i == self.hover:
+                pygame.draw.rect(surface, COLOR_ACCENT, row_rect)
+            # render option text
+            text = self.font.render(option, True, COLOR_TEXT)
+            # blit (draw) the option text centered in its row (half of the row height and half of the text height)
+            surface.blit(text, (row_rect.centerx - text.get_width() // 2, row_rect.centery - text.get_height() // 2))
 
 
 # methods to draw HUD

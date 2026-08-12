@@ -81,6 +81,7 @@ COLOR_HP_BAR    = (70, 200, 70)     # green
 COLOR_MP_BAR    = (70, 130, 220)    # blue
 COLOR_BAR_BG    = (50, 50, 60)      # empty part of a bar
 COLOR_BORDER    = (230, 230, 230)   # bar and panel borders
+COLOR_ACCENT    = (240, 200, 80)    # highlight for the selected menu option
 
 # Colors for the placeholder characters
 COLOR_HERO      = (90, 140, 210)    # bluish knight
