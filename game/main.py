@@ -236,7 +236,7 @@ def main():
                 resolve_turn("flee")
         elif menu_level == SKILL_MENU:
             if index == 0:    # Fireball
-                resolve_turn("skill", "fireball")
+                resolve_turn("skill", "spell")
             elif index == 1:  # Guard
                 resolve_turn("skill", "guard")
             elif index == 2:  # Heal
