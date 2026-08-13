@@ -4,20 +4,27 @@
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
 
+from pygame import event
 import pygame
-from game.battle import Battle
+from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
-    HERO_X, ENEMY_X, ARENA_Y, COLOR_HERO, COLOR_ENEMY, LOG_RECT, MENU_RECT
+    HERO_X, ENEMY_X, ARENA_Y, COLOR_HERO, COLOR_ENEMY, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE
 )
 from game.entities import make_hero, make_enemy
-from game.ui import CharacterSprite, LogPanel
-from game.ui import Menu
+from game.ui import CharacterSprite, LogPanel, Menu, draw_hud
+from game.score import add_result
 
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
 
+# battle menu levels
+MAIN_MENU, SKILL_MENU = 0, 1
+
+# battle menu options
+BATTLE_OPTIONS = ["Attack", "Skill", "Potion", "Flee"]
+SKILL_OPTIONS  = ["Fireball", "Guard", "Heal", "Back"]
 
 def make_main_menu(font):
     """Create the main menu widget, centered on screen."""
@@ -69,6 +76,10 @@ def main():
     font_title = pygame.font.SysFont(FONT_NAME, FONT_TITLE_SIZE)
     font_menu = pygame.font.SysFont(FONT_NAME, FONT_MENU_SIZE)
 
+    # create fonts for HUD and log
+    font_hud = pygame.font.SysFont(FONT_NAME, FONT_HUD_SIZE)
+    font_log = pygame.font.SysFont(FONT_NAME, FONT_LOG_SIZE)
+
     # set initial state
     state = MENU
 
@@ -84,6 +95,7 @@ def main():
         # use nonlocal to modify the state and running variables
         nonlocal state, running
         if index == 0:          # Play
+            start_battle()
             state = BATTLE
         elif index == 1:        # Statistics
             state = STATS
@@ -94,7 +106,7 @@ def main():
     def handle_events():
         """Handle events, including quitting the game."""
         # use nonlocal to modify the state and running variables
-        nonlocal state, running
+        nonlocal state, running, menu_level
         for event in pygame.event.get():
             # handle quit
             if event.type == pygame.QUIT:
@@ -123,14 +135,43 @@ def main():
                 # handle mouse click events
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     select(main_menu.handle_click(event.pos))
-            # handle states
-            elif state in (STATS, BATTLE, ANIM, END):
+            # handle battle menu events
+            elif state == BATTLE:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        battle_menu.move_cursor(-1)
+                    elif event.key == pygame.K_DOWN:
+                        battle_menu.move_cursor(1)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        choose_action(battle_menu.cursor)
+                    elif event.key == pygame.K_ESCAPE and menu_level == SKILL_MENU:
+                        menu_level = MAIN_MENU
+                        battle_menu.options = BATTLE_OPTIONS
+                        battle_menu.cursor = 0
+                    elif event.key == pygame.K_1:
+                        choose_action(0)
+                    elif event.key == pygame.K_2:
+                        choose_action(1)
+                    elif event.key == pygame.K_3:
+                        choose_action(2)
+                    elif event.key == pygame.K_4:
+                        choose_action(3)
+                elif event.type == pygame.MOUSEMOTION:
+                    index = battle_menu.index_at(event.pos)
+                    if index is not None:
+                        battle_menu.cursor = index
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    choose_action(battle_menu.handle_click(event.pos))
+            # handle states (ANIM is not handled, it is automatic)
+            elif state in (STATS, END):
                 # TODO: temporary — any key/click returns to the menu
                 if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1):
                     state = MENU
 
     def handle_draw():
         """Handle drawing."""
+        # use nonlocal to modify the state and other variables
+        nonlocal state, hero_sprite, enemy_sprite, battle_log, battle_menu, font_hud, font_log
         # fill the screen with the background color
         screen.fill(COLOR_BG)
 
@@ -138,7 +179,7 @@ def main():
         if state == MENU:
             draw_menu_screen(screen, font_title, main_menu)
         elif state == BATTLE:
-            draw_placeholder(screen, font_title, "Battle - coming soon")
+            draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE))
         elif state == STATS:
             draw_placeholder(screen, font_title, "Statistics - coming soon")
         elif state == ANIM:
@@ -172,59 +213,76 @@ def main():
         # create battle log
         battle_log = LogPanel(LOG_RECT)
         # create battle menu
-        battle_menu = Menu(MENU_RECT, ["Fight", "Item", "Run"], font_menu)
+        battle_menu = Menu(MENU_RECT, BATTLE_OPTIONS, font_menu)
         # set menu level
-        menu_level = 0
+        menu_level = MAIN_MENU
         # set pending events
         pending_events = []
 
     def choose_action(index):
         """Select action in the battle menu."""
-        # use nonlocal to modify the state and pending_events variables
+        # use nonlocal to modify menu_level
         nonlocal menu_level
-        if menu_level == 0:
-            if index == 0:    # Fight
-                pass
-            elif index == 1:  # Item
-                pass
-            elif index == 2:  # Run
-                pass
-        elif menu_level == 1:
+        if menu_level == MAIN_MENU:
             if index == 0:    # Attack
-                pass
+                resolve_turn("attack")
             elif index == 1:  # Skill
-                pass
-            elif index == 2:  # Back
-                pass
-        elif menu_level == 2:
+                menu_level = SKILL_MENU
+                battle_menu.options = SKILL_OPTIONS
+                battle_menu.cursor = 0
+            elif index == 2:  # Potion
+                resolve_turn("potion")
+            elif index == 3:  # Flee
+                resolve_turn("flee")
+        elif menu_level == SKILL_MENU:
             if index == 0:    # Fireball
-                pass
+                resolve_turn("skill", "fireball")
             elif index == 1:  # Guard
-                pass
+                resolve_turn("skill", "guard")
             elif index == 2:  # Heal
-                pass
+                resolve_turn("skill", "heal")
             elif index == 3:  # Back
-                pass
-        elif menu_level == 3:
-            if index == 0:    # Potion
-                pass
-            elif index == 1:  # Back
-                pass
+                menu_level = MAIN_MENU
+                battle_menu.options = BATTLE_OPTIONS
+                battle_menu.cursor = 0
 
     def resolve_turn(action, skill = None):
         """Resolve the turn"""
+        # use nonlocal to modify the state and pending_events variables
+        nonlocal state, pending_events
         # get previous number of events
         prev = len(battle.log)
         # player turn
         battle.player_turn(action, skill)
         # get new events
-        pending_events = battle.log[prev:]
+        pending_events = battle.log[prev:]  # only new events (for ANIM)
         # set state ANIM
         state = ANIM
 
     def update():
         """Update game state."""
-        pass
+        nonlocal state, menu_level
+        # if not ANIM, return
+        if not state == ANIM:
+            return
+
+        # print events from queue to log
+        for event in pending_events:
+            battle_log.add(format_event(event))
+
+        # clear pending events
+        pending_events.clear()
+
+        # check if battle is finished
+        if battle.is_finished:
+            add_result(result=battle.result, turns=battle.turns, hero_hp_left=battle.hero.hp, hero_hp_max=battle.hero.max_hp, enemy_name=battle.enemy.name)
+            state = END
+        # if not finished, return to battle
+        else:
+            state = BATTLE
+            menu_level = MAIN_MENU
+            battle_menu.options = BATTLE_OPTIONS
+            battle_menu.cursor = 0
 
     # ----------------------------------------------------------------------
     # MAIN LOOP
@@ -247,9 +305,22 @@ def main():
 
 
 # Draw Helpers
-def draw_battle_screen(screen, font, menu):
+def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=True):
     """Draw battle screen"""
-    pass
+    if hero_sprite is None or enemy_sprite is None:
+        return
+
+    # draw hero and enemy sprites
+    hero_sprite.draw(screen)
+    enemy_sprite.draw(screen)
+    # draw hud for hero and enemy
+    draw_hud(screen, hero_sprite, font_hud)
+    draw_hud(screen, enemy_sprite, font_hud)
+    # draw battle log
+    battle_log.draw(screen, font_log)
+    # draw menu if show_menu is True
+    if show_menu:
+        battle_menu.draw(screen)
 
 
 def draw_end_screen(screen, font, result):
