@@ -5,9 +5,13 @@
 
 
 import pygame
+from game.battle import Battle
 from game.config import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
+    HERO_X, ENEMY_X, ARENA_Y, COLOR_HERO, COLOR_ENEMY, LOG_RECT, MENU_RECT
 )
+from game.entities import make_hero, make_enemy
+from game.ui import CharacterSprite, LogPanel
 from game.ui import Menu
 
 
@@ -46,6 +50,9 @@ def draw_placeholder(screen, title_font, text):
 def main():
     """Run the pygame window main loop."""
 
+    # ----------------------------------------------------------------------
+    # Pygame Initialization
+    # ----------------------------------------------------------------------
     # initialize pygame (events, video, audio, etc.)
     pygame.init()
 
@@ -142,7 +149,86 @@ def main():
         # update the display
         pygame.display.flip()
 
-    # main game loop
+    # ----------------------------------------------------------------------
+    # BATTLE
+    # ----------------------------------------------------------------------
+    # initialize battle variables
+    battle = None
+    hero_sprite = None
+    enemy_sprite = None
+    battle_log = None
+    battle_menu = None
+    menu_level = 0
+    pending_events = []
+
+    def start_battle():
+        """Start a new battle."""
+        nonlocal battle, hero_sprite, enemy_sprite, battle_log, battle_menu, menu_level, pending_events
+        # create battle
+        battle = Battle(make_hero(), make_enemy())
+        # create sprites for hero and enemy
+        hero_sprite = CharacterSprite(battle.hero, HERO_X, ARENA_Y, COLOR_HERO)
+        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ARENA_Y, COLOR_ENEMY)
+        # create battle log
+        battle_log = LogPanel(LOG_RECT)
+        # create battle menu
+        battle_menu = Menu(MENU_RECT, ["Fight", "Item", "Run"], font_menu)
+        # set menu level
+        menu_level = 0
+        # set pending events
+        pending_events = []
+
+    def choose_action(index):
+        """Select action in the battle menu."""
+        # use nonlocal to modify the state and pending_events variables
+        nonlocal menu_level
+        if menu_level == 0:
+            if index == 0:    # Fight
+                pass
+            elif index == 1:  # Item
+                pass
+            elif index == 2:  # Run
+                pass
+        elif menu_level == 1:
+            if index == 0:    # Attack
+                pass
+            elif index == 1:  # Skill
+                pass
+            elif index == 2:  # Back
+                pass
+        elif menu_level == 2:
+            if index == 0:    # Fireball
+                pass
+            elif index == 1:  # Guard
+                pass
+            elif index == 2:  # Heal
+                pass
+            elif index == 3:  # Back
+                pass
+        elif menu_level == 3:
+            if index == 0:    # Potion
+                pass
+            elif index == 1:  # Back
+                pass
+
+    def resolve_turn(action, skill = None):
+        """Resolve the turn"""
+        # get previous number of events
+        prev = len(battle.log)
+        # player turn
+        battle.player_turn(action, skill)
+        # get new events
+        pending_events = battle.log[prev:]
+        # set state ANIM
+        state = ANIM
+
+    def update():
+        """Update game state."""
+        pass
+
+    # ----------------------------------------------------------------------
+    # MAIN LOOP
+    # ----------------------------------------------------------------------
     while running:
         # update the clock
         dt = clock.tick(FPS) / 1000.0  # seconds since last frame
@@ -151,13 +237,30 @@ def main():
         handle_events()
 
         # update (empty for now; ANIM will use it)
-        # TODO
+        update()
 
         # handle drawing
         handle_draw()
 
     # quit pygame when the main loop ends
     pygame.quit()
+
+
+# Draw Helpers
+def draw_battle_screen(screen, font, menu):
+    """Draw battle screen"""
+    pass
+
+
+def draw_end_screen(screen, font, result):
+    """Draw end screen"""
+    pass
+
+
+def draw_stats_screen(screen, font, stats):
+    """Draw stats screen"""
+    pass
+
 
 if __name__ == "__main__":
     main()
