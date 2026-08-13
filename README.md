@@ -37,8 +37,15 @@ the Phase 1 engine (unchanged battle logic).
 - Placeholder hero and enemy sprites drawn with primitives (rounded body + face)
   above their own HP/MP bars, and a scrolling combat log panel showing the last
   six `format_event` messages with word wrapping.
-- Battle actions, menus and animations (state machine, lunge / flash / recoil /
-  floating damage numbers) are the next step.
+- Main menu (Play / Statistics / Quit) with a single cursor shared by keyboard
+  (arrow keys + Enter, number shortcuts 1-3) and mouse (hover moves the cursor,
+  click confirms).
+- Suikoden II-style two-level battle menu: Attack / Skill / Potion / Flee, where
+  choosing Skill swaps the panel for the rune submenu Fireball / Guard / Heal / Back.
+  Same navigation as the main menu (arrows + Enter, keys 1-4, mouse).
+- The game flow is driven by a state machine (menu / battle / animation / end /
+  stats). Animations (lunge / flash / recoil / floating damage numbers) and the
+  statistics screen are the next step.
 
 ## Repository structure
 
