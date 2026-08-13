@@ -44,8 +44,10 @@ the Phase 1 engine (unchanged battle logic).
   choosing Skill swaps the panel for the rune submenu Fireball / Guard / Heal / Back.
   Same navigation as the main menu (arrows + Enter, keys 1-4, mouse).
 - The game flow is driven by a state machine (menu / battle / animation / end /
-  stats). Animations (lunge / flash / recoil / floating damage numbers) and the
-  statistics screen are the next step.
+  stats): Play starts a battle, choosing an action resolves the turn instantly and
+  the new events appear in the log, and a finished battle is recorded to the score
+  history. End and statistics screens and the animations (lunge / flash / recoil /
+  floating damage numbers) are the next step.
 
 ## Repository structure
 
