@@ -103,7 +103,6 @@ class Menu:
         self.options = options  # list of options (attack, skill, etc)
         self.font = font  # font to render options
         self.cursor = 0  # index of the currently selected option
-        self.hover = None  # mouse cursor over an option, or None if not over any option
 
     def move_cursor(self, delta):
         """Move cursor up or down, wrapping around the ends.
@@ -177,7 +176,7 @@ class Menu:
             row_rect = pygame.Rect(self.rect.left, self.rect.top + i * row_height, self.rect.width, row_height)
 
             # highlight row if cursor is on it (is the current option selected by keyboard or mouse)
-            if i == self.cursor or i == self.hover:
+            if i == self.cursor:
                 pygame.draw.rect(surface, COLOR_ACCENT, row_rect)
             # render option text
             text = self.font.render(option, True, COLOR_TEXT)
