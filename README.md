@@ -34,9 +34,12 @@ the Phase 1 engine (unchanged battle logic).
   stores dicts (attack / spell / guard / heal / potion / mana/potion failures /
   flee / defeated) and a `format_event()` renders the same messages as Phase 1,
   keeping the visual log and the semantics identical.
-- Placeholder hero and enemy sprites drawn with primitives (rounded body + face)
-  above their own HP/MP bars, and a scrolling combat log panel showing the last
-  six `format_event` messages with word wrapping.
+- Suikoden II-style field with depth: the enemy stands up-left and smaller
+  (0.8 scale, further away) while the hero stands down-right at full scale
+  (closer). The hero's status is shown in a fixed framed card at the top-right
+  (name + HP/MP bars); the enemy's HP/MP stay hidden for combat tension, with
+  only a name plate above the enemy. A scrolling combat log panel shows the
+  last six `format_event` messages with word wrapping.
 - Main menu (Play / Statistics / Quit) with a single cursor shared by keyboard
   (arrow keys + Enter, number shortcuts 1-3) and mouse (hover moves the cursor,
   click confirms).
@@ -46,8 +49,10 @@ the Phase 1 engine (unchanged battle logic).
 - The game flow is driven by a state machine (menu / battle / animation / end /
   stats): Play starts a battle, choosing an action resolves the turn instantly and
   the new events appear in the log, and a finished battle is recorded to the score
-  history. End and statistics screens and the animations (lunge / flash / recoil /
-  floating damage numbers) are the next step.
+  history. The end screen shows the result with a flavor line (e.g. "Hero vs Enemy -
+  5 turns") plus the global summary, and a statistics screen shows the same summary
+  from the main menu; both return to the menu on any key or click. Animations
+  (lunge / flash / recoil / floating damage numbers) are the next step.
 
 ## Repository structure
 
