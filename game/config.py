@@ -67,7 +67,6 @@ RESULT_VICTORY    = "victory"
 RESULT_DEFEAT     = "defeat"
 RESULT_FLED       = "fled"
 
-
 ## User interface configuration (pygame)
 # Window and FPS settings
 SCREEN_WIDTH     = 960
@@ -123,3 +122,20 @@ LUNGE_DURATION     = 0.25   # attacker moves forward
 FLASH_DURATION     = 0.15   # impact flash on the defender
 RECOIL_DURATION    = 0.15   # defender knocked back
 FLOAT_DURATION     = 0.80   # damage number rising and fading
+
+# Distances
+LUNGE_DISTANCE     = 40   # px the attacker moves forward
+RECOIL_DISTANCE    = 20   # px the defender is knocked back
+
+# Impact flash
+FLASH_RADIUS       = 40
+FLASH_COLOR        = (255, 255, 200)
+
+# Floating number colors by type
+COLOR_DAMAGE       = (255, 230, 80)    # yellow: normal damage
+COLOR_CRIT         = (255, 80, 80)     # red: critical hit
+COLOR_HEAL         = (120, 230, 120)   # green: heal / potion
+COLOR_GRAY         = (190, 190, 190)   # grey: guard / fails
+
+# Floating number rise speed (px per second)
+FLOAT_SPEED        = 40

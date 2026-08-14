@@ -12,6 +12,25 @@ import pygame
 from collections import deque
 from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT
 
+class Animation:
+    """Base class for one-shot timed effects driven by dt (never sleep)."""
+    def __init__(self, duration):
+        self.duration = duration
+        self.elapsed = 0.0
+
+    def update(self, dt):
+        """Advance the animation by dt (seconds)."""
+        self.elapsed += dt
+
+    def is_done(self):
+        """Return True when the animation has finished."""
+        return self.elapsed >= self.duration
+
+    def draw(self, surface):
+        """Draw the effect. Base class draws nothing."""
+        pass
+
+
 # Base class for sprite of characters
 class CharacterSprite:
     """Wraps a Character and draws it as a placeholder built with primitives."""
