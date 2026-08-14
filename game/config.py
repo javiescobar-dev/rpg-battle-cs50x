@@ -92,6 +92,8 @@ FONT_TITLE_SIZE    = 48
 FONT_MENU_SIZE     = 28
 FONT_LOG_SIZE      = 20
 FONT_HUD_SIZE      = 18
+FONT_FLOAT_SIZE    = 24   # damage numbers
+FONT_CRIT_SIZE     = 34   # critical hit numbers (bigger)
 
 # Layout (positions in pixels)
 HERO_X    = 700

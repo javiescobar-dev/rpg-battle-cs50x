@@ -10,7 +10,11 @@ animation classes here.
 
 import pygame
 from collections import deque
-from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT
+from game.config import (
+    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT,
+    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_DISTANCE, RECOIL_DISTANCE, FLASH_RADIUS, FLASH_COLOR,
+    COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME
+)
 
 class Animation:
     """Base class for one-shot timed effects driven by dt (never sleep)."""
@@ -29,6 +33,103 @@ class Animation:
     def draw(self, surface):
         """Draw the effect. Base class draws nothing."""
         pass
+
+
+class AttackAnimation(Animation):
+    """Implements the attacker's movement (lunge forward and recoil) and the hit flash."""
+    def __init__(self, attacker, defender, event):
+        # set base duration all animations will last this amount of time (seconds)
+        super().__init__(LUNGE_DURATION + FLASH_DURATION + RECOIL_DURATION + FLOAT_DURATION)
+
+        self.attacker = attacker
+        self.defender = defender
+        self.event = event
+        self.damage = event.get("damage", 0)
+        self.is_crit = event.get("is_crit", False)
+        # The direction of the animation (1 if defender is to the right of the attacker, -1 if defender is to the left of the attacker)
+        self.sign = 1 if defender.x > attacker.x else -1
+
+        # distances for the animation phases based on scale
+        self.lunge   = LUNGE_DISTANCE * attacker.scale
+        self.recoil  = RECOIL_DISTANCE * defender.scale
+
+        # create font
+        self.font = pygame.font.SysFont(FONT_NAME, FONT_CRIT_SIZE if self.is_crit else FONT_FLOAT_SIZE)
+
+    def _phase(self):
+        """Return the current phase name based on elapsed time."""
+        if self.elapsed < LUNGE_DURATION:
+            return "lunge"
+        if self.elapsed < LUNGE_DURATION + FLASH_DURATION:
+            return "flash"
+        if self.elapsed < LUNGE_DURATION + FLASH_DURATION + RECOIL_DURATION:
+            return "recoil"
+        return "float"
+
+    def update(self, dt):
+        """Update the animation state based on elapsed time."""
+        super().update(dt)
+        phase = self._phase()
+
+        # calculate the attacker's offset based on the current phase
+        if phase == "lunge":
+            progress = self.elapsed / LUNGE_DURATION  # 0 → 1
+            self.attacker.offset = self.sign * self.lunge * progress
+        elif phase == "flash":
+            self.attacker.offset = self.sign * self.lunge  # attacker stays at max extension
+        elif phase == "recoil":
+            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION   # 0 → 1
+            self.defender.offset = -self.sign * self.recoil * progress     # knocked back
+        elif phase == "float":
+            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION) / FLOAT_DURATION
+            self.attacker.offset = self.sign * self.lunge * (1 - progress)   # go back to original position
+            self.defender.offset = -self.sign * self.recoil * (1 - progress)  # go back to original position
+
+        # reset attacker and defender offsets once the full animation completes
+        if self.is_done():
+            self.attacker.offset = 0  # stay at original position
+            self.defender.offset = 0  # stay at original position
+
+    def draw(self, surface):
+        """Draw the animation (centered on attacker/defender)."""
+        phase = self._phase()
+        if phase == "flash":
+            self._draw_flash(surface)
+        elif phase == "float":
+            self._draw_float(surface)
+
+    def _draw_flash(self, surface):
+        """Draw a fading flash circle over the defender."""
+        progress = (self.elapsed - LUNGE_DURATION) / FLASH_DURATION   # 0 → 1
+        alpha = int(255 * (1 - progress))                             # fade out
+        radius = FLASH_RADIUS
+        # Create an overlay surface for the flash
+        overlay = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        # Draw the flash circle on the overlay surface
+        pygame.draw.circle(overlay, (*FLASH_COLOR, alpha), (radius, radius), radius)
+        # Blit the overlay surface on the screen
+        surface.blit(overlay, (self.defender.x - radius, self.defender.y - radius))
+
+    def _draw_float(self, surface):
+        """Draw the floating damage number rising and fading."""
+        # calculate elapsed time for the float phase
+        float_elapsed = self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION
+        # calculate progress (0 -> 1)
+        progress = float_elapsed / FLOAT_DURATION                       # 0 → 1
+        # set text based on if the hit was a critical hit
+        text = f"{self.damage}!" if self.is_crit else str(self.damage)  # "12!" on crit
+        # render the text
+        rendered = self.font.render(text, True, COLOR_CRIT if self.is_crit else COLOR_DAMAGE)
+        # set the alpha of the text based on the progress
+        rendered.set_alpha(int(255 * (1 - progress)))                   # fade out
+        # calculate the y position of the text
+        y = self.defender.y - 30 * self.defender.scale - FLOAT_SPEED * float_elapsed
+        surface.blit(rendered, (self.defender.x - rendered.get_width() // 2, y))
+
+
+class SpellAnimation(AttackAnimation):
+    """Spell attack. Identical to AttackAnimation in Phase 2."""
+    pass
 
 
 # Base class for sprite of characters
