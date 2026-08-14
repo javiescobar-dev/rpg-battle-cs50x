@@ -4,16 +4,16 @@
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
 
-from pygame import event
 import pygame
 from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
-    HERO_X, ENEMY_X, ARENA_Y, COLOR_HERO, COLOR_ENEMY, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE
+    HERO_X, ENEMY_X, ARENA_Y, COLOR_HERO, COLOR_ENEMY, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE,
+    RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, draw_hud
-from game.score import add_result
+from game.score import add_result, summary
 
 
 # states of the game
@@ -26,6 +26,10 @@ MAIN_MENU, SKILL_MENU = 0, 1
 BATTLE_OPTIONS = ["Attack", "Skill", "Potion", "Flee"]
 SKILL_OPTIONS  = ["Fireball", "Guard", "Heal", "Back"]
 
+
+# ----------------------------------------------------------------------
+# Pygame Widget Helpers
+# ----------------------------------------------------------------------
 def make_main_menu(font):
     """Create the main menu widget, centered on screen."""
     width = 300
@@ -44,14 +48,6 @@ def draw_menu_screen(screen, title_font, menu):
     screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
     # draw the menu
     menu.draw(screen)
-
-
-def draw_placeholder(screen, title_font, text):
-    """Temporary screen for states not implemented yet."""
-    # render text
-    label = title_font.render(text, True, COLOR_TEXT)
-    # draw text on screen, centered horizontally and vertically
-    screen.blit(label, ((SCREEN_WIDTH - label.get_width()) // 2, (SCREEN_HEIGHT - label.get_height()) // 2))
 
 
 def main():
@@ -178,14 +174,12 @@ def main():
         # draw based on state
         if state == MENU:
             draw_menu_screen(screen, font_title, main_menu)
-        elif state == BATTLE:
+        elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
             draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE))
         elif state == STATS:
-            draw_placeholder(screen, font_title, "Statistics - coming soon")
-        elif state == ANIM:
-            draw_placeholder(screen, font_title, "Animation - coming soon")
+            draw_stats_screen(screen, font_title, font_menu, summary())
         elif state == END:
-            draw_placeholder(screen, font_title, "End - coming soon")
+            draw_end_screen(screen, font_title, font_menu, battle, summary())
 
         # update the display
         pygame.display.flip()
@@ -304,7 +298,49 @@ def main():
     pygame.quit()
 
 
-# Draw Helpers
+# --- Draw Helpers ---
+def format_summary_lines(stats):
+    """Turn the summary dict into a list of text lines."""
+    # create list of lines from the summary dictionary
+    lines = [
+        f"Total Battles: {stats['total_battles']}",
+        f"Victories: {stats['victories']}",
+        f"Defeats: {stats['defeats']}",
+        f"Flees: {stats['flees']}",
+    ]
+    # add the most common enemy if it exists
+    if stats['most_common_enemy']:
+        lines.append(f"Most Common Enemy: {stats['most_common_enemy']}")
+    # return the list of lines
+    return lines
+
+
+def draw_lines_centered(screen, font, lines, y):
+    """Draw lines centered on screen"""
+    for line in lines:
+        text = font.render(line, True, COLOR_TEXT)
+        text_rect = text.get_rect()
+        text_rect.center = (SCREEN_WIDTH // 2, y)
+        screen.blit(text, text_rect)
+        y += font.get_linesize()
+
+
+def draw_hint(screen, font):
+    """Draw hint"""
+    text = font.render("Press any key or click to continue...", True, COLOR_TEXT)
+    text_rect = text.get_rect()
+    text_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
+    screen.blit(text, text_rect)
+
+
+def draw_summary_and_hint(screen, menu_font, stats, y):
+    """Draw summary and hint"""
+    # draw the summary
+    draw_lines_centered(screen, menu_font, format_summary_lines(stats), y)
+    # draw the hint
+    draw_hint(screen, menu_font)
+
+
 def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=True):
     """Draw battle screen"""
     if hero_sprite is None or enemy_sprite is None:
@@ -323,14 +359,33 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
         battle_menu.draw(screen)
 
 
-def draw_end_screen(screen, font, result):
-    """Draw end screen"""
-    pass
+def draw_end_screen(screen, title_font, menu_font, battle, stats):
+    """Draw the battle result, a flavor line and the global summary."""
+    # get the result of the battle
+    result_text = {
+        RESULT_VICTORY: "Victory!",
+        RESULT_DEFEAT: "Defeat",
+        RESULT_FLED: "Fled from battle",
+    }[battle.result]
+
+    # render the result
+    title = title_font.render(result_text, True, COLOR_TEXT)
+    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
+    # render the flavor line
+    flavor = f"{battle.hero.name} vs {battle.enemy.name} - {battle.turns} turns"
+    text = menu_font.render(flavor, True, COLOR_TEXT)
+    screen.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 170))
+    # draw summary and hint
+    draw_summary_and_hint(screen, menu_font, stats, 250)
 
 
-def draw_stats_screen(screen, font, stats):
-    """Draw stats screen"""
-    pass
+def draw_stats_screen(screen, title_font, menu_font, stats):
+    """Draw the global statistics screen."""
+    # render the title
+    title = title_font.render("Statistics", True, COLOR_TEXT)
+    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
+    # draw summary and hint
+    draw_summary_and_hint(screen, menu_font, stats, 250)
 
 
 if __name__ == "__main__":
