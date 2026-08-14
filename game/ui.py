@@ -10,28 +10,35 @@ animation classes here.
 
 import pygame
 from collections import deque
-from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_WIDTH, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT
+from game.config import COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT
 
 # Base class for sprite of characters
 class CharacterSprite:
     """Wraps a Character and draws it as a placeholder built with primitives."""
-    def __init__(self, character, x, y, color):
+    def __init__(self, character, x, y, color, scale=1.0):
         self.character = character
         self.x = x
         self.y = y
         self.color = color  # Color to represent the character (for placeholder purposes)
+        self.scale = scale
         self.offset = 0     # Offset for simple animation
 
     def draw(self, surface):
         """Draw the character as a placeholder rectangle with a border and a head."""
         # Calculate the position with offset for simple animation
         x = self.x + self.offset
+        width = int(60 * self.scale)
+        height = int(80 * self.scale)
         # Draw the character's body as a rectangle with a border and a head
-        body = pygame.Rect(x - 30, self.y - 40, 60, 80)  # Placeholder rectangle for the character
+        body = pygame.Rect(x - width // 2, self.y - height // 2, width, height)
         pygame.draw.rect(surface, self.color, body)  # Draw the character's body
         pygame.draw.rect(surface, COLOR_BORDER, body, 2)  # Draw the border of the character's body
-        pygame.draw.circle(surface, COLOR_TEXT, (x - 10, self.y - 22), 4)  # Draw the character's eye (left)
-        pygame.draw.circle(surface, COLOR_TEXT, (x + 10, self.y - 22), 4)  # Draw the character's eye (right)
+        # Draw eyes
+        eye_dx = int(10 * self.scale)
+        eye_y  = self.y - int(22 * self.scale)
+        radius = max(2, int(4 * self.scale))  # ensure radius is at least 2 px with max scale
+        pygame.draw.circle(surface, COLOR_TEXT, (x - eye_dx, eye_y), radius)
+        pygame.draw.circle(surface, COLOR_TEXT, (x + eye_dx, eye_y), radius)
 
 
 # class to display battle log
@@ -197,15 +204,33 @@ def draw_bar(surface, x, y, width, height, current_value, max_value, color):
     pygame.draw.rect(surface, COLOR_BORDER, (x, y, width, height), 2)
 
 
-def draw_hud(surface, sprite, font):
-    """Draw the HUD (Name, Health and Mana bars) above a character sprite."""
+def draw_hud(surface, sprite, font, rect):
+    """Draw a fixed status card (Name, Health and Mana bars) at the given rect."""
     # get character of sprite
     char = sprite.character
-    # get x position of sprite
-    x = sprite.x - BAR_WIDTH // 2
+    card = pygame.Rect(rect)                       # position comes from the caller
+    # frame: background + border, same style as the other panels
+    pygame.draw.rect(surface, COLOR_BAR_BG, card)
+    pygame.draw.rect(surface, COLOR_BORDER, card, 2)
+    # name centered at the top of the card
+    name = font.render(char.name, True, COLOR_TEXT)
+    surface.blit(name, (card.centerx - name.get_width() // 2, card.top + 4))
+    # HP and MP bars inside the card
+    bar_width = card.width - 12
+    draw_bar(surface, card.left + 6, card.top + 24, bar_width, BAR_HEIGHT, char.hp, char.max_hp, COLOR_HP_BAR)
+    draw_bar(surface, card.left + 6, card.top + 38, bar_width, BAR_HEIGHT, char.mp, char.max_mp, COLOR_MP_BAR)
+
+
+def draw_enemy_name(surface, sprite, font):
+    """Draw the enemy's name above the enemy sprite."""
+    # get character of sprite
+    char = sprite.character
     # get name with render style
     name = font.render(char.name, True, COLOR_TEXT)
-    # Draw the character's name above the sprite
-    surface.blit(name, (sprite.x - name.get_width() // 2, sprite.y - 100))
-    draw_bar(surface, x, sprite.y - 78, BAR_WIDTH, BAR_HEIGHT, char.hp, char.max_hp, COLOR_HP_BAR)
-    draw_bar(surface, x, sprite.y - 62, BAR_WIDTH, BAR_HEIGHT, char.mp, char.max_mp, COLOR_MP_BAR)
+    # get rect for the enemy name
+    rect = pygame.Rect(ENEMY_NAME_RECT)
+    # plate background + frame
+    pygame.draw.rect(surface, COLOR_BAR_BG, rect)
+    pygame.draw.rect(surface, COLOR_BORDER, rect, 2)
+    # Draw the enemy's name centered in its rectangle, blit needs a tuple (x, y), not two separate numbers
+    surface.blit(name, (rect.centerx - name.get_width() // 2, rect.centery - name.get_height() // 2))

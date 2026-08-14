@@ -95,16 +95,28 @@ FONT_LOG_SIZE      = 20
 FONT_HUD_SIZE      = 18
 
 # Layout (positions in pixels)
-ARENA_Y      = 260   # vertical center of the fighters (height of characters positions)
-HERO_X       = 260   # hero position
-ENEMY_X      = 700   # enemy position
-# Battle menu and log
-MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
-LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
+HERO_X    = 700
+HERO_Y    = 300
+ENEMY_X   = 260
+ENEMY_Y   = 210
+HERO_SCALE  = 1.0
+ENEMY_SCALE = 0.8     # smaller => further away
+
+# Hero status card (fixed top-right, enemy info hidden for tension)
+CARD_WIDTH  = 150
+CARD_HEIGHT = 54
+HERO_CARD_RECT = (SCREEN_WIDTH - CARD_WIDTH - 20, 20, CARD_WIDTH, CARD_HEIGHT)
+
+# Enemy name plate (in the field, above the enemy body)
+ENEMY_NAME_RECT = (ENEMY_X - 60, ENEMY_Y - 64, 120, 24)
 
 # Bar dimensions
 BAR_WIDTH  = 80   # width of the HP/MP bars
 BAR_HEIGHT = 12   # height of the HP/MP bars
+
+# Battle menu and log
+MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
+LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
 
 # Animation durations (seconds)
 LUNGE_DURATION     = 0.25   # attacker moves forward

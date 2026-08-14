@@ -8,11 +8,11 @@ import pygame
 from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
-    HERO_X, ENEMY_X, ARENA_Y, COLOR_HERO, COLOR_ENEMY, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE,
-    RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED
+    HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, ENEMY_NAME_RECT,
+    LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED
 )
 from game.entities import make_hero, make_enemy
-from game.ui import CharacterSprite, LogPanel, Menu, draw_hud
+from game.ui import CharacterSprite, LogPanel, Menu, draw_hud, draw_enemy_name
 from game.score import add_result, summary
 
 
@@ -202,8 +202,8 @@ def main():
         # create battle
         battle = Battle(make_hero(), make_enemy())
         # create sprites for hero and enemy
-        hero_sprite = CharacterSprite(battle.hero, HERO_X, ARENA_Y, COLOR_HERO)
-        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ARENA_Y, COLOR_ENEMY)
+        hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, COLOR_HERO, HERO_SCALE)
+        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE)
         # create battle log
         battle_log = LogPanel(LOG_RECT)
         # create battle menu
@@ -350,8 +350,8 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
     hero_sprite.draw(screen)
     enemy_sprite.draw(screen)
     # draw hud for hero and enemy
-    draw_hud(screen, hero_sprite, font_hud)
-    draw_hud(screen, enemy_sprite, font_hud)
+    draw_hud(screen, hero_sprite, font_hud, HERO_CARD_RECT)
+    draw_enemy_name(screen, enemy_sprite, font_hud)
     # draw battle log
     battle_log.draw(screen, font_log)
     # draw menu if show_menu is True
