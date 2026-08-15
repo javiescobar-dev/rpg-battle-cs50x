@@ -92,8 +92,8 @@ FONT_TITLE_SIZE    = 48
 FONT_MENU_SIZE     = 28
 FONT_LOG_SIZE      = 20
 FONT_HUD_SIZE      = 18
-FONT_FLOAT_SIZE    = 24   # damage numbers
-FONT_CRIT_SIZE     = 34   # critical hit numbers (bigger)
+FONT_FLOAT_SIZE    = 26   # damage numbers
+FONT_CRIT_SIZE     = 36   # critical hit numbers (bigger)
 
 # Layout (positions in pixels)
 HERO_X    = 700
@@ -120,13 +120,13 @@ MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
 LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
 
 # Animation durations (seconds)
-LUNGE_DURATION     = 0.25   # attacker moves forward
+LUNGE_DURATION     = 0.35   # attacker travels to the target
 FLASH_DURATION     = 0.15   # impact flash on the defender
 RECOIL_DURATION    = 0.15   # defender knocked back
 FLOAT_DURATION     = 0.80   # damage number rising and fading
 
 # Distances
-LUNGE_DISTANCE     = 40   # px the attacker moves forward
+LUNGE_GAP          = 30   # px the attacker stops before the target
 RECOIL_DISTANCE    = 20   # px the defender is knocked back
 
 # Impact flash
@@ -142,3 +142,6 @@ COLOR_GUARD        = (120, 180, 255)   # light blue: guard
 
 # Floating number rise speed (px per second)
 FLOAT_SPEED        = 40
+
+# Float text stays fully opaque for the first 50% of its duration, then fades out
+FLOAT_FADE_START   = 0.5
