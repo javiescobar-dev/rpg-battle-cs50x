@@ -79,11 +79,11 @@ class AttackAnimation(Animation):
             self.attacker.offset = self.sign * self.lunge  # attacker stays at max extension
         elif phase == "recoil":
             progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION   # 0 -> 1
-            self.defender.offset = -self.sign * self.recoil * progress     # knocked back
+            self.defender.offset = self.sign * self.recoil * progress     # knocked back in the blow's direction
         elif phase == "float":
             progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION) / FLOAT_DURATION
             self.attacker.offset = self.sign * self.lunge * (1 - progress)   # go back to original position
-            self.defender.offset = -self.sign * self.recoil * (1 - progress)  # go back to original position
+            self.defender.offset = self.sign * self.recoil * (1 - progress)  # go back to original position
 
         # reset attacker and defender offsets once the full animation completes
         if self.is_done():
