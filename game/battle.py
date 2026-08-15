@@ -34,6 +34,20 @@ class Battle:
         return self.result is not None
 
 
+    def _append(self, event):
+        """Log an event together with the current HP/MP of both fighters.
+
+        The snapshot lets the UI show each stat change as its animation plays,
+        instead of revealing the whole round at once. It does not affect the
+        battle logic: format_event only reads the action-specific keys.
+        """
+        event["hero_hp"] = self.hero.hp
+        event["hero_mp"] = self.hero.mp
+        event["enemy_hp"] = self.enemy.hp
+        event["enemy_mp"] = self.enemy.mp
+        self.log.append(event)
+
+
     def calculate_damage(self, raw_damage, defender):
         """Calculate the final damage after applying defense, randomness, and critical hits."""
 
@@ -64,7 +78,7 @@ class Battle:
         damage_dealt = defender.take_damage(damage)  # apply the damage and get the actual damage taken (after guard mitigation)
 
         # log the action in the battle log
-        self.log.append({
+        self._append({
             "action": action,
             "attacker": attacker,
             "defender": defender,
@@ -76,7 +90,7 @@ class Battle:
         # check if the defender is still alive after taking damage
         if not defender.is_alive:
             # log the defeat in the battle log and set the result of the battle
-            self.log.append({ "action": "defeated", "defender": defender })
+            self._append({ "action": "defeated", "defender": defender })
             if defender is self.enemy:
                 self.result = RESULT_VICTORY
             else:
@@ -96,7 +110,7 @@ class Battle:
 
         # check if the skill exists and if the hero has enough mana to cast it
         if not value:
-            self.log.append({ "action": "mana_fail", "actor": self.hero, "skill": skill_name })
+            self._append({ "action": "mana_fail", "actor": self.hero, "skill": skill_name })
             return False  # Skill casting failed
 
         if skill_name == "spell":
@@ -104,10 +118,10 @@ class Battle:
             self.deal_damage(self.hero, self.enemy, raw_damage, "spell")
         elif skill_name == "guard":
             # hero guard is set to True in cast_skill, so we just log the action here
-            self.log.append({ "action": "guard", "actor": self.hero })
+            self._append({ "action": "guard", "actor": self.hero })
         elif skill_name == "heal":
             heal_amount = value  # is the amount healed
-            self.log.append({ "action": "heal", "actor": self.hero, "amount": heal_amount })
+            self._append({ "action": "heal", "actor": self.hero, "amount": heal_amount })
 
         return True  # Skill casting succeeded
 
@@ -117,9 +131,9 @@ class Battle:
 
         value = self.hero.use_potion() # return POTION_AMOUNT if potion was used, or False if no potions left
         if value:
-            self.log.append({ "action": "potion", "actor": self.hero, "amount": value })
+            self._append({ "action": "potion", "actor": self.hero, "amount": value })
         else:
-            self.log.append({ "action": "potion_fail", "actor": self.hero })
+            self._append({ "action": "potion_fail", "actor": self.hero })
 
 
     def player_flee(self):
@@ -131,11 +145,11 @@ class Battle:
         flee_chance = max(FLEE_MIN, min(FLEE_MAX, chance))  # clamp between min and max
 
         if random.random() < flee_chance:
-            self.log.append({ "action": "flee_success", "actor": self.hero })
+            self._append({ "action": "flee_success", "actor": self.hero })
             self.result = RESULT_FLED
             return True  # Flee successful
         else:
-            self.log.append({ "action": "flee_fail", "actor": self.hero })
+            self._append({ "action": "flee_fail", "actor": self.hero })
             return False  # Flee failed
 
 
@@ -177,7 +191,7 @@ class Battle:
             self.deal_damage(self.enemy, self.hero, raw_damage, "spell")
         elif action == "guard":
             self.enemy.guard = True  # Set guard state
-            self.log.append({ "action": "guard", "actor": self.enemy })
+            self._append({ "action": "guard", "actor": self.enemy })
 
 
 def format_event(event):
