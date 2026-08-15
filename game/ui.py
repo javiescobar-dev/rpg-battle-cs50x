@@ -73,12 +73,12 @@ class AttackAnimation(Animation):
 
         # calculate the attacker's offset based on the current phase
         if phase == "lunge":
-            progress = self.elapsed / LUNGE_DURATION  # 0 → 1
+            progress = self.elapsed / LUNGE_DURATION  # 0 -> 1
             self.attacker.offset = self.sign * self.lunge * progress
         elif phase == "flash":
             self.attacker.offset = self.sign * self.lunge  # attacker stays at max extension
         elif phase == "recoil":
-            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION   # 0 → 1
+            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION   # 0 -> 1
             self.defender.offset = -self.sign * self.recoil * progress     # knocked back
         elif phase == "float":
             progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION) / FLOAT_DURATION
@@ -100,7 +100,7 @@ class AttackAnimation(Animation):
 
     def _draw_flash(self, surface):
         """Draw a fading flash circle over the defender."""
-        progress = (self.elapsed - LUNGE_DURATION) / FLASH_DURATION   # 0 → 1
+        progress = (self.elapsed - LUNGE_DURATION) / FLASH_DURATION   # 0 -> 1
         alpha = int(255 * (1 - progress))                             # fade out
         radius = FLASH_RADIUS
         # Create an overlay surface for the flash
@@ -115,7 +115,7 @@ class AttackAnimation(Animation):
         # calculate elapsed time for the float phase
         float_elapsed = self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION
         # calculate progress (0 -> 1)
-        progress = float_elapsed / FLOAT_DURATION                       # 0 → 1
+        progress = float_elapsed / FLOAT_DURATION                       # 0 -> 1
         # set text based on if the hit was a critical hit
         text = f"{self.damage}!" if self.is_crit else str(self.damage)  # "12!" on crit
         # render the text
@@ -130,6 +130,31 @@ class AttackAnimation(Animation):
 class SpellAnimation(AttackAnimation):
     """Spell attack. Identical to AttackAnimation in Phase 2."""
     pass
+
+
+class TextAnimation(Animation):
+    """Shows a floating message that rises and fades above a sprite."""
+    def __init__(self, sprite, text, color):
+        # create an object that inherits from Animation with the duration of the animation
+        super().__init__(FLOAT_DURATION)
+        # set the sprite, text, color and font
+        self.sprite = sprite
+        self.text = text
+        self.color = color
+        self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
+
+    def draw(self, surface):
+        """Draw the text animation."""
+        # calculate progress (0 -> 1)
+        progress = self.elapsed / FLOAT_DURATION                       # 0 -> 1
+        # render the text
+        rendered = self.font.render(self.text, True, self.color)
+        # set the alpha of the text based on the progress
+        rendered.set_alpha(int(255 * (1 - progress)))                   # fade out
+        # calculate the y position of the text
+        y = self.sprite.y - 30 * self.sprite.scale - FLOAT_SPEED * self.elapsed
+        # blit the text on the screen
+        surface.blit(rendered, (self.sprite.x - rendered.get_width() // 2, y))
 
 
 # Base class for sprite of characters
