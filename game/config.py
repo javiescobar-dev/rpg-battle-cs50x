@@ -137,7 +137,8 @@ FLASH_COLOR        = (255, 255, 200)
 COLOR_DAMAGE       = (255, 230, 80)    # yellow: normal damage
 COLOR_CRIT         = (255, 80, 80)     # red: critical hit
 COLOR_HEAL         = (120, 230, 120)   # green: heal / potion
-COLOR_GRAY         = (190, 190, 190)   # grey: guard / fails
+COLOR_GRAY         = (225, 225, 225)   # whitish: fails / flee
+COLOR_GUARD        = (120, 180, 255)   # light blue: guard
 
 # Floating number rise speed (px per second)
 FLOAT_SPEED        = 40
