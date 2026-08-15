@@ -13,7 +13,7 @@ from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_DISTANCE, RECOIL_DISTANCE, FLASH_RADIUS, FLASH_COLOR,
-    COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME
+    COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
 )
 
 class Animation:
@@ -155,6 +155,95 @@ class TextAnimation(Animation):
         y = self.sprite.y - 30 * self.sprite.scale - FLOAT_SPEED * self.elapsed
         # blit the text on the screen
         surface.blit(rendered, (self.sprite.x - rendered.get_width() // 2, y))
+
+
+class EventPlayer:
+    """Plays battle events as animations, one at a time, driven by dt."""
+    def __init__(self, hero_sprite, enemy_sprite, on_event=None):
+        # map each Character to its sprite, so events (which carry Characters) resolve to sprites
+        self.sprites = {
+            hero_sprite.character: hero_sprite,
+            enemy_sprite.character: enemy_sprite,
+        }
+        self.on_event = on_event   # optional callback(event) fired when an animation starts
+        self.queue = deque()       # pending events
+        self.current = None        # active Animation or None
+
+    def push(self, event):
+        """Queue an event to be animated."""
+        self.queue.append(event)
+
+    def _make_animation(self, event):
+        """Build the right Animation for an event."""
+        # get the action from the event
+        action = event["action"]
+
+        # if the action is attack, create an AttackAnimation
+        if action == "attack":
+            return AttackAnimation(self._sprite_of(event["attacker"]), self._sprite_of(event["defender"]), event)
+        # if the action is spell, create a SpellAnimation
+        elif action == "spell":
+            return SpellAnimation(self._sprite_of(event["attacker"]), self._sprite_of(event["defender"]), event)
+
+        # get the actor from the event. "defeated" has no "actor"
+        actor = self._sprite_of(event.get("actor") or event.get("defender"))
+        # get the text and color for the event
+        text, color = self._text_for(event)
+        # create a TextAnimation for the event
+        return TextAnimation(actor, text, color)
+
+    def _sprite_of(self, character):
+        """Return the sprite of a character."""
+        return self.sprites[character]
+
+    def _text_for(self, event):
+        """Return text and color for a given event."""
+        # get the action from the event
+        action = event["action"]
+
+        # for every possible action, return the text and color for it
+        if action == "guard":
+            return "Guard", COLOR_GUARD
+        elif action == "heal" or action == "potion":
+            return f"+{event['amount']}", COLOR_HEAL
+        elif action == "mana_fail":
+            return "Not enough mana", COLOR_GRAY
+        elif action == "potion_fail":
+            return "No potions left", COLOR_GRAY
+        elif action == "flee_success":
+            return "Fled!", COLOR_GRAY
+        elif action == "flee_fail":
+            return "Failed to flee!", COLOR_GRAY
+        elif action == "defeated":
+            return "Defeated!", COLOR_CRIT
+
+        # for every other case, return the event as a string and COLOR_GRAY
+        return str(event), COLOR_GRAY
+
+    def update(self, dt):
+        """Advance the current animation; pull the next event when it finishes."""
+        # if there is no current animation and there is a queue, pop the next event
+        if self.current is None and self.queue:
+            event = self.queue.popleft()
+            self.current = self._make_animation(event)
+            # if there is an on_event callback, call it with the event
+            if self.on_event:
+                self.on_event(event)
+        # if there is a current animation, update it
+        if self.current is not None:
+            self.current.update(dt)
+            # if the current animation is done, set it to None
+            if self.current.is_done():
+                self.current = None
+
+    def is_idle(self):
+        """True when no animation is playing or waiting."""
+        return self.current is None and not self.queue
+
+    def draw(self, surface):
+        """Draw the active animation effect on top of the sprites."""
+        if self.current is not None:
+            self.current.draw(surface)
 
 
 # Base class for sprite of characters
