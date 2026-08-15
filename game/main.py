@@ -12,9 +12,8 @@ from game.config import (
     LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED
 )
 from game.entities import make_hero, make_enemy
-from game.ui import CharacterSprite, LogPanel, Menu, draw_hud, draw_enemy_name
+from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
 from game.score import add_result, summary
-
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
@@ -167,7 +166,7 @@ def main():
     def handle_draw():
         """Handle drawing."""
         # use nonlocal to modify the state and other variables
-        nonlocal state, hero_sprite, enemy_sprite, battle_log, battle_menu, font_hud, font_log
+        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log
         # fill the screen with the background color
         screen.fill(COLOR_BG)
 
@@ -175,7 +174,7 @@ def main():
         if state == MENU:
             draw_menu_screen(screen, font_title, main_menu)
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
-            draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE))
+            draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player)
         elif state == STATS:
             draw_stats_screen(screen, font_title, font_menu, summary())
         elif state == END:
@@ -192,13 +191,18 @@ def main():
     hero_sprite = None
     enemy_sprite = None
     battle_log = None
+    event_player = None
     battle_menu = None
     menu_level = 0
     pending_events = []
 
+    # Callback function used by the EventPlayer to add formatted events to the battle log
+    def log_event(event):
+        battle_log.add(format_event(event))
+
     def start_battle():
         """Start a new battle."""
-        nonlocal battle, hero_sprite, enemy_sprite, battle_log, battle_menu, menu_level, pending_events
+        nonlocal battle, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, menu_level, pending_events
         # create battle
         battle = Battle(make_hero(), make_enemy())
         # create sprites for hero and enemy
@@ -206,6 +210,8 @@ def main():
         enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE)
         # create battle log
         battle_log = LogPanel(LOG_RECT)
+        # create event player
+        event_player = EventPlayer(hero_sprite, enemy_sprite, on_event=log_event)
         # create battle menu
         battle_menu = Menu(MENU_RECT, BATTLE_OPTIONS, font_menu)
         # set menu level
@@ -253,30 +259,34 @@ def main():
         # set state ANIM
         state = ANIM
 
-    def update():
+    def update(dt):
         """Update game state."""
-        nonlocal state, menu_level
+        nonlocal state, menu_level, event_player
         # if not ANIM, return
-        if not state == ANIM:
+        if state != ANIM:
             return
 
-        # print events from queue to log
-        for event in pending_events:
-            battle_log.add(format_event(event))
+        # add events to the event player only one time
+        if pending_events:
+            for event in pending_events:
+                event_player.push(event)
+            # clear pending events
+            pending_events.clear()
 
-        # clear pending events
-        pending_events.clear()
+        # update event_player
+        event_player.update(dt)
 
-        # check if battle is finished
-        if battle.is_finished:
-            add_result(result=battle.result, turns=battle.turns, hero_hp_left=battle.hero.hp, hero_hp_max=battle.hero.max_hp, enemy_name=battle.enemy.name)
-            state = END
-        # if not finished, return to battle
-        else:
-            state = BATTLE
-            menu_level = MAIN_MENU
-            battle_menu.options = BATTLE_OPTIONS
-            battle_menu.cursor = 0
+        # check if battle is finished only when animation ends
+        if event_player.is_idle():
+            if battle.is_finished:
+                add_result(result=battle.result, turns=battle.turns, hero_hp_left=battle.hero.hp, hero_hp_max=battle.hero.max_hp, enemy_name=battle.enemy.name)
+                state = END
+            # if not finished, return to battle
+            else:
+                state = BATTLE
+                menu_level = MAIN_MENU
+                battle_menu.options = BATTLE_OPTIONS
+                battle_menu.cursor = 0
 
     # ----------------------------------------------------------------------
     # MAIN LOOP
@@ -289,7 +299,7 @@ def main():
         handle_events()
 
         # update (empty for now; ANIM will use it)
-        update()
+        update(dt)
 
         # handle drawing
         handle_draw()
@@ -341,7 +351,7 @@ def draw_summary_and_hint(screen, menu_font, stats, y):
     draw_hint(screen, menu_font)
 
 
-def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=True):
+def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=True, event_player=None):
     """Draw battle screen"""
     if hero_sprite is None or enemy_sprite is None:
         return
@@ -349,11 +359,18 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
     # draw hero and enemy sprites
     hero_sprite.draw(screen)
     enemy_sprite.draw(screen)
+
     # draw hud for hero and enemy
     draw_hud(screen, hero_sprite, font_hud, HERO_CARD_RECT)
     draw_enemy_name(screen, enemy_sprite, font_hud)
+
+    # if event_player is not None, draw it
+    if event_player is not None:
+        event_player.draw(screen)
+
     # draw battle log
     battle_log.draw(screen, font_log)
+
     # draw menu if show_menu is True
     if show_menu:
         battle_menu.draw(screen)
