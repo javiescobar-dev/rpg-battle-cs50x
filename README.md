@@ -48,11 +48,21 @@ the Phase 1 engine (unchanged battle logic).
   Same navigation as the main menu (arrows + Enter, keys 1-4, mouse).
 - The game flow is driven by a state machine (menu / battle / animation / end /
   stats): Play starts a battle, choosing an action resolves the turn instantly and
-  the new events appear in the log, and a finished battle is recorded to the score
-  history. The end screen shows the result with a flavor line (e.g. "Hero vs Enemy -
-  5 turns") plus the global summary, and a statistics screen shows the same summary
-  from the main menu; both return to the menu on any key or click. Animations
-  (lunge / flash / recoil / floating damage numbers) are the next step.
+  the new engine events are queued to an EventPlayer, and a finished battle is
+  recorded to the score history. The end screen shows the result with a flavor line
+  (e.g. "Hero vs Enemy - 5 turns") plus the global summary, and a statistics screen
+  shows the same summary from the main menu; both return to the menu on any key or
+  click.
+- Battle animations driven by the EventPlayer: events play one at a time as
+  animations. AttackAnimation plays a lunge, an impact flash (drawn on a translucent
+  SRCALPHA overlay), a recoil (the defender is knocked back in the direction of the
+  blow) and a rising, fading damage number; spell attacks use a SpellAnimation
+  subclass (identical for now, ready to gain a cast glow in Phase 3). Heal, potion,
+  guard, flee and failure events show a short floating message. Numbers are colored
+  by type: yellow for damage, red and larger with a "!" for critical hits, green +N
+  for heal/potion, light blue for guard and whitish for failures. The combat log
+  streams live, one line per event, as each animation starts, and the game only
+  returns to the battle menu or ends after the last animation finishes.
 
 ## Repository structure
 
