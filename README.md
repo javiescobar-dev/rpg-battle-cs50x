@@ -25,7 +25,7 @@ Playable in the terminal with `python -m game.main`.
   statistics view shows wins/losses/flees and the most common enemy.
 - Main menu loop: play a battle, view statistics, or quit.
 
-### Pygame UI (Phase 2 — in progress)
+### Pygame UI (Phase 2)
 
 Launched with `python -m game.main`. A Suikoden II-style battle screen on top of
 the Phase 1 engine (unchanged battle logic).
@@ -63,6 +63,14 @@ the Phase 1 engine (unchanged battle logic).
   for heal/potion, light blue for guard and whitish for failures. The combat log
   streams live, one line per event, as each animation starts, and the game only
   returns to the battle menu or ends after the last animation finishes.
+- Polished combat feel: floating numbers and messages are pre-rendered with a
+  black outline and stay fully opaque until halfway through their rise, then fade
+  out. The attacker lunges almost all the way to the target (stopping 30px short,
+  Suikoden II style) instead of advancing a fixed distance. The hero's HP/MP card
+  updates progressively rather than all at once: every event carries an HP/MP
+  snapshot, the mana cost is shown as the attack starts, the defender's HP drops
+  exactly at the moment of impact, and heals/potions raise HP as their animation
+  plays.
 
 ## Repository structure
 
