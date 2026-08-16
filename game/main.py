@@ -356,9 +356,9 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
     if hero_sprite is None or enemy_sprite is None:
         return
 
-    # draw hero and enemy sprites
-    hero_sprite.draw(screen)
+    # draw hero and enemy sprites (the enemy first, so the hero appears on top)
     enemy_sprite.draw(screen)
+    hero_sprite.draw(screen)
 
     # draw hud for hero and enemy
     draw_hud(screen, hero_sprite, font_hud, HERO_CARD_RECT)
