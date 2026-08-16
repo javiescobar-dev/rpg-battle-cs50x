@@ -72,9 +72,9 @@ the Phase 1 engine (unchanged battle logic).
 - Polished combat feel: floating numbers and messages are pre-rendered with a
   black outline and stay fully opaque until halfway through their rise, then fade
   out. The hero's HP/MP card updates progressively rather than all at once: every
-  event carries an HP/MP snapshot, the mana cost is shown as the attack starts,
-  the defender's HP drops exactly at the moment of impact, and heals/potions
-  raise HP as their animation plays.
+  event carries an HP/MP snapshot, the mana cost is shown as the skill starts
+  (including guard and heal), the defender's HP drops exactly at the moment of
+  impact, and heals/potions raise HP as their animation plays.
 
 ## Repository structure
 
