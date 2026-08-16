@@ -108,9 +108,6 @@ CARD_WIDTH  = 150
 CARD_HEIGHT = 54
 HERO_CARD_RECT = (SCREEN_WIDTH - CARD_WIDTH - 20, 20, CARD_WIDTH, CARD_HEIGHT)
 
-# Enemy name plate (in the field, above the enemy body)
-ENEMY_NAME_RECT = (ENEMY_X - 60, ENEMY_Y - 64, 120, 24)
-
 # Bar dimensions
 BAR_WIDTH  = 80   # width of the HP/MP bars
 BAR_HEIGHT = 12   # height of the HP/MP bars

@@ -12,7 +12,7 @@ import math
 import pygame
 from collections import deque
 from game.config import (
-    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT,
+    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, FLASH_COLOR,
     COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
 )
@@ -565,8 +565,10 @@ def draw_enemy_name(surface, sprite, font):
     char = sprite.character
     # get name with render style
     name = font.render(char.name, True, COLOR_TEXT)
-    # get rect for the enemy name
-    rect = pygame.Rect(ENEMY_NAME_RECT)
+    # build the plate from the sprite's animated position, keeping it above its head
+    rect = pygame.Rect(0, 0, 120, 24)
+    rect.centerx = int(sprite.x + sprite.offset_x)
+    rect.centery = int(sprite.y + sprite.offset_y - 40 * (sprite.scale * sprite.scale_factor) - 36)
     # plate background + frame
     pygame.draw.rect(surface, COLOR_BAR_BG, rect)
     pygame.draw.rect(surface, COLOR_BORDER, rect, 2)
