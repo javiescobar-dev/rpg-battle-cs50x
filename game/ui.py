@@ -12,8 +12,8 @@ import pygame
 from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT,
-    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_DISTANCE, RECOIL_DISTANCE, FLASH_RADIUS, FLASH_COLOR,
-    COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
+    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, FLASH_RADIUS, FLASH_COLOR,
+    COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
 )
 
 class Animation:
@@ -37,7 +37,7 @@ class Animation:
 
 class AttackAnimation(Animation):
     """Implements the attacker's movement (lunge forward and recoil) and the hit flash."""
-    def __init__(self, attacker, defender, event):
+    def __init__(self, attacker, defender, event, on_impact=None):
         # set base duration all animations will last this amount of time (seconds)
         super().__init__(LUNGE_DURATION + FLASH_DURATION + RECOIL_DURATION + FLOAT_DURATION)
 
@@ -46,15 +46,23 @@ class AttackAnimation(Animation):
         self.event = event
         self.damage = event.get("damage", 0)
         self.is_crit = event.get("is_crit", False)
+        self.on_impact = on_impact      # optional callback fired exactly at the moment of the hit to update the HUD
+        self._impact_fired = False      # flag to prevent the callback from being called more than once
         # The direction of the animation (1 if defender is to the right of the attacker, -1 if defender is to the left of the attacker)
         self.sign = 1 if defender.x > attacker.x else -1
 
-        # distances for the animation phases based on scale
-        self.lunge   = LUNGE_DISTANCE * attacker.scale
-        self.recoil  = RECOIL_DISTANCE * defender.scale
+        # distances: the attacker travels almost all the way to the target (LUNGE_GAP margin)
+        self.lunge   = max(1, self.sign * (defender.x - attacker.x) - LUNGE_GAP)  # calculate the distance the attacker travels
+        self.recoil  = RECOIL_DISTANCE * defender.scale  # calculate the distance the defender is knocked back
 
-        # create font
+        # create font and pre-render the floating damage number with an outline
         self.font = pygame.font.SysFont(FONT_NAME, FONT_CRIT_SIZE if self.is_crit else FONT_FLOAT_SIZE)
+        # get the text to display
+        text = f"{self.damage}!" if self.is_crit else str(self.damage)
+        # get the color based on whether it's a critical hit
+        color = COLOR_CRIT if self.is_crit else COLOR_DAMAGE
+        # pre-render the floating damage number with an outline
+        self._float_surf = render_outlined_text(self.font, text, color)
 
     def _phase(self):
         """Return the current phase name based on elapsed time."""
@@ -71,10 +79,16 @@ class AttackAnimation(Animation):
         super().update(dt)
         phase = self._phase()
 
+        # fire the impact callback the first time the flash phase starts
+        if phase == "flash" and not self._impact_fired:
+            self._impact_fired = True
+            if self.on_impact:
+                self.on_impact()  # update the HUD
+
         # calculate the attacker's offset based on the current phase
         if phase == "lunge":
             progress = self.elapsed / LUNGE_DURATION  # 0 -> 1
-            self.attacker.offset = self.sign * self.lunge * progress
+            self.attacker.offset = self.sign * self.lunge * progress  # attacker moves forward
         elif phase == "flash":
             self.attacker.offset = self.sign * self.lunge  # attacker stays at max extension
         elif phase == "recoil":
@@ -115,16 +129,13 @@ class AttackAnimation(Animation):
         # calculate elapsed time for the float phase
         float_elapsed = self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION
         # calculate progress (0 -> 1)
-        progress = float_elapsed / FLOAT_DURATION                       # 0 -> 1
-        # set text based on if the hit was a critical hit
-        text = f"{self.damage}!" if self.is_crit else str(self.damage)  # "12!" on crit
-        # render the text
-        rendered = self.font.render(text, True, COLOR_CRIT if self.is_crit else COLOR_DAMAGE)
-        # set the alpha of the text based on the progress
-        rendered.set_alpha(int(255 * (1 - progress)))                   # fade out
+        progress = float_elapsed / FLOAT_DURATION
+        # stay fully opaque for the first part of the float, then fade out
+        fade = (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START)
+        self._float_surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))
         # calculate the y position of the text
         y = self.defender.y - 30 * self.defender.scale - FLOAT_SPEED * float_elapsed
-        surface.blit(rendered, (self.defender.x - rendered.get_width() // 2, y))
+        surface.blit(self._float_surf, (self.defender.x - self._float_surf.get_width() // 2, y))
 
 
 class SpellAnimation(AttackAnimation):
@@ -137,24 +148,24 @@ class TextAnimation(Animation):
     def __init__(self, sprite, text, color):
         # create an object that inherits from Animation with the duration of the animation
         super().__init__(FLOAT_DURATION)
-        # set the sprite, text, color and font
+        # set the sprite and pre-render the outlined message
         self.sprite = sprite
         self.text = text
         self.color = color
         self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
+        self._surf = render_outlined_text(self.font, text, color)
 
     def draw(self, surface):
         """Draw the text animation."""
         # calculate progress (0 -> 1)
-        progress = self.elapsed / FLOAT_DURATION                       # 0 -> 1
-        # render the text
-        rendered = self.font.render(self.text, True, self.color)
-        # set the alpha of the text based on the progress
-        rendered.set_alpha(int(255 * (1 - progress)))                   # fade out
+        progress = self.elapsed / FLOAT_DURATION
+        # stay fully opaque for the first part, then fade out
+        fade = (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START)
+        self._surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))
         # calculate the y position of the text
         y = self.sprite.y - 30 * self.sprite.scale - FLOAT_SPEED * self.elapsed
         # blit the text on the screen
-        surface.blit(rendered, (self.sprite.x - rendered.get_width() // 2, y))
+        surface.blit(self._surf, (self.sprite.x - self._surf.get_width() // 2, y))
 
 
 class EventPlayer:
@@ -165,6 +176,11 @@ class EventPlayer:
             hero_sprite.character: hero_sprite,
             enemy_sprite.character: enemy_sprite,
         }
+        # map each Character to its battle side ("hero" / "enemy"), to read snapshots
+        self._sides = {
+            hero_sprite.character: "hero",
+            enemy_sprite.character: "enemy",
+        }
         self.on_event = on_event   # optional callback(event) fired when an animation starts
         self.queue = deque()       # pending events
         self.current = None        # active Animation or None
@@ -173,17 +189,66 @@ class EventPlayer:
         """Queue an event to be animated."""
         self.queue.append(event)
 
+    def _snapshot_of(self, character, event):
+        """Return the (hp, mp) of a fighter recorded in the event snapshot."""
+        # get the side of the character
+        side = self._sides[character]
+        # return the hp and mp of the character from the event snapshot
+        return event[f"{side}_hp"], event[f"{side}_mp"]
+
+    def _apply_display(self, character, hp=None, mp=None):
+        """Update the HUD display values of a fighter's sprite."""
+        # get the sprite of the character
+        sprite = self.sprites[character]
+        # update the hp if it's not None
+        if hp is not None:
+            sprite.display_hp = hp
+        # update the mp if it's not None
+        if mp is not None:
+            sprite.display_mp = mp
+
+    def _apply_stat_changes(self, event):
+        """Sync the HUD display values for an event that just started animating.
+
+        The engine snapshots every fighter's HP/MP at the moment each event is
+        logged, so revealing them one animation at a time shows the round
+        progressively instead of all at once.
+        """
+        action = event["action"]
+        if action in ("attack", "spell"):
+            # mana is spent as soon as the attack starts; the defender's HP
+            # drops at the moment of impact (handled by the animation's callback)
+            actor = event["attacker"]
+            _, mp = self._snapshot_of(actor, event)
+            self._apply_display(actor, mp=mp)
+        elif action in ("heal", "potion"):
+            # HP is restored as soon as the heal animation plays
+            actor = event["actor"]
+            hp, _ = self._snapshot_of(actor, event)
+            self._apply_display(actor, hp=hp)
+        elif action == "defeated":
+            # the last HP drop: empty the defeated fighter's bar
+            defender = event["defender"]
+            hp, _ = self._snapshot_of(defender, event)
+            self._apply_display(defender, hp=hp)
+
     def _make_animation(self, event):
         """Build the right Animation for an event."""
         # get the action from the event
         action = event["action"]
 
         # if the action is attack, create an AttackAnimation
-        if action == "attack":
-            return AttackAnimation(self._sprite_of(event["attacker"]), self._sprite_of(event["defender"]), event)
-        # if the action is spell, create a SpellAnimation
-        elif action == "spell":
-            return SpellAnimation(self._sprite_of(event["attacker"]), self._sprite_of(event["defender"]), event)
+        if action in ("attack", "spell"):
+            # the defender's HP is revealed at the moment of impact
+            defender = event["defender"]
+            hp = event[f"{self._sides[defender]}_hp"]
+            # create an AttackAnimation for the event
+            return AttackAnimation(
+                self._sprite_of(event["attacker"]),
+                self._sprite_of(defender),
+                event,
+                on_impact=lambda: self._apply_display(defender, hp=hp)  # update the HUD when the animation impacts
+            )
 
         # get the actor from the event. "defeated" has no "actor"
         actor = self._sprite_of(event.get("actor") or event.get("defender"))
@@ -226,6 +291,8 @@ class EventPlayer:
         if self.current is None and self.queue:
             event = self.queue.popleft()
             self.current = self._make_animation(event)
+            # sync the HUD display values to this event's snapshot
+            self._apply_stat_changes(event)
             # if there is an on_event callback, call it with the event
             if self.on_event:
                 self.on_event(event)
@@ -256,6 +323,9 @@ class CharacterSprite:
         self.color = color  # Color to represent the character (for placeholder purposes)
         self.scale = scale
         self.offset = 0     # Offset for simple animation
+        # values currently shown in the HUD; updated as each battle event animates
+        self.display_hp = character.hp
+        self.display_mp = character.mp
 
     def draw(self, surface):
         """Draw the character as a placeholder rectangle with a border and a head."""
@@ -451,8 +521,8 @@ def draw_hud(surface, sprite, font, rect):
     surface.blit(name, (card.centerx - name.get_width() // 2, card.top + 4))
     # HP and MP bars inside the card
     bar_width = card.width - 12
-    draw_bar(surface, card.left + 6, card.top + 24, bar_width, BAR_HEIGHT, char.hp, char.max_hp, COLOR_HP_BAR)
-    draw_bar(surface, card.left + 6, card.top + 38, bar_width, BAR_HEIGHT, char.mp, char.max_mp, COLOR_MP_BAR)
+    draw_bar(surface, card.left + 6, card.top + 24, bar_width, BAR_HEIGHT, sprite.display_hp, char.max_hp, COLOR_HP_BAR)
+    draw_bar(surface, card.left + 6, card.top + 38, bar_width, BAR_HEIGHT, sprite.display_mp, char.max_mp, COLOR_MP_BAR)
 
 
 def draw_enemy_name(surface, sprite, font):
@@ -468,3 +538,22 @@ def draw_enemy_name(surface, sprite, font):
     pygame.draw.rect(surface, COLOR_BORDER, rect, 2)
     # Draw the enemy's name centered in its rectangle, blit needs a tuple (x, y), not two separate numbers
     surface.blit(name, (rect.centerx - name.get_width() // 2, rect.centery - name.get_height() // 2))
+
+
+def render_outlined_text(font, text, color):
+    """Render text with a black 1px outline baked onto a transparent surface."""
+    # render the text with the given font
+    base = font.render(text, True, color)
+    # render the outline
+    outline = font.render(text, True, (0, 0, 0))
+    # get the size of the text
+    width, height = base.get_size()
+    # create a surface for the text with the outline
+    surf = pygame.Surface((width + 2, height + 2), pygame.SRCALPHA)
+    # loop through the outline offsets
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            if dx or dy:
+                surf.blit(outline, (1 + dx, 1 + dy))
+    surf.blit(base, (1, 1))
+    return surf
