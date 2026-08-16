@@ -250,16 +250,20 @@ class EventPlayer:
             actor = event["attacker"]
             _, mp = self._snapshot_of(actor, event)
             self._apply_display(actor, mp=mp)
-        elif action in ("heal", "potion"):
-            # HP is restored as soon as the heal animation plays
-            actor = event["actor"]
-            hp, _ = self._snapshot_of(actor, event)
-            self._apply_display(actor, hp=hp)
         elif action == "defeated":
             # the last HP drop: empty the defeated fighter's bar
             defender = event["defender"]
             hp, _ = self._snapshot_of(defender, event)
             self._apply_display(defender, hp=hp)
+        else:
+            # For actions like "heal", "potion", "guard", "flee", " victory", "defeat", "fled"
+            # These actions may not have an "actor" (e.g. "fled", "victory", "defeat"), so we check if it exists
+            actor = event.get("actor")
+            if actor is not None:
+                # get the hp and mp of the actor
+                hp, mp = self._snapshot_of(actor, event)
+                # update the display
+                self._apply_display(actor, hp=hp, mp=mp)
 
     def _make_animation(self, event):
         """Build the right Animation for an event."""
@@ -567,6 +571,7 @@ def draw_enemy_name(surface, sprite, font):
     name = font.render(char.name, True, COLOR_TEXT)
     # build the plate from the sprite's animated position, keeping it above its head
     rect = pygame.Rect(0, 0, 120, 24)
+    # positions from the caller (enemy)
     rect.centerx = int(sprite.x + sprite.offset_x)
     rect.centery = int(sprite.y + sprite.offset_y - 40 * (sprite.scale * sprite.scale_factor) - 36)
     # plate background + frame
