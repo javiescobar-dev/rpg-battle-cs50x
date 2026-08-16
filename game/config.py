@@ -101,7 +101,7 @@ HERO_Y    = 360
 ENEMY_X   = 400
 ENEMY_Y   = 180
 HERO_SCALE  = 1.1
-ENEMY_SCALE = 0.7     # smaller => further away
+ENEMY_SCALE = 0.95     # smaller => further away
 
 # Hero status card (fixed top-right, enemy info hidden for tension)
 CARD_WIDTH  = 150
@@ -126,9 +126,10 @@ RECOIL_DURATION    = 0.15   # defender knocked back
 FLOAT_DURATION     = 0.80   # damage number rising and fading
 
 # Distances
-LUNGE_GAP          = 30   # px the attacker stops before the target
-RECOIL_DISTANCE    = 20   # px the defender is knocked back
-RETURN_JUMP_HEIGHT = 30   # px peak of the attacker's backward hop on the return
+LUNGE_GAP          = 30     # px the attacker stops before the target
+RECOIL_DISTANCE    = 20     # px the defender is knocked back
+RETURN_JUMP_HEIGHT = 50     # px peak of the attacker's backward hop on the return
+LUNGE_SCALE_DEPTH  = 0.3    # how much apparent scale changes as the attacker approaches
 
 # Impact flash
 FLASH_RADIUS       = 40

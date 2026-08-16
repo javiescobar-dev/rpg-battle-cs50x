@@ -13,7 +13,7 @@ import pygame
 from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT,
-    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, FLASH_RADIUS, FLASH_COLOR,
+    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, FLASH_COLOR,
     COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
 )
 
@@ -67,6 +67,7 @@ class AttackAnimation(Animation):
         self.land_y = defender.y - self.uy * LUNGE_GAP
         self.dx = self.land_x - attacker.x   # total horizontal travel
         self.dy = self.land_y - attacker.y   # total vertical travel
+        self.scale_target = 1 + self.uy * LUNGE_SCALE_DEPTH  # grows when approaching the camera (uy > 0)
         self.recoil = RECOIL_DISTANCE * defender.scale
 
         # create font and pre-render the floating damage number with an outline
@@ -104,9 +105,11 @@ class AttackAnimation(Animation):
             progress = self.elapsed / LUNGE_DURATION  # 0 -> 1
             self.attacker.offset_x = self.dx * progress
             self.attacker.offset_y = self.dy * progress
+            self.attacker.scale_factor = 1 + (self.scale_target - 1) * progress  # grows when approaching the camera (uy > 0)
         elif phase == "flash":
             self.attacker.offset_x = self.dx  # attacker stays at max extension
             self.attacker.offset_y = self.dy
+            self.attacker.scale_factor = self.scale_target  # reaches peak scale
         elif phase == "recoil":
             progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION  # 0 -> 1
             self.defender.offset_x = self.ux * self.recoil * progress  # knocked back along the blow
@@ -119,14 +122,16 @@ class AttackAnimation(Animation):
             self.attacker.offset_y = self.dy * (1 - progress) - RETURN_JUMP_HEIGHT * math.sin(math.pi * progress)
             self.defender.offset_x = self.ux * self.recoil * (1 - progress)
             self.defender.offset_y = self.uy * self.recoil * (1 - progress)
-
+            self.attacker.scale_factor = 1 + (self.scale_target - 1) * (1 - progress)  # shrinks back to normal size
 
         # reset attacker and defender offsets once the full animation completes
         if self.is_done():
+            # reset to zero offsets and default scale when animation finishes
             self.attacker.offset_x = 0
             self.attacker.offset_y = 0
             self.defender.offset_x = 0
             self.defender.offset_y = 0
+            self.attacker.scale_factor = 1.0  # return to base scale
 
     def draw(self, surface):
         """Draw the animation (centered on attacker/defender)."""
@@ -348,6 +353,7 @@ class CharacterSprite:
         self.scale = scale
         self.offset_x = 0   # Horizontal offset for simple animation
         self.offset_y = 0   # Vertical offset for simple animation
+        self.scale_factor = 1.0   # animated scale multiplier (depth during lunge)
         # values currently shown in the HUD; updated as each battle event animates
         self.display_hp = character.hp
         self.display_mp = character.mp
@@ -358,16 +364,17 @@ class CharacterSprite:
         x = self.x + self.offset_x
         y = self.y + self.offset_y
         # size of the placeholder
-        width = int(60 * self.scale)
-        height = int(80 * self.scale)
+        scale = self.scale * self.scale_factor
+        width = int(60 * scale)
+        height = int(80 * scale)
         # Draw the character's body as a rectangle with a border and a head
         body = pygame.Rect(x - width // 2, y - height // 2, width, height)
         pygame.draw.rect(surface, self.color, body)  # Draw the character's body
         pygame.draw.rect(surface, COLOR_BORDER, body, 2)  # Draw the border of the character's body
         # Draw eyes
-        eye_dx = int(10 * self.scale)
-        eye_y  = y - int(22 * self.scale)
-        radius = max(2, int(4 * self.scale))  # ensure radius is at least 2 px with max scale
+        eye_dx = int(10 * scale)
+        eye_y  = y - int(22 * scale)
+        radius = max(2, int(4 * scale))  # ensure radius is at least 2 px with max scale
         pygame.draw.circle(surface, COLOR_TEXT, (x - eye_dx, eye_y), radius)
         pygame.draw.circle(surface, COLOR_TEXT, (x + eye_dx, eye_y), radius)
 
