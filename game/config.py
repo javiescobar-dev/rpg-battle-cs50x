@@ -96,12 +96,12 @@ FONT_FLOAT_SIZE    = 26   # damage numbers
 FONT_CRIT_SIZE     = 36   # critical hit numbers (bigger)
 
 # Layout (positions in pixels)
-HERO_X    = 700
-HERO_Y    = 300
-ENEMY_X   = 260
-ENEMY_Y   = 210
-HERO_SCALE  = 1.0
-ENEMY_SCALE = 0.8     # smaller => further away
+HERO_X    = 590
+HERO_Y    = 360
+ENEMY_X   = 400
+ENEMY_Y   = 180
+HERO_SCALE  = 1.1
+ENEMY_SCALE = 0.7     # smaller => further away
 
 # Hero status card (fixed top-right, enemy info hidden for tension)
 CARD_WIDTH  = 150
