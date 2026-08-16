@@ -128,6 +128,7 @@ FLOAT_DURATION     = 0.80   # damage number rising and fading
 # Distances
 LUNGE_GAP          = 30   # px the attacker stops before the target
 RECOIL_DISTANCE    = 20   # px the defender is knocked back
+RETURN_JUMP_HEIGHT = 30   # px peak of the attacker's backward hop on the return
 
 # Impact flash
 FLASH_RADIUS       = 40

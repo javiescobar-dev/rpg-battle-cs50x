@@ -8,11 +8,12 @@ and LogPanel renders the formatted battle log. Step 5 adds the
 animation classes here.
 """
 
+import math
 import pygame
 from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, ENEMY_NAME_RECT,
-    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, FLASH_RADIUS, FLASH_COLOR,
+    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, FLASH_RADIUS, FLASH_COLOR,
     COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
 )
 
@@ -48,12 +49,25 @@ class AttackAnimation(Animation):
         self.is_crit = event.get("is_crit", False)
         self.on_impact = on_impact      # optional callback fired exactly at the moment of the hit to update the HUD
         self._impact_fired = False      # flag to prevent the callback from being called more than once
-        # The direction of the animation (1 if defender is to the right of the attacker, -1 if defender is to the left of the attacker)
-        self.sign = 1 if defender.x > attacker.x else -1
 
-        # distances: the attacker travels almost all the way to the target (LUNGE_GAP margin)
-        self.lunge   = max(1, self.sign * (defender.x - attacker.x) - LUNGE_GAP)  # calculate the distance the attacker travels
-        self.recoil  = RECOIL_DISTANCE * defender.scale  # calculate the distance the defender is knocked back
+        # phase boundaries (attributes so SpellAnimation can override them)
+        self.t_flash = LUNGE_DURATION + FLASH_DURATION  # duration of the lunge and flash phases
+        self.t_float = self.t_flash + RECOIL_DURATION   # duration of the recoil phase
+
+        # unit vector pointing from the attacker to the defender (diagonal movement)
+        dx = defender.x - attacker.x
+        dy = defender.y - attacker.y
+        dist = max(1, math.hypot(dx, dy))  # hypot is the square root of the sum of the squares of the arguments, used to get the distance between the attacker and the defender
+        # get the direction from the attacker to the defender (unit vector)
+        self.ux = dx / dist
+        self.uy = dy / dist
+
+        # the attacker stops LUNGE_GAP px short of the defender along that direction
+        self.land_x = defender.x - self.ux * LUNGE_GAP
+        self.land_y = defender.y - self.uy * LUNGE_GAP
+        self.dx = self.land_x - attacker.x   # total horizontal travel
+        self.dy = self.land_y - attacker.y   # total vertical travel
+        self.recoil = RECOIL_DISTANCE * defender.scale
 
         # create font and pre-render the floating damage number with an outline
         self.font = pygame.font.SysFont(FONT_NAME, FONT_CRIT_SIZE if self.is_crit else FONT_FLOAT_SIZE)
@@ -68,9 +82,9 @@ class AttackAnimation(Animation):
         """Return the current phase name based on elapsed time."""
         if self.elapsed < LUNGE_DURATION:
             return "lunge"
-        if self.elapsed < LUNGE_DURATION + FLASH_DURATION:
+        if self.elapsed < self.t_flash:
             return "flash"
-        if self.elapsed < LUNGE_DURATION + FLASH_DURATION + RECOIL_DURATION:
+        if self.elapsed < self.t_float:
             return "recoil"
         return "float"
 
@@ -88,21 +102,31 @@ class AttackAnimation(Animation):
         # calculate the attacker's offset based on the current phase
         if phase == "lunge":
             progress = self.elapsed / LUNGE_DURATION  # 0 -> 1
-            self.attacker.offset = self.sign * self.lunge * progress  # attacker moves forward
+            self.attacker.offset_x = self.dx * progress
+            self.attacker.offset_y = self.dy * progress
         elif phase == "flash":
-            self.attacker.offset = self.sign * self.lunge  # attacker stays at max extension
+            self.attacker.offset_x = self.dx  # attacker stays at max extension
+            self.attacker.offset_y = self.dy
         elif phase == "recoil":
-            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION   # 0 -> 1
-            self.defender.offset = self.sign * self.recoil * progress     # knocked back in the blow's direction
+            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION) / RECOIL_DURATION  # 0 -> 1
+            self.defender.offset_x = self.ux * self.recoil * progress  # knocked back along the blow
+            self.defender.offset_y = self.uy * self.recoil * progress
         elif phase == "float":
-            progress = (self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION) / FLOAT_DURATION
-            self.attacker.offset = self.sign * self.lunge * (1 - progress)   # go back to original position
-            self.defender.offset = self.sign * self.recoil * (1 - progress)  # go back to original position
+            progress = (self.elapsed - self.t_float) / FLOAT_DURATION  # 0 -> 1
+            # the attacker hops back in an arc (up then down) while keeping its eyes on the target
+            self.attacker.offset_x = self.dx * (1 - progress)
+            # sin pi * progress goes from 0 to 1 (if progress is 0 to 1), so this subtracts a value that goes from 0 to 1 (if progress is 0 to 1)
+            self.attacker.offset_y = self.dy * (1 - progress) - RETURN_JUMP_HEIGHT * math.sin(math.pi * progress)
+            self.defender.offset_x = self.ux * self.recoil * (1 - progress)
+            self.defender.offset_y = self.uy * self.recoil * (1 - progress)
+
 
         # reset attacker and defender offsets once the full animation completes
         if self.is_done():
-            self.attacker.offset = 0  # stay at original position
-            self.defender.offset = 0  # stay at original position
+            self.attacker.offset_x = 0
+            self.attacker.offset_y = 0
+            self.defender.offset_x = 0
+            self.defender.offset_y = 0
 
     def draw(self, surface):
         """Draw the animation (centered on attacker/defender)."""
@@ -122,20 +146,20 @@ class AttackAnimation(Animation):
         # Draw the flash circle on the overlay surface
         pygame.draw.circle(overlay, (*FLASH_COLOR, alpha), (radius, radius), radius)
         # Blit the overlay surface on the screen
-        surface.blit(overlay, (self.defender.x - radius, self.defender.y - radius))
+        surface.blit(overlay, (self.defender.x + self.defender.offset_x - radius, self.defender.y + self.defender.offset_y - radius))
 
     def _draw_float(self, surface):
         """Draw the floating damage number rising and fading."""
         # calculate elapsed time for the float phase
-        float_elapsed = self.elapsed - LUNGE_DURATION - FLASH_DURATION - RECOIL_DURATION
+        float_elapsed = self.elapsed - self.t_float
         # calculate progress (0 -> 1)
         progress = float_elapsed / FLOAT_DURATION
         # stay fully opaque for the first part of the float, then fade out
         fade = (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START)
         self._float_surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))
         # calculate the y position of the text
-        y = self.defender.y - 30 * self.defender.scale - FLOAT_SPEED * float_elapsed
-        surface.blit(self._float_surf, (self.defender.x - self._float_surf.get_width() // 2, y))
+        y = self.defender.y + self.defender.offset_y - 30 * self.defender.scale - FLOAT_SPEED * float_elapsed
+        surface.blit(self._float_surf, (self.defender.x + self.defender.offset_x - self._float_surf.get_width() // 2, y))
 
 
 class SpellAnimation(AttackAnimation):
@@ -322,24 +346,27 @@ class CharacterSprite:
         self.y = y
         self.color = color  # Color to represent the character (for placeholder purposes)
         self.scale = scale
-        self.offset = 0     # Offset for simple animation
+        self.offset_x = 0   # Horizontal offset for simple animation
+        self.offset_y = 0   # Vertical offset for simple animation
         # values currently shown in the HUD; updated as each battle event animates
         self.display_hp = character.hp
         self.display_mp = character.mp
 
     def draw(self, surface):
         """Draw the character as a placeholder rectangle with a border and a head."""
-        # Calculate the position with offset for simple animation
-        x = self.x + self.offset
+        # Calculate the position with offsets for simple animation
+        x = self.x + self.offset_x
+        y = self.y + self.offset_y
+        # size of the placeholder
         width = int(60 * self.scale)
         height = int(80 * self.scale)
         # Draw the character's body as a rectangle with a border and a head
-        body = pygame.Rect(x - width // 2, self.y - height // 2, width, height)
+        body = pygame.Rect(x - width // 2, y - height // 2, width, height)
         pygame.draw.rect(surface, self.color, body)  # Draw the character's body
         pygame.draw.rect(surface, COLOR_BORDER, body, 2)  # Draw the border of the character's body
         # Draw eyes
         eye_dx = int(10 * self.scale)
-        eye_y  = self.y - int(22 * self.scale)
+        eye_y  = y - int(22 * self.scale)
         radius = max(2, int(4 * self.scale))  # ensure radius is at least 2 px with max scale
         pygame.draw.circle(surface, COLOR_TEXT, (x - eye_dx, eye_y), radius)
         pygame.draw.circle(surface, COLOR_TEXT, (x + eye_dx, eye_y), radius)

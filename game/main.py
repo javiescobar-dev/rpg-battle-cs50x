@@ -3,7 +3,6 @@
 
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
-
 import pygame
 from game.battle import Battle, format_event
 from game.config import (
