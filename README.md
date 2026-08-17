@@ -62,9 +62,11 @@ the Phase 1 engine (unchanged battle logic).
   damage number; on the way back the attacker hops in an arc — a backward leap
   that keeps its eyes on the target — while its apparent scale shifts to sell the
   depth (the hero shrinks as it moves away from the camera, the enemy grows as it
-  comes closer). Spell attacks currently reuse the same movement (ranged spell
-  animations come next). Heal, potion, guard, flee and failure events show a short
-  floating message. Numbers are colored by type: yellow for damage, red and larger
+  comes closer). SpellAnimation is a ranged variant: a glowing projectile flies
+  from the caster to the target, then a flash and the damage number appear on
+  impact (the caster stays still, no lunge or recoil). Projectile color is
+  orange for hero spells and purple for enemy spells. Heal, potion, guard, flee
+  and failure events show a short floating message. Numbers are colored by type: yellow for damage, red and larger
   with a "!" for critical hits, green +N for heal/potion, light blue for guard and
   whitish for failures. The combat log streams live, one line per event, as each
   animation starts, and the game only returns to the battle menu or ends after the
