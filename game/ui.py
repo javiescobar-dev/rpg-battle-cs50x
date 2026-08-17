@@ -12,9 +12,9 @@ import math
 import pygame
 from collections import deque
 from game.config import (
-    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT,
-    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, FLASH_COLOR,
-    COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
+    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT,
+    LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
+    FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
 )
 
 class Animation:
@@ -38,9 +38,9 @@ class Animation:
 
 class AttackAnimation(Animation):
     """Implements the attacker's movement (lunge forward and recoil) and the hit flash."""
-    def __init__(self, attacker, defender, event, on_impact=None):
+    def __init__(self, attacker, defender, event, on_impact=None, duration=LUNGE_DURATION + FLASH_DURATION + RECOIL_DURATION + FLOAT_DURATION):
         # set base duration all animations will last this amount of time (seconds)
-        super().__init__(LUNGE_DURATION + FLASH_DURATION + RECOIL_DURATION + FLOAT_DURATION)
+        super().__init__(duration)
 
         self.attacker = attacker
         self.defender = defender
@@ -53,6 +53,7 @@ class AttackAnimation(Animation):
         # phase boundaries (attributes so SpellAnimation can override them)
         self.t_flash = LUNGE_DURATION + FLASH_DURATION  # duration of the lunge and flash phases
         self.t_float = self.t_flash + RECOIL_DURATION   # duration of the recoil phase
+        self.t_flash_start = LUNGE_DURATION             # duration of the lunge phase for the attacker movement and projectile motion
 
         # unit vector pointing from the attacker to the defender (diagonal movement)
         dx = defender.x - attacker.x
@@ -143,7 +144,8 @@ class AttackAnimation(Animation):
 
     def _draw_flash(self, surface):
         """Draw a fading flash circle over the defender."""
-        progress = (self.elapsed - LUNGE_DURATION) / FLASH_DURATION   # 0 -> 1
+        # calculate progress when the flash should start (when lunge ends)
+        progress = (self.elapsed - self.t_flash_start) / FLASH_DURATION   # 0 -> 1
         alpha = int(255 * (1 - progress))                             # fade out
         radius = FLASH_RADIUS
         # Create an overlay surface for the flash
@@ -169,7 +171,73 @@ class AttackAnimation(Animation):
 
 class SpellAnimation(AttackAnimation):
     """Spell attack. Identical to AttackAnimation in Phase 2."""
-    pass
+    def __init__(self, attacker, defender, event, projectile_color, on_impact=None):
+        # set base duration all animations will last this amount of time (seconds)
+        duration = FLY_DURATION + FLASH_DURATION + FLOAT_DURATION
+        super().__init__(attacker, defender, event, on_impact, duration)
+
+        # override phase boundaries
+        self.t_flash_start = FLY_DURATION          # flash starts when projectile lands
+        self.t_flash       = FLY_DURATION + FLASH_DURATION
+        self.t_float       = self.t_flash          # float starts when flash ends
+
+        # set the projectile color
+        self.projectile_color = projectile_color
+
+    def _phase(self):
+        """Returns the current phase."""
+        if self.elapsed < FLY_DURATION:
+            return "fly"
+        if self.elapsed < self.t_flash:
+            return "flash"
+        return "float"
+
+    def update(self, dt):
+        """Update the spell animation."""
+        # only increment elapsed time via Animation base class (only increment duration, not entire AttackAnimation logic)
+        Animation.update(self, dt)
+
+        phase = self._phase()
+
+        # trigger impact callback when the flash phase starts
+        if phase == "flash" and not self._impact_fired:
+            self._impact_fired = True
+            if self.on_impact:
+                self.on_impact()
+
+        # reset offsets when animation finishes
+        if self.is_done():
+            self.attacker.offset_x = 0
+            self.attacker.offset_y = 0
+            self.defender.offset_x = 0
+            self.defender.offset_y = 0
+            self.attacker.scale_factor = 1.0
+
+    def draw(self, surface):
+        """Draw the spell animation."""
+        phase = self._phase()
+        if phase == "fly":
+            self._draw_projectile(surface)
+        elif phase == "flash":
+            super()._draw_flash(surface)
+        elif phase == "float":
+            super()._draw_float(surface)
+
+    def _draw_projectile(self, surface):
+        """Draw the projectile moving from attacker to defender."""
+        # get the current animation progress (0 -> 1)
+        progress = self.elapsed / FLY_DURATION
+        # interpolate position from attacker to defender
+        x = self.attacker.x + (self.defender.x - self.attacker.x) * progress
+        y = self.attacker.y + (self.defender.y - self.attacker.y) * progress
+        radius = PROJ_RADIUS * 2
+        # create an overlay surface with per-pixel alpha
+        overlay = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        # draw a semi-transparent halo around the projectile
+        pygame.draw.circle(overlay, (*self.projectile_color, 80), (radius, radius), radius)  # halo effect around the projectile
+        pygame.draw.circle(overlay, (*self.projectile_color, 255), (radius, radius), PROJ_RADIUS // 2)   # projectile center
+        # blit the overlay to the surface at the projectile's position
+        surface.blit(overlay, (x - radius, y - radius))
 
 
 class TextAnimation(Animation):
@@ -275,13 +343,23 @@ class EventPlayer:
             # the defender's HP is revealed at the moment of impact
             defender = event["defender"]
             hp = event[f"{self._sides[defender]}_hp"]
-            # create an AttackAnimation for the event
-            return AttackAnimation(
-                self._sprite_of(event["attacker"]),
-                self._sprite_of(defender),
-                event,
-                on_impact=lambda: self._apply_display(defender, hp=hp)  # update the HUD when the animation impacts
-            )
+            # create an AttackAnimation for the attack event
+            if action == "attack":
+                return AttackAnimation(
+                    self._sprite_of(event["attacker"]),
+                    self._sprite_of(defender),
+                    event,
+                    on_impact=lambda: self._apply_display(defender, hp=hp)  # update the HUD when the animation impacts
+                )
+            # create an SpellAnimation for the spell event
+            else:
+                return SpellAnimation(
+                    self._sprite_of(event["attacker"]),
+                    self._sprite_of(defender),
+                    event,
+                    COLOR_FIREBALL if self._sides[event["attacker"]] == "hero" else COLOR_SHADOW_BOLT,
+                    on_impact=lambda: self._apply_display(defender, hp=hp)  # update the HUD when the animation impacts
+                )
 
         # get the actor from the event. "defeated" has no "actor"
         actor = self._sprite_of(event.get("actor") or event.get("defender"))

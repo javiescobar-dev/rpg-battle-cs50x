@@ -86,6 +86,10 @@ COLOR_ACCENT    = (240, 200, 80)    # highlight for the selected menu option
 COLOR_HERO      = (90, 140, 210)    # bluish knight
 COLOR_ENEMY     = (200, 90, 90)     # reddish
 
+# Colors for spells
+COLOR_FIREBALL    = (255, 100, 0)     # orange
+COLOR_SHADOW_BOLT = (128, 0, 128)     # purple
+
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
 FONT_TITLE_SIZE    = 48
@@ -102,6 +106,7 @@ ENEMY_X   = 400
 ENEMY_Y   = 180
 HERO_SCALE  = 1.1
 ENEMY_SCALE = 0.95     # smaller => further away
+PROJ_RADIUS = 10       # radius of the projectile (spell)
 
 # Hero status card (fixed top-right, enemy info hidden for tension)
 CARD_WIDTH  = 150
@@ -121,6 +126,7 @@ LUNGE_DURATION     = 0.35   # attacker travels to the target
 FLASH_DURATION     = 0.15   # impact flash on the defender
 RECOIL_DURATION    = 0.15   # defender knocked back
 FLOAT_DURATION     = 0.80   # damage number rising and fading
+FLY_DURATION       = 0.40   # projectile (spell) travel time
 
 # Distances
 LUNGE_GAP          = 30     # px the attacker stops before the target
