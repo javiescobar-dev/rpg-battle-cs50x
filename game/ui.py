@@ -372,6 +372,34 @@ class EventPlayer:
         """Return the sprite of a character."""
         return self.sprites[character]
 
+    def _apply_sprite_pose(self, event):
+        """Apply the sprite pose for the given event."""
+        action = event["action"]
+        if action == "attack":
+            self._sprite_of(event["attacker"]).set_animation("lunge")
+        elif action == "spell":
+            self._sprite_of(event["attacker"]).set_animation("use_magic")
+        elif action == "guard":
+            self._sprite_of(event["actor"]).set_animation("defend")
+        elif action == "heal":
+            self._sprite_of(event["actor"]).set_animation("use_magic")
+        elif action == "potion":
+            self._sprite_of(event["actor"]).set_animation("potion")
+        elif action == "flee_success":
+            self._sprite_of(event["actor"]).set_animation("flee")
+        elif action == "defeated":
+            self._sprite_of(event["defender"]).set_animation("defeated")
+        else:
+            # The animation is handled by the TextAnimation class, so we don't need to set a pose.
+            pass
+
+    def _reset_sprite_pose(self):
+        """Reset the sprite pose for all characters."""
+        # set all characters to idle if they are alive
+        for character in self.sprites:
+            if character.is_alive:
+                self._sprite_of(character).set_animation("idle")
+
     def _text_for(self, event):
         """Return text and color for a given event."""
         # get the action from the event
@@ -400,7 +428,11 @@ class EventPlayer:
         """Advance the current animation; pull the next event when it finishes."""
         # if there is no current animation and there is a queue, pop the next event
         if self.current is None and self.queue:
+            # get the next event
             event = self.queue.popleft()
+            # apply the sprite pose
+            self._apply_sprite_pose(event)
+            # create the animation
             self.current = self._make_animation(event)
             # sync the HUD display values to this event's snapshot
             self._apply_stat_changes(event)
@@ -412,6 +444,8 @@ class EventPlayer:
             self.current.update(dt)
             # if the current animation is done, set it to None
             if self.current.is_done():
+                # reset the sprite pose
+                self._reset_sprite_pose()
                 self.current = None
 
     def is_idle(self):
@@ -444,6 +478,7 @@ class CharacterSprite:
 
     def set_animation(self, name):
         """Set the current animation."""
+        self.animation_name = name
         self.current_animation = self.animations[name]
         self.frame_idx = 0
         self.frame_timer = 0
