@@ -78,6 +78,22 @@ the Phase 1 engine (unchanged battle logic).
   (including guard and heal), the defender's HP drops exactly at the moment of
   impact, and heals/potions raise HP as their animation plays.
 
+### Polished graphics (Phase 3 — in progress)
+
+Sprites and asset pipeline replacing the Phase 2 placeholders.
+
+- Pixel Champions II sprite sheets (864x576 px, 96x96 px frames) loaded via
+  `assets.py`: each character PNG is split into 18 animation poses of 3 frames
+  (idle, lunge, defend, use_magic, potion, hit, defeated, flee, victory, and
+  more). The loader returns a dictionary keyed by pose name.
+- `CharacterSprite` draws the current animation frame with
+  `pygame.transform.smoothscale`, applying a base scale (1.1 hero, 0.95 enemy)
+  and a dynamic `scale_factor` for depth during lunges, all centered on the
+  character's world position with offset support for movement animations.
+- Sprite loading is integrated into the battle startup: `start_battle()` loads
+  hero and enemy sprite sheets once and passes them to the sprite constructors;
+  the main loop advances sprite frame timers during the animation state.
+
 ## Repository structure
 
 - `game/` — the Pygame battle game.
