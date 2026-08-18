@@ -427,7 +427,7 @@ class EventPlayer:
 # Base class for sprite of characters
 class CharacterSprite:
     """Wraps a Character and draws it as a placeholder built with primitives."""
-    def __init__(self, character, x, y, color, scale=1.0):
+    def __init__(self, character, x, y, color, scale=1.0, animations=None):
         self.character = character
         self.x = x
         self.y = y
@@ -439,26 +439,42 @@ class CharacterSprite:
         # values currently shown in the HUD; updated as each battle event animates
         self.display_hp = character.hp
         self.display_mp = character.mp
+        self.animations = animations
+        self.set_animation("idle")
+
+    def set_animation(self, name):
+        """Set the current animation."""
+        self.current_animation = self.animations[name]
+        self.frame_idx = 0
+        self.frame_timer = 0
+        self.frame_speed = 0.1  # time to wait before switching to the next frame
+        self.frame_count = len(self.current_animation)
+
+    def update(self, dt):
+        """Advance the current animation; pull the next event when it finishes."""
+        self.frame_timer += dt
+        if self.frame_timer >= self.frame_speed:
+            self.frame_timer = 0
+            self.frame_idx = (self.frame_idx + 1) % self.frame_count
 
     def draw(self, surface):
         """Draw the character as a placeholder rectangle with a border and a head."""
-        # Calculate the position with offsets for simple animation
-        x = self.x + self.offset_x
-        y = self.y + self.offset_y
-        # size of the placeholder
+        # get the current frame from the animation
+        frame = self.current_animation[self.frame_idx]
+
+        # scale the frame to the desired size
         scale = self.scale * self.scale_factor
-        width = int(60 * scale)
-        height = int(80 * scale)
-        # Draw the character's body as a rectangle with a border and a head
-        body = pygame.Rect(x - width // 2, y - height // 2, width, height)
-        pygame.draw.rect(surface, self.color, body)  # Draw the character's body
-        pygame.draw.rect(surface, COLOR_BORDER, body, 2)  # Draw the border of the character's body
-        # Draw eyes
-        eye_dx = int(10 * scale)
-        eye_y  = y - int(22 * scale)
-        radius = max(2, int(4 * scale))  # ensure radius is at least 2 px with max scale
-        pygame.draw.circle(surface, COLOR_TEXT, (x - eye_dx, eye_y), radius)
-        pygame.draw.circle(surface, COLOR_TEXT, (x + eye_dx, eye_y), radius)
+        width = int(frame.get_width() * scale)
+        height = int(frame.get_height() * scale)
+
+        # flip if needed (basic left/right mirroring)
+        # TODO: fix
+
+        # smoothly scale the frame to the desired size
+        scaled = pygame.transform.smoothscale(frame, (width, height))
+
+        # Draw the character's sprite based on current animation and frame
+        surface.blit(scaled, (self.x - width // 2, self.y - height // 2))
 
 
 # class to display battle log

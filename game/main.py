@@ -13,6 +13,7 @@ from game.config import (
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
 from game.score import add_result, summary
+from game.assets import load_character_sprites
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
@@ -204,9 +205,12 @@ def main():
         nonlocal battle, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, menu_level, pending_events
         # create battle
         battle = Battle(make_hero(), make_enemy())
+        # load animations
+        hero_animations = load_character_sprites("game/assets/sprites/hero.png")
+        enemy_animations = load_character_sprites("game/assets/sprites/enemy.png")
         # create sprites for hero and enemy
-        hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, COLOR_HERO, HERO_SCALE)
-        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE)
+        hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, COLOR_HERO, HERO_SCALE, hero_animations)
+        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE, enemy_animations)
         # create battle log
         battle_log = LogPanel(LOG_RECT)
         # create event player
@@ -264,6 +268,10 @@ def main():
         # if not ANIM, return
         if state != ANIM:
             return
+
+        # update character animations
+        hero_sprite.update(dt)
+        enemy_sprite.update(dt)
 
         # add events to the event player only one time
         if pending_events:
