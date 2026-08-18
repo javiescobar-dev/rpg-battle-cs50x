@@ -93,6 +93,9 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Sprite loading is integrated into the battle startup: `start_battle()` loads
   hero and enemy sprite sheets once and passes them to the sprite constructors;
   the main loop advances sprite frame timers during the animation state.
+- Sprite poses change per action: attacking shows the lunge pose, casting shows
+  use_magic, defending shows defend, and so on, via `EventPlayer._apply_sprite_pose`.
+  Sprites reset to idle after each animation finishes, except defeated characters.
 
 ## Repository structure
 
