@@ -9,6 +9,9 @@ Phase 2 will add window/FPS/color constants for pygame.
 """
 
 ## Battle configuration
+HERO_NAME     = "Hero"
+ENEMY_NAME    = "Dark Wisp"
+
 # Stats base
 HERO_HP          = 100
 HERO_MP          = 30
