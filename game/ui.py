@@ -71,6 +71,10 @@ class AttackAnimation(Animation):
         self.scale_target = 1 + self.uy * LUNGE_SCALE_DEPTH  # grows when approaching the camera (uy > 0)
         self.recoil = RECOIL_DISTANCE * defender.scale
 
+        # flags to track the attacker's pose
+        self._pose_lunge_done = False    # already switched to "lunge" at impact
+        self._pose_recover_done = False  # already switched to "idle" at recovery
+
         # create font and pre-render the floating damage number with an outline
         self.font = pygame.font.SysFont(FONT_NAME, FONT_CRIT_SIZE if self.is_crit else FONT_FLOAT_SIZE)
         # get the text to display
@@ -95,11 +99,21 @@ class AttackAnimation(Animation):
         super().update(dt)
         phase = self._phase()
 
-        # fire the impact callback the first time the flash phase starts
-        if phase == "flash" and not self._impact_fired:
-            self._impact_fired = True
-            if self.on_impact:
-                self.on_impact()  # update the HUD
+        # set the attacker to idle the first time the lunge phase starts
+        if phase == "lunge" and not self._pose_lunge_done:
+            self.attacker.set_animation("idle")
+            self._pose_lunge_done = True
+
+        if phase == "flash":
+            # set the defender to hit the first time the flash phase starts
+            if not self._pose_recover_done:
+                self.defender.set_animation("hit")
+                self._pose_recover_done = True
+            # fire the impact callback the first time the flash phase starts
+            if not self._impact_fired:
+                self._impact_fired = True
+                if self.on_impact:
+                    self.on_impact()  # update the HUD
 
         # calculate the attacker's offset based on the current phase
         if phase == "lunge":
@@ -133,6 +147,9 @@ class AttackAnimation(Animation):
             self.defender.offset_x = 0
             self.defender.offset_y = 0
             self.attacker.scale_factor = 1.0  # return to base scale
+            # reset animations
+            self.attacker.set_animation("idle")
+            self.defender.set_animation("idle")
 
     def draw(self, surface):
         """Draw the animation (centered on attacker/defender)."""
@@ -184,6 +201,9 @@ class SpellAnimation(AttackAnimation):
         # set the projectile color
         self.projectile_color = projectile_color
 
+        # flag to indicate if the cast pose has been set
+        self._pose_cast_done = False
+
     def _phase(self):
         """Returns the current phase."""
         if self.elapsed < FLY_DURATION:
@@ -199,6 +219,11 @@ class SpellAnimation(AttackAnimation):
 
         phase = self._phase()
 
+        # set the defender to hit the first time the flash phase starts
+        if phase == "flash" and not self._pose_cast_done:
+            self.defender.set_animation("hit")
+            self._pose_cast_done = True
+
         # trigger impact callback when the flash phase starts
         if phase == "flash" and not self._impact_fired:
             self._impact_fired = True
@@ -212,6 +237,9 @@ class SpellAnimation(AttackAnimation):
             self.defender.offset_x = 0
             self.defender.offset_y = 0
             self.attacker.scale_factor = 1.0
+            # reset animations
+            self.attacker.set_animation("idle")
+            self.defender.set_animation("idle")
 
     def draw(self, surface):
         """Draw the spell animation."""
