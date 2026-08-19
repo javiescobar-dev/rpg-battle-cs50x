@@ -8,12 +8,12 @@ from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
     HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT,
-    LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED
+    LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUND
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
 from game.score import add_result, summary
-from game.assets import load_character_sprites
+from game.assets import load_character_sprites, load_background
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
@@ -166,7 +166,7 @@ def main():
     def handle_draw():
         """Handle drawing."""
         # use nonlocal to modify the state and other variables
-        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log
+        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background
         # fill the screen with the background color
         screen.fill(COLOR_BG)
 
@@ -174,7 +174,7 @@ def main():
         if state == MENU:
             draw_menu_screen(screen, font_title, main_menu)
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
-            draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player)
+            draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player, background=background)
         elif state == STATS:
             draw_stats_screen(screen, font_title, font_menu, summary())
         elif state == END:
@@ -195,6 +195,7 @@ def main():
     battle_menu = None
     menu_level = 0
     pending_events = []
+    background = None
 
     # Callback function used by the EventPlayer to add formatted events to the battle log
     def log_event(event):
@@ -202,7 +203,9 @@ def main():
 
     def start_battle():
         """Start a new battle."""
-        nonlocal battle, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, menu_level, pending_events
+        nonlocal battle, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, menu_level, pending_events, background
+        # load background
+        background = load_background(BATTLE_BACKGROUND)
         # create battle
         battle = Battle(make_hero(), make_enemy())
         # load animations
@@ -358,10 +361,15 @@ def draw_summary_and_hint(screen, menu_font, stats, y):
     draw_hint(screen, menu_font)
 
 
-def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=True, event_player=None):
+def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=True, event_player=None, background=None):
     """Draw battle screen"""
     if hero_sprite is None or enemy_sprite is None:
         return
+
+    if background is not None:
+        screen.blit(background, (0, 0))
+    else:
+        screen.fill(COLOR_BG)
 
     # draw hero and enemy sprites (the enemy first, so the hero appears on top)
     enemy_sprite.draw(screen)

@@ -153,3 +153,6 @@ FLOAT_SPEED        = 40
 
 # Float text stays fully opaque for the first 50% of its duration, then fades out
 FLOAT_FADE_START   = 0.5
+
+# Assets
+BATTLE_BACKGROUND = "game/assets/backgrounds/rpg_battle_background_forest.png"
