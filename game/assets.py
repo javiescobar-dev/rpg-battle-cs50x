@@ -46,6 +46,9 @@ def load_character_sprites(path):
                 frames.append(sheet.subsurface(rect).copy())
             animations[pose_name] = frames
 
+    # add extra animation "run" based on flee animation, but horizontally flipped
+    animations["run"] = [pygame.transform.flip(f, True, False) for f in animations["flee"]]
+
     # return the animations dict
     return animations
 

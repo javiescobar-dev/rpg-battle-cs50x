@@ -72,8 +72,9 @@ class AttackAnimation(Animation):
         self.recoil = RECOIL_DISTANCE * defender.scale
 
         # flags to track the attacker's pose
-        self._pose_lunge_done = False    # already switched to "lunge" at impact
-        self._pose_recover_done = False  # already switched to "idle" at recovery
+        self._pose_lunge_done = False    # already switched to "run" at impact
+        self._pose_recover_done = False  # already switched to "lunge" at recovery
+        self._pose_recoil_done = False   # already switched to "idle" at recoil
 
         # create font and pre-render the floating damage number with an outline
         self.font = pygame.font.SysFont(FONT_NAME, FONT_CRIT_SIZE if self.is_crit else FONT_FLOAT_SIZE)
@@ -99,21 +100,29 @@ class AttackAnimation(Animation):
         super().update(dt)
         phase = self._phase()
 
-        # set the attacker to idle the first time the lunge phase starts
+        # set the attacker to run the first time the lunge phase starts
         if phase == "lunge" and not self._pose_lunge_done:
-            self.attacker.set_animation("idle")
+            self.attacker.set_animation("run")
             self._pose_lunge_done = True
 
         if phase == "flash":
-            # set the defender to hit the first time the flash phase starts
+            # set the defender to hit the first time the flash phase starts and attacker to lunge
             if not self._pose_recover_done:
-                self.defender.set_animation("hit")
+                self.attacker.set_animation("lunge")
+                # if the defender has the "hit" animation, set it to hit
+                if "hit" in self.defender.animations:
+                    self.defender.set_animation("hit")
                 self._pose_recover_done = True
             # fire the impact callback the first time the flash phase starts
             if not self._impact_fired:
                 self._impact_fired = True
                 if self.on_impact:
                     self.on_impact()  # update the HUD
+
+        if phase == "recoil":
+            if not self._pose_recoil_done:
+                self.attacker.set_animation("idle")
+            self._pose_recoil_done = True
 
         # calculate the attacker's offset based on the current phase
         if phase == "lunge":
