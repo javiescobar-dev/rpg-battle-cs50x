@@ -7,7 +7,6 @@ Supports extracting all animation poses from character sprite sheets
 following the game's standard format.
 """
 
-import os
 import pygame
 from game.config import SCREEN_WIDTH, SCREEN_HEIGHT
 

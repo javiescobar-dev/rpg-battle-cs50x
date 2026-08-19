@@ -210,7 +210,7 @@ def main():
         enemy_animations = load_character_sprites("game/assets/sprites/enemy.png")
         # create sprites for hero and enemy
         hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, COLOR_HERO, HERO_SCALE, hero_animations)
-        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE, enemy_animations)
+        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE, enemy_animations, True)
         # create battle log
         battle_log = LogPanel(LOG_RECT)
         # create event player

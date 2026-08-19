@@ -489,7 +489,7 @@ class EventPlayer:
 # Base class for sprite of characters
 class CharacterSprite:
     """Wraps a Character and draws it as a placeholder built with primitives."""
-    def __init__(self, character, x, y, color, scale=1.0, animations=None):
+    def __init__(self, character, x, y, color, scale=1.0, animations=None, flip_x=False):
         self.character = character
         self.x = x
         self.y = y
@@ -503,6 +503,7 @@ class CharacterSprite:
         self.display_mp = character.mp
         self.animations = animations
         self.set_animation("idle")
+        self.flip_x = flip_x  # Flip the sprite on the x-axis
 
     def set_animation(self, name):
         """Set the current animation."""
@@ -525,19 +526,20 @@ class CharacterSprite:
         # get the current frame from the animation
         frame = self.current_animation[self.frame_idx]
 
+        # flip if needed (basic left/right mirroring)
+        if self.flip_x:
+            frame = pygame.transform.flip(frame, True, False)  # flip the sprite on the x-axis
+
         # scale the frame to the desired size
         scale = self.scale * self.scale_factor
         width = int(frame.get_width() * scale)
         height = int(frame.get_height() * scale)
 
-        # flip if needed (basic left/right mirroring)
-        # TODO: fix
-
         # smoothly scale the frame to the desired size
         scaled = pygame.transform.smoothscale(frame, (width, height))
 
         # Draw the character's sprite based on current animation and frame
-        surface.blit(scaled, (self.x - width // 2, self.y - height // 2))
+        surface.blit(scaled, (self.x + self.offset_x - width // 2, self.y + self.offset_y - height // 2))
 
 
 # class to display battle log
