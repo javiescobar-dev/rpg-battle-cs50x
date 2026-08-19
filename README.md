@@ -85,17 +85,22 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Pixel Champions II sprite sheets (864x576 px, 96x96 px frames) loaded via
   `assets.py`: each character PNG is split into 18 animation poses of 3 frames
   (idle, lunge, defend, use_magic, potion, hit, defeated, flee, victory, and
-  more). The loader returns a dictionary keyed by pose name.
+  more). A 19th pose, `run`, is derived from `flee` flipped horizontally.
 - `CharacterSprite` draws the current animation frame with
   `pygame.transform.smoothscale`, applying a base scale (1.1 hero, 0.95 enemy)
   and a dynamic `scale_factor` for depth during lunges, all centered on the
-  character's world position with offset support for movement animations.
+  character's world position with offset support for movement animations. A
+  `flip_x` flag mirrors the sprite so the enemy faces the hero.
+- `set_idle_pose()` checks the character's HP on every animation reset: below
+  20% the sprite shows the `caution` pose instead of `idle`.
+- Sprite poses are driven per phase inside `AttackAnimation` and
+  `SpellAnimation`: the attacker runs (`run`), strikes (`lunge`), then returns
+  to idle/caution; the defender briefly shows `hit` on impact. Each transition
+  fires once via dedicated flags (`_pose_lunge_done`, `_pose_recover_done`,
+  `_pose_recoil_done`).
 - Sprite loading is integrated into the battle startup: `start_battle()` loads
   hero and enemy sprite sheets once and passes them to the sprite constructors;
   the main loop advances sprite frame timers during the animation state.
-- Sprite poses change per action: attacking shows the lunge pose, casting shows
-  use_magic, defending shows defend, and so on, via `EventPlayer._apply_sprite_pose`.
-  Sprites reset to idle after each animation finishes, except defeated characters.
 
 ## Repository structure
 
