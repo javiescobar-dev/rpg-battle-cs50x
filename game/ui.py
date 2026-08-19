@@ -157,8 +157,8 @@ class AttackAnimation(Animation):
             self.defender.offset_y = 0
             self.attacker.scale_factor = 1.0  # return to base scale
             # reset animations
-            self.attacker.set_animation("idle")
-            self.defender.set_animation("idle")
+            self.attacker.set_idle_pose()
+            self.defender.set_idle_pose()
 
     def draw(self, surface):
         """Draw the animation (centered on attacker/defender)."""
@@ -247,8 +247,8 @@ class SpellAnimation(AttackAnimation):
             self.defender.offset_y = 0
             self.attacker.scale_factor = 1.0
             # reset animations
-            self.attacker.set_animation("idle")
-            self.defender.set_animation("idle")
+            self.attacker.set_idle_pose()
+            self.defender.set_idle_pose()
 
     def draw(self, surface):
         """Draw the spell animation."""
@@ -435,7 +435,7 @@ class EventPlayer:
         # set all characters to idle if they are alive
         for character in self.sprites:
             if character.is_alive:
-                self._sprite_of(character).set_animation("idle")
+                self._sprite_of(character).set_idle_pose()
 
     def _text_for(self, event):
         """Return text and color for a given event."""
@@ -522,6 +522,13 @@ class CharacterSprite:
         self.frame_timer = 0
         self.frame_speed = 0.1  # time to wait before switching to the next frame
         self.frame_count = len(self.current_animation)
+
+    def set_idle_pose(self):
+        """Set the current animation to idle or caution based on HP."""
+        if self.character.hp / self.character.max_hp > 0.2:
+            self.set_animation("idle")
+        else:
+            self.set_animation("caution")
 
     def update(self, dt):
         """Advance the current animation; pull the next event when it finishes."""
