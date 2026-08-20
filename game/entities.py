@@ -9,7 +9,7 @@ factory helpers (make_hero / make_enemy) used to build combatants.
 
 import random
 from game.config import (
-    SKILLS, POTION_AMOUNT, POTION_START, GUARD_MITIGATION, HERO_NAME, ENEMY_NAME,
+    SKILLS, POTION_AMOUNT, POTION_START, GUARD_MITIGATION, HERO_NAMES, ENEMY_NAMES,
     HERO_HP, HERO_MP, HERO_ATTACK, HERO_DEFENSE, HERO_SPEED, HERO_SPELL_NAME,
     ENEMY_HP, ENEMY_MP, ENEMY_ATTACK, ENEMY_DEFENSE, ENEMY_SPEED, ENEMY_SPELL_NAME,
     ENEMY_ATTACK_WEIGHT, ENEMY_SPELL_WEIGHT, ENEMY_GUARD_WEIGHT,
@@ -118,8 +118,10 @@ class Enemy(Character):
 
 
 # Factory helpers to create hero and enemy instances with predefined stats
-def make_hero():
-    return Hero(HERO_NAME, HERO_HP, HERO_MP, HERO_ATTACK, HERO_DEFENSE, HERO_SPEED, spell_name=HERO_SPELL_NAME)
+def make_hero(path):
+    name = HERO_NAMES.get(path)
+    return Hero(name, HERO_HP, HERO_MP, HERO_ATTACK, HERO_DEFENSE, HERO_SPEED, spell_name=HERO_SPELL_NAME)
 
-def make_enemy():
-    return Enemy(ENEMY_NAME, ENEMY_HP, ENEMY_MP, ENEMY_ATTACK, ENEMY_DEFENSE, ENEMY_SPEED, spell_name=ENEMY_SPELL_NAME)
+def make_enemy(path):
+    name = ENEMY_NAMES.get(path)
+    return Enemy(name, ENEMY_HP, ENEMY_MP, ENEMY_ATTACK, ENEMY_DEFENSE, ENEMY_SPEED, spell_name=ENEMY_SPELL_NAME)
