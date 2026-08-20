@@ -156,10 +156,10 @@ FLOAT_FADE_START   = 0.5
 
 # Assets
 BATTLE_BACKGROUNDS = [
-    "game/assets/backgrounds/rpg_battle_background_castle_02.png",
-    "game/assets/backgrounds/rpg_battle_background_cave_02.png",
-    "game/assets/backgrounds/rpg_battle_background_forest_02.png",
-    "game/assets/backgrounds/rpg_battle_background_port_02.png"
+    "game/assets/backgrounds/rpg_battle_background_castle.png",
+    "game/assets/backgrounds/rpg_battle_background_cave.png",
+    "game/assets/backgrounds/rpg_battle_background_forest.png",
+    "game/assets/backgrounds/rpg_battle_background_port.png"
 ]
 
 # Hero and enemy sprites and names
@@ -181,3 +181,20 @@ ENEMIES = [
     ("game/assets/sprites/enemy/enemy_04.png", "Turtle Dragon"),
     ("game/assets/sprites/enemy/enemy_05.png", "Satan")
 ]
+
+# Sound effects
+SFX_DIR = "game/assets/sfx"
+SFX = {
+    "attack":       f"{SFX_DIR}/attack.wav",
+    "spell":        f"{SFX_DIR}/spell.wav",
+    "guard":        f"{SFX_DIR}/guard.wav",
+    "heal":         f"{SFX_DIR}/heal.wav",
+    "potion":       f"{SFX_DIR}/potion.wav",
+    "mana_fail":    f"{SFX_DIR}/fail.wav",
+    "potion_fail":  f"{SFX_DIR}/fail.wav",
+    "flee_success": f"{SFX_DIR}/flee.wav",
+    "flee_fail":    f"{SFX_DIR}/flee.wav",
+    "defeated":     f"{SFX_DIR}/defeated.wav",
+    "victory":      f"{SFX_DIR}/victory.wav",
+    "defeat":       f"{SFX_DIR}/defeated.wav",
+}

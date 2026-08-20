@@ -58,14 +58,17 @@ def load_background(path):
     bg = pygame.image.load(path).convert()
     return pygame.transform.scale(bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
+# sound effects cache
+_sounds = {}
 
 def load_sound(path):
     """Load a sound effect."""
-    pass
-    # return pygame.mixer.Sound(path)
+    if path not in _sounds:
+        _sounds[path] = pygame.mixer.Sound(path)
+    return _sounds[path]
+
 
 
 def play_sound(path):
     """Play a sound effect."""
-    pass
-    # pygame.mixer.Sound(path).play()
+    load_sound(path).play()

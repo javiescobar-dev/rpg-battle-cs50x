@@ -14,8 +14,9 @@ from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
-    FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY
+    FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX
 )
+from game.assets import play_sound
 
 class Animation:
     """Base class for one-shot timed effects driven by dt (never sleep)."""
@@ -476,6 +477,10 @@ class EventPlayer:
             # if there is an on_event callback, call it with the event
             if self.on_event:
                 self.on_event(event)
+            # play the sound effect for the action
+            action = event["action"]
+            if action in SFX:
+                play_sound(SFX[action])
         # if there is a current animation, update it
         if self.current is not None:
             self.current.update(dt)
