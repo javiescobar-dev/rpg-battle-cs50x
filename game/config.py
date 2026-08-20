@@ -155,4 +155,9 @@ FLOAT_SPEED        = 40
 FLOAT_FADE_START   = 0.5
 
 # Assets
-BATTLE_BACKGROUND = "game/assets/backgrounds/rpg_battle_background_forest.png"
+BATTLE_BACKGROUNDS = [
+    "game/assets/backgrounds/rpg_battle_background_castle.png",
+    "game/assets/backgrounds/rpg_battle_background_cave.png",
+    "game/assets/backgrounds/rpg_battle_background_forest.png",
+    "game/assets/backgrounds/rpg_battle_background_port.png"
+]

@@ -3,12 +3,12 @@
 
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
-import pygame
+import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
     HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT,
-    LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUND
+    LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUNDS
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -204,8 +204,8 @@ def main():
     def start_battle():
         """Start a new battle."""
         nonlocal battle, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, menu_level, pending_events, background
-        # load background
-        background = load_background(BATTLE_BACKGROUND)
+        # load random background
+        background = load_background(random.choice(BATTLE_BACKGROUNDS))
         # create battle
         battle = Battle(make_hero(), make_enemy())
         # load animations
