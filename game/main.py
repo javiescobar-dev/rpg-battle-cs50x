@@ -9,7 +9,7 @@ from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
     HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT,
     LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUNDS,
-    HERO_SPRITES, ENEMY_SPRITES
+    HEROES, ENEMIES
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -208,12 +208,12 @@ def main():
         # load random background
         background = load_background(random.choice(BATTLE_BACKGROUNDS))
         # load animations
-        hero_choice = random.choice(HERO_SPRITES)
-        enemy_choice = random.choice(ENEMY_SPRITES)
-        hero_animations = load_character_sprites(hero_choice)
-        enemy_animations = load_character_sprites(enemy_choice)
+        hero_path, hero_name = random.choice(HEROES)
+        enemy_path, enemy_name = random.choice(ENEMIES)
+        hero_animations = load_character_sprites(hero_path)
+        enemy_animations = load_character_sprites(enemy_path)
         # create battle
-        battle = Battle(make_hero(hero_choice), make_enemy(enemy_choice))
+        battle = Battle(make_hero(hero_name), make_enemy(enemy_name))
         # create sprites for hero and enemy
         hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, COLOR_HERO, HERO_SCALE, hero_animations)
         enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE, enemy_animations, True)

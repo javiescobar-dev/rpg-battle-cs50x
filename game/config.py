@@ -162,41 +162,22 @@ BATTLE_BACKGROUNDS = [
     "game/assets/backgrounds/rpg_battle_background_port_02.png"
 ]
 
-HERO_SPRITES = [
-    "game/assets/sprites/hero/hero_01.png",
-    "game/assets/sprites/hero/hero_02.png",
-    "game/assets/sprites/hero/hero_03.png",
-    "game/assets/sprites/hero/hero_04.png",
-    "game/assets/sprites/hero/hero_05.png",
-    "game/assets/sprites/hero/hero_06.png",
-    "game/assets/sprites/hero/hero_07.png",
-    "game/assets/sprites/hero/hero_08.png"
+# Hero and enemy sprites and names
+HEROES = [
+    ("game/assets/sprites/hero/hero_01.png", "Bryan"),
+    ("game/assets/sprites/hero/hero_02.png", "Matt"),
+    ("game/assets/sprites/hero/hero_03.png", "Sarah"),
+    ("game/assets/sprites/hero/hero_04.png", "Lucy"),
+    ("game/assets/sprites/hero/hero_05.png", "Jane"),
+    ("game/assets/sprites/hero/hero_06.png", "Roberto"),
+    ("game/assets/sprites/hero/hero_07.png", "Jennifer"),
+    ("game/assets/sprites/hero/hero_08.png", "Felix")
 ]
 
-ENEMY_SPRITES = [
-    "game/assets/sprites/enemy/enemy_01.png",
-    "game/assets/sprites/enemy/enemy_02.png",
-    "game/assets/sprites/enemy/enemy_03.png",
-    "game/assets/sprites/enemy/enemy_04.png",
-    "game/assets/sprites/enemy/enemy_05.png"
+ENEMIES = [
+    ("game/assets/sprites/enemy/enemy_01.png", "Dark Wisp"),
+    ("game/assets/sprites/enemy/enemy_02.png", "Lord Malice"),
+    ("game/assets/sprites/enemy/enemy_03.png", "Dark Mage"),
+    ("game/assets/sprites/enemy/enemy_04.png", "Turtle Dragon"),
+    ("game/assets/sprites/enemy/enemy_05.png", "Satan")
 ]
-
-# Hero and enemy names
-HERO_NAMES = {
-    "game/assets/sprites/hero/hero_01.png": "Bryan",
-    "game/assets/sprites/hero/hero_02.png": "Matt",
-    "game/assets/sprites/hero/hero_03.png": "Sarah",
-    "game/assets/sprites/hero/hero_04.png": "Lucy",
-    "game/assets/sprites/hero/hero_05.png": "Jane",
-    "game/assets/sprites/hero/hero_06.png": "Roberto",
-    "game/assets/sprites/hero/hero_07.png": "Jennifer",
-    "game/assets/sprites/hero/hero_08.png": "Felix"
-}
-
-ENEMY_NAMES = {
-    "game/assets/sprites/enemy/enemy_01.png": "Dark Wisp",
-    "game/assets/sprites/enemy/enemy_02.png": "Lord Malice",
-    "game/assets/sprites/enemy/enemy_03.png": "Dark Mage",
-    "game/assets/sprites/enemy/enemy_04.png": "Turtle Dragon",
-    "game/assets/sprites/enemy/enemy_05.png": "Satan"
-}
