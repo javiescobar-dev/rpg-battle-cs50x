@@ -103,8 +103,10 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   the main loop advances sprite frame timers during the animation state.
 - Battle backgrounds: four AI-generated pixel art scenes (castle, forest, cave,
   port) in Suikoden II style, loaded via `load_background()` and drawn before
-  sprites. The active background is set via `BATTLE_BACKGROUND` in `config.py`,
-  with a solid color fallback if none is loaded.
+  sprites.
+- Random asset selection each battle: 8 heroes, 5 enemies, and 4 backgrounds
+  are defined as tuple lists `(path, name)` in `config.py`; `start_battle()`
+  picks one of each via `random.choice()`.
 
 ## Repository structure
 
