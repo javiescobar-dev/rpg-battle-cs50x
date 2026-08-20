@@ -101,6 +101,10 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Sprite loading is integrated into the battle startup: `start_battle()` loads
   hero and enemy sprite sheets once and passes them to the sprite constructors;
   the main loop advances sprite frame timers during the animation state.
+- Battle backgrounds: four AI-generated pixel art scenes (castle, forest, cave,
+  port) in Suikoden II style, loaded via `load_background()` and drawn before
+  sprites. The active background is set via `BATTLE_BACKGROUND` in `config.py`,
+  with a solid color fallback if none is loaded.
 
 ## Repository structure
 
