@@ -130,6 +130,7 @@ FLASH_DURATION     = 0.15   # impact flash on the defender
 RECOIL_DURATION    = 0.15   # defender knocked back
 FLOAT_DURATION     = 0.80   # damage number rising and fading
 FLY_DURATION       = 0.40   # projectile (spell) travel time
+CHOSE_DELAY        = 0.65   # delay between confirming and executing an action
 
 # Distances
 LUNGE_GAP          = 30     # px the attacker stops before the target

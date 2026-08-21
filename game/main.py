@@ -9,7 +9,7 @@ from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
     HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT,
     LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUNDS,
-    HEROES, ENEMIES, SFX
+    HEROES, ENEMIES, SFX, CHOSE_DELAY
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -199,6 +199,8 @@ def main():
     menu_level = 0
     pending_events = []
     background = None
+    pending_action = None
+    action_timer = 0
 
     # Callback function used by the EventPlayer to add formatted events to the battle log
     def log_event(event):
@@ -233,25 +235,34 @@ def main():
     def choose_action(index):
         """Select action in the battle menu."""
         # use nonlocal to modify menu_level
-        nonlocal menu_level
+        nonlocal menu_level, pending_action, action_timer
+        if pending_action is not None:
+            return  # Already choosing action
+
         if menu_level == MAIN_MENU:
             if index == 0:    # Attack
-                resolve_turn("attack")
+                pending_action = ("attack", None)
+                action_timer = CHOSE_DELAY
             elif index == 1:  # Skill
                 menu_level = SKILL_MENU
                 battle_menu.options = SKILL_OPTIONS
                 battle_menu.cursor = 0
             elif index == 2:  # Potion
-                resolve_turn("potion")
+                pending_action = ("potion", None)
+                action_timer = CHOSE_DELAY
             elif index == 3:  # Flee
-                resolve_turn("flee")
+                pending_action = ("flee", None)
+                action_timer = CHOSE_DELAY
         elif menu_level == SKILL_MENU:
             if index == 0:    # Fireball
-                resolve_turn("skill", "spell")
+                pending_action = ("skill", "spell")
+                action_timer = CHOSE_DELAY
             elif index == 1:  # Guard
-                resolve_turn("skill", "guard")
+                pending_action = ("skill", "guard")
+                action_timer = CHOSE_DELAY
             elif index == 2:  # Heal
-                resolve_turn("skill", "heal")
+                pending_action = ("skill", "heal")
+                action_timer = CHOSE_DELAY
             elif index == 3:  # Back
                 menu_level = MAIN_MENU
                 battle_menu.options = BATTLE_OPTIONS
@@ -274,7 +285,15 @@ def main():
 
     def update(dt):
         """Update game state."""
-        nonlocal state, menu_level, event_player
+        nonlocal state, menu_level, event_player, pending_action, action_timer
+
+        # handle the pending action
+        if pending_action is not None:
+            action_timer -= dt
+            if action_timer <= 0:
+                resolve_turn(*pending_action)
+                pending_action = None
+
         # if not ANIM, return
         if state != ANIM:
             return
