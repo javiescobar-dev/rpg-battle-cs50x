@@ -9,12 +9,12 @@ from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
     HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT,
     LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUNDS,
-    HEROES, ENEMIES
+    HEROES, ENEMIES, SFX
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
 from game.score import add_result, summary
-from game.assets import load_character_sprites, load_background
+from game.assets import load_character_sprites, load_background, play_sound
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
@@ -97,6 +97,8 @@ def main():
             state = STATS
         elif index == 2:        # Quit
             running = False
+        # play sound
+        play_sound(SFX["confirm"])
 
     # method to handle events
     def handle_events():
@@ -254,6 +256,8 @@ def main():
                 menu_level = MAIN_MENU
                 battle_menu.options = BATTLE_OPTIONS
                 battle_menu.cursor = 0
+        # play sound
+        play_sound(SFX["confirm"])
 
     def resolve_turn(action, skill = None):
         """Resolve the turn"""
@@ -293,6 +297,12 @@ def main():
         if event_player.is_idle():
             if battle.is_finished:
                 add_result(result=battle.result, turns=battle.turns, hero_hp_left=battle.hero.hp, hero_hp_max=battle.hero.max_hp, enemy_name=battle.enemy.name)
+                # play sounds
+                if battle.result == RESULT_VICTORY:
+                    play_sound(SFX["victory"])
+                elif battle.result == RESULT_DEFEAT:
+                    play_sound(SFX["defeat"])
+                # go to end screen
                 state = END
             # if not finished, return to battle
             else:

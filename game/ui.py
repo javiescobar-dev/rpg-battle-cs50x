@@ -105,6 +105,8 @@ class AttackAnimation(Animation):
         if phase == "lunge" and not self._pose_lunge_done:
             self.attacker.set_animation("run")
             self._pose_lunge_done = True
+            # play lunge sound effect
+            play_sound(SFX["lunge"])
 
         if phase == "flash":
             # set the defender to hit the first time the flash phase starts and attacker to lunge
@@ -255,8 +257,12 @@ class SpellAnimation(AttackAnimation):
         """Draw the spell animation."""
         phase = self._phase()
         if phase == "fly":
+            # play spell cast sound effect
+            play_sound(SFX["cast_spell"])
             self._draw_projectile(surface)
         elif phase == "flash":
+            # play spell hit sound effect
+            play_sound(SFX["spell"])
             super()._draw_flash(surface)
         elif phase == "float":
             super()._draw_float(surface)
@@ -642,6 +648,8 @@ class Menu:
         # store the current selection, module (%) is used to wrap around the ends
         # (if cursor > options, it goes to the end; if cursor < 0, it goes to the begining)
         self.cursor = (self.cursor + delta) % len(self.options)
+        # play cursor movement sound effect
+        play_sound(SFX["cursor"])
 
     def index_at(self, pos):
         """Convert a pixel position into an option index (0-based), or return None if outside the menu area.
@@ -681,6 +689,8 @@ class Menu:
             The index of the option clicked, or None if no option was clicked.
         """
 
+        # play cursor selection sound effect
+        play_sound(SFX["confirm"])
         # by now only return the index of the option, later can be used to implement click logic
         return self.index_at(pos)
 

@@ -186,7 +186,9 @@ ENEMIES = [
 SFX_DIR = "game/assets/sfx"
 SFX = {
     "attack":       f"{SFX_DIR}/attack.wav",
-    "spell":        f"{SFX_DIR}/spell.wav",
+    "lunge":        f"{SFX_DIR}/lunge.wav",
+    "cast_spell":   f"{SFX_DIR}/cast_spell.wav",
+    "spell":        f"{SFX_DIR}/spell_hit.wav",
     "guard":        f"{SFX_DIR}/guard.wav",
     "heal":         f"{SFX_DIR}/heal.wav",
     "potion":       f"{SFX_DIR}/potion.wav",
@@ -197,4 +199,6 @@ SFX = {
     "defeated":     f"{SFX_DIR}/defeated.wav",
     "victory":      f"{SFX_DIR}/victory.wav",
     "defeat":       f"{SFX_DIR}/defeated.wav",
+    "cursor":       f"{SFX_DIR}/cursor.wav",
+    "confirm":      f"{SFX_DIR}/confirm.wav",
 }
