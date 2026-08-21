@@ -216,6 +216,9 @@ class SpellAnimation(AttackAnimation):
         # flag to indicate if the cast pose has been set
         self._pose_cast_done = False
 
+        # flag to indicate if the cast sound effect has been played
+        self._cast_sound_played = False
+
     def _phase(self):
         """Returns the current phase."""
         if self.elapsed < FLY_DURATION:
@@ -230,6 +233,11 @@ class SpellAnimation(AttackAnimation):
         Animation.update(self, dt)
 
         phase = self._phase()
+
+        # play spell cast sound effect the first time the fly phase starts
+        if phase == "fly" and not self._cast_sound_played:
+            play_sound(SFX["cast_spell"])
+            self._cast_sound_played = True
 
         # set the defender to hit the first time the flash phase starts
         if phase == "flash" and not self._pose_cast_done:
@@ -257,12 +265,8 @@ class SpellAnimation(AttackAnimation):
         """Draw the spell animation."""
         phase = self._phase()
         if phase == "fly":
-            # play spell cast sound effect
-            play_sound(SFX["cast_spell"])
             self._draw_projectile(surface)
         elif phase == "flash":
-            # play spell hit sound effect
-            play_sound(SFX["spell"])
             super()._draw_flash(surface)
         elif phase == "float":
             super()._draw_float(surface)
