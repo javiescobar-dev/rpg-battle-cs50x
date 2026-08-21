@@ -128,8 +128,9 @@ def main():
                 # handle mouse motion events
                 elif event.type == pygame.MOUSEMOTION:
                     index = main_menu.index_at(event.pos)  # row under mouse
-                    if index is not None:                  # if mouse is over an option
+                    if index is not None and index != main_menu.cursor:  # if mouse is over an option
                         main_menu.cursor = index           # cursor follows mouse
+                        play_sound(SFX["cursor"])          # play cursor sound effect
                 # handle mouse click events
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     select(main_menu.handle_click(event.pos))
@@ -156,8 +157,9 @@ def main():
                         choose_action(3)
                 elif event.type == pygame.MOUSEMOTION:
                     index = battle_menu.index_at(event.pos)
-                    if index is not None:
+                    if index is not None and index != battle_menu.cursor:
                         battle_menu.cursor = index
+                        play_sound(SFX["cursor"])  # play cursor sound effect
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     choose_action(battle_menu.handle_click(event.pos))
             # handle states (ANIM is not handled, it is automatic)
