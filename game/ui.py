@@ -246,6 +246,7 @@ class SpellAnimation(AttackAnimation):
 
         # trigger impact callback when the flash phase starts
         if phase == "flash" and not self._impact_fired:
+            play_sound(SFX["spell_hit"])
             self._impact_fired = True
             if self.on_impact:
                 self.on_impact()
@@ -489,7 +490,7 @@ class EventPlayer:
                 self.on_event(event)
             # play the sound effect for the action
             action = event["action"]
-            if action in SFX:
+            if action in SFX and action != "spell":  # spell sound effect is handled in SpellAnimation class
                 play_sound(SFX[action])
         # if there is a current animation, update it
         if self.current is not None:

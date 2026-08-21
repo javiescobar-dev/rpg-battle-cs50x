@@ -189,7 +189,7 @@ SFX = {
     "attack":       f"{SFX_DIR}/attack.wav",
     "lunge":        f"{SFX_DIR}/lunge.wav",
     "cast_spell":   f"{SFX_DIR}/cast_spell.wav",
-    "spell":        f"{SFX_DIR}/spell_hit.wav",
+    "spell_hit":    f"{SFX_DIR}/spell_hit.wav",
     "guard":        f"{SFX_DIR}/guard.wav",
     "heal":         f"{SFX_DIR}/heal.wav",
     "potion":       f"{SFX_DIR}/potion.wav",
