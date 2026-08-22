@@ -9,7 +9,8 @@ from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
-    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_MENU, OVERLAY_BATTLE, OVERLAY_END, FONT_END_SIZE
+    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_MENU, OVERLAY_BATTLE, OVERLAY_END, FONT_END_SIZE,
+    FADE_DURATION
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -84,6 +85,9 @@ def main():
 
     # create font for end screen
     font_end = pygame.font.SysFont(FONT_NAME, FONT_END_SIZE)
+
+    # Fade effect
+    fade_alpha = 0
 
     # set initial state
     state = MENU
@@ -180,9 +184,7 @@ def main():
     def handle_draw():
         """Handle drawing."""
         # use nonlocal to modify the state and other variables
-        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background, menu_bg
-        # fill the screen with the background color
-        screen.fill(COLOR_BG)
+        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background, menu_bg, fade_alpha
 
         # draw based on state
         if state == MENU:
@@ -197,6 +199,13 @@ def main():
             screen.blit(end_bg, (0, 0))
             draw_dark_overlay(screen, OVERLAY_END)
             draw_end_screen(screen, font_end, font_menu, battle, summary())
+
+        # Draw fade effect
+        if fade_alpha > 0:
+            fade_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            fade_surface.fill((0, 0, 0))
+            fade_surface.set_alpha(int(fade_alpha))
+            screen.blit(fade_surface, (0, 0))
 
         # update the display
         pygame.display.flip()
@@ -300,7 +309,7 @@ def main():
 
     def update(dt):
         """Update game state."""
-        nonlocal state, menu_level, event_player, pending_action, action_timer
+        nonlocal state, menu_level, event_player, pending_action, action_timer, fade_alpha
 
         # handle the pending action
         if pending_action is not None:
@@ -308,6 +317,10 @@ def main():
             if action_timer <= 0:
                 resolve_turn(*pending_action)
                 pending_action = None
+
+        # handle fade effect
+        if fade_alpha > 0:
+            fade_alpha = max(0, fade_alpha - (255 / FADE_DURATION) * dt)
 
         # if not ANIM, return
         if state != ANIM:
@@ -337,6 +350,7 @@ def main():
                 elif battle.result == RESULT_DEFEAT:
                     play_sound(SFX["defeat"])
                 # go to end screen
+                fade_alpha = 255  # full alpha for fade out
                 state = END
             # if not finished, return to battle
             else:

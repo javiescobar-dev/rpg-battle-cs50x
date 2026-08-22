@@ -123,6 +123,9 @@ OVERLAY_MENU   = 120
 OVERLAY_BATTLE = 100
 OVERLAY_END    = 140
 
+# Fade screen effect duration
+FADE_DURATION = 0.5
+
 # Animation durations (seconds)
 LUNGE_DURATION     = 0.35   # attacker travels to the target
 FLASH_DURATION     = 0.15   # impact flash on the defender
