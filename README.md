@@ -107,6 +107,11 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Random asset selection each battle: 8 heroes, 5 enemies, and 4 backgrounds
   are defined as tuple lists `(path, name)` in `config.py`; `start_battle()`
   picks one of each via `random.choice()`.
+- Sound effects: 14 WAV files mapped by action in a `SFX` dict, loaded with
+  caching via `load_sound()`. Battle sounds trigger at event start or at
+  specific animation phases (lunge, cast, impact). Menu navigation plays
+  cursor blips on option change and a confirm sound on selection, with a
+  short delay before executing the chosen battle action.
 
 ## Repository structure
 
