@@ -112,6 +112,16 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   specific animation phases (lunge, cast, impact). Menu navigation plays
   cursor blips on option change and a confirm sound on selection, with a
   short delay before executing the chosen battle action.
+- Title and end screens display background images with a dark semi-transparent
+  overlay for text readability. A fade-through-black transition plays when
+  starting a battle or viewing results. The end screen title is rendered at
+  64 px with a color that matches the battle outcome (gold for victory, red
+  for defeat). Battle statistics are shown as a left-aligned table with
+  labels and accent-colored values inside a semi-transparent panel.
+- Menus and the combat log use semi-transparent dark backgrounds with a
+  black border. The hero status card shows a cropped portrait from the
+  character's idle sprite alongside name and HP/MP bars. Battle input is
+  locked during the action delay to prevent duplicate confirmations.
 
 ## Repository structure
 
