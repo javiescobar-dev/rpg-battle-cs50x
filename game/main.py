@@ -496,10 +496,13 @@ def draw_stats_screen(screen, title_font, menu_font, stats):
     screen.fill(COLOR_BG)
 
     # draw semi-transparent background panel
-    panel = pygame.Surface((400, 300))
+    panel_w, panel_h = 500, 360
+    panel_x = (SCREEN_WIDTH - panel_w) // 2
+    panel_y = 60
+    panel = pygame.Surface((panel_w, panel_h))
     panel.fill((0, 0, 0))
     panel.set_alpha(80)
-    screen.blit(panel, ((SCREEN_WIDTH - 400) // 2, 60))
+    screen.blit(panel, (panel_x, panel_y))
 
     # render the title
     title = title_font.render("Statistics", True, COLOR_TEXT)
@@ -507,10 +510,31 @@ def draw_stats_screen(screen, title_font, menu_font, stats):
 
     # draw horizontal line
     line_y = 160
-    pygame.draw.line(screen, COLOR_BORDER, (280, line_y), (680, line_y), 1)
+    pygame.draw.line(screen, COLOR_BORDER, (panel_x + 30, line_y), (panel_x + panel_w - 30, line_y), 1)
 
+    # draw stats as a left-aligned table
+    y = 200
+    x_label = panel_x + 50
+    x_value = panel_x + 340
+    lines = [
+        ("Total Battles", str(stats['total_battles'])),
+        ("Victories", str(stats['victories'])),
+        ("Defeats", str(stats['defeats'])),
+        ("Flees", str(stats['flees'])),
+    ]
+    if stats['most_common_enemy']:
+        lines.append(("Most Common Enemy", stats['most_common_enemy']))
+
+    for label, value in lines:
+        label_surf = menu_font.render(label, True, COLOR_TEXT)
+        value_surf = menu_font.render(value, True, COLOR_ACCENT)
+        screen.blit(label_surf, (x_label, y))
+        screen.blit(value_surf, (x_value, y))
+        y += menu_font.get_linesize()
+
+    draw_hint(screen, menu_font)
     # draw summary and hint
-    draw_summary_and_hint(screen, menu_font, stats, 250)
+    # draw_summary_and_hint(screen, menu_font, stats, 250)
 
 
 if __name__ == "__main__":
