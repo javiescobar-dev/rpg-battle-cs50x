@@ -695,8 +695,6 @@ class Menu:
             The index of the option clicked, or None if no option was clicked.
         """
 
-        # play cursor selection sound effect
-        play_sound(SFX["confirm"])
         # by now only return the index of the option, later can be used to implement click logic
         return self.index_at(pos)
 
