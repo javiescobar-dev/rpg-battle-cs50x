@@ -110,8 +110,8 @@ ENEMY_SCALE     = 0.95     # smaller => further away
 PROJ_RADIUS     = 10       # radius of the projectile (spell)
 
 # Hero status card (fixed top-right, enemy info hidden for tension)
-CARD_WIDTH  = 150
-CARD_HEIGHT = 54
+CARD_WIDTH  = 240
+CARD_HEIGHT = 64
 HERO_CARD_RECT = (SCREEN_WIDTH - CARD_WIDTH - 20, 20, CARD_WIDTH, CARD_HEIGHT)
 
 # Bar dimensions

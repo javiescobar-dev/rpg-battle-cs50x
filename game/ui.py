@@ -753,15 +753,31 @@ def draw_hud(surface, sprite, font, rect):
     char = sprite.character
     card = pygame.Rect(rect)                       # position comes from the caller
     # frame: background + border, same style as the other panels
-    pygame.draw.rect(surface, COLOR_BAR_BG, card)
-    pygame.draw.rect(surface, COLOR_BORDER, card, 2)
-    # name centered at the top of the card
+    bg = pygame.Surface((card.width, card.height), pygame.SRCALPHA)
+    bg.fill((*PANEL_BORDER, PANEL_ALPHA))
+    surface.blit(bg, card.topleft)
+    pygame.draw.rect(surface, PANEL_BORDER, card, 2)
+
+    # Hero portrait from idle frame 0
+    idle_frame = sprite.animations["idle"][0]  # frame 96x96
+    head_crop = pygame.Rect(16, 8, 64, 56)     # head crop
+    head = idle_frame.subsurface(head_crop).copy()
+    head = pygame.transform.smoothscale(head, (48, 48))
+    # head drawn at the left, centered vertically
+    head_x = card.left + 8
+    head_y = card.centery - 24
+    surface.blit(head, (head_x, head_y))
+
+    # name aligned at right of head
+    text_x = card.left + 64  # 8 (margin) + 48 (head) + 8 (gap)
     name = font.render(char.name, True, COLOR_TEXT)
-    surface.blit(name, (card.centerx - name.get_width() // 2, card.top + 4))
-    # HP and MP bars inside the card
-    bar_width = card.width - 12
-    draw_bar(surface, card.left + 6, card.top + 24, bar_width, BAR_HEIGHT, sprite.display_hp, char.max_hp, COLOR_HP_BAR)
-    draw_bar(surface, card.left + 6, card.top + 38, bar_width, BAR_HEIGHT, sprite.display_mp, char.max_mp, COLOR_MP_BAR)
+    surface.blit(name, (text_x, card.top + 6))
+
+    # HP and MP bars below name
+    bar_x = text_x
+    bar_width = card.right - bar_x - 6  # remaining space minus margin
+    draw_bar(surface, bar_x, card.top + 26, bar_width, BAR_HEIGHT, sprite.display_hp, char.max_hp, COLOR_HP_BAR)
+    draw_bar(surface, bar_x, card.top + 42, bar_width, BAR_HEIGHT, sprite.display_mp, char.max_mp, COLOR_MP_BAR)
 
 
 def draw_enemy_name(surface, sprite, font):
