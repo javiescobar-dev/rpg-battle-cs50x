@@ -3,7 +3,6 @@
 
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
-from game.config import COLOR_ACCENT
 import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
@@ -70,10 +69,16 @@ def main():
     clock = pygame.time.Clock()
 
     # Menu Background
-    menu_bg = load_background(TITLE_BG_PATH)
+    try:
+        menu_bg = load_background(TITLE_BG_PATH)
+    except pygame.error:
+        menu_bg = None
 
     # End Screen Background
-    end_bg  = load_background(END_BG_PATH)
+    try:
+        end_bg  = load_background(END_BG_PATH)
+    except pygame.error:
+        end_bg = None
 
     # create fonts for main menu
     font_title = pygame.font.SysFont(FONT_NAME, FONT_TITLE_SIZE)
@@ -188,7 +193,10 @@ def main():
 
         # draw based on state
         if state == MENU:
-            screen.blit(menu_bg, (0, 0))
+            if menu_bg is None:
+                screen.fill(COLOR_BG)
+            else:
+                screen.blit(menu_bg, (0, 0))
             draw_dark_overlay(screen, OVERLAY_MENU)
             draw_menu_screen(screen, font_title, main_menu)
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
@@ -196,7 +204,10 @@ def main():
         elif state == STATS:
             draw_stats_screen(screen, font_title, font_menu, summary())
         elif state == END:
-            screen.blit(end_bg, (0, 0))
+            if end_bg is None:
+                screen.fill(COLOR_BG)
+            else:
+                screen.blit(end_bg, (0, 0))
             draw_dark_overlay(screen, OVERLAY_END)
             draw_end_screen(screen, font_end, font_menu, battle, summary())
 
