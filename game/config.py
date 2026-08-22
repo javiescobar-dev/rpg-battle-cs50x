@@ -96,6 +96,10 @@ FONT_FLOAT_SIZE    = 26   # damage numbers
 FONT_CRIT_SIZE     = 36   # critical hit numbers (bigger)
 FONT_END_SIZE      = 64   # end screen text
 
+# Panel styling
+PANEL_ALPHA   = 140   # alpha for semi-transparent panels
+PANEL_BORDER  = (0, 0, 0)  # black border for panels
+
 # Layout (positions in pixels)
 HERO_X          = 590
 HERO_Y          = 360

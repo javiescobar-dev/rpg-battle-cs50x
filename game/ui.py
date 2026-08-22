@@ -12,7 +12,7 @@ import math
 import pygame
 from collections import deque
 from game.config import (
-    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT,
+    COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT, PANEL_BORDER, PANEL_ALPHA,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX
 )
@@ -609,9 +609,11 @@ class LogPanel:
     # method to draw the box of the log and show messages of the battle
     def draw(self, surface, font):
         # draw the box of the log
-        pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)
+        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        bg.fill((*PANEL_BORDER, PANEL_ALPHA))
+        surface.blit(bg, self.rect.topleft)
         # draw the border of the log
-        pygame.draw.rect(surface, COLOR_BORDER, self.rect, 2)
+        pygame.draw.rect(surface, PANEL_BORDER, self.rect, 2)
         # calculate max width for the lines
         max_width = self.rect.width - 10
         # create a list of wrapped lines from the messages in the queue (top to bottom)
@@ -706,9 +708,12 @@ class Menu:
         """
 
         # Draw the background of the menu panel
-        pygame.draw.rect(surface, COLOR_BAR_BG, self.rect)
+        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        bg.fill((*PANEL_BORDER, PANEL_ALPHA))
+        surface.blit(bg, self.rect.topleft)
+
         # Draw the border of the menu panel
-        pygame.draw.rect(surface, COLOR_BORDER, self.rect, 2)
+        pygame.draw.rect(surface, PANEL_BORDER, self.rect, 2)
 
         # get the height of each row (option)
         row_height = self.font.get_height() + 8
@@ -720,7 +725,9 @@ class Menu:
 
             # highlight row if cursor is on it (is the current option selected by keyboard or mouse)
             if i == self.cursor:
-                pygame.draw.rect(surface, COLOR_ACCENT, row_rect)
+                hl = pygame.Surface((row_rect.width, row_rect.height), pygame.SRCALPHA)
+                hl.fill((*COLOR_ACCENT, 200))
+                surface.blit(hl, row_rect.topleft)
             # render option text
             text = self.font.render(option, True, COLOR_TEXT)
             # blit (draw) the option text centered in its row (half of the row height and half of the text height)
@@ -763,16 +770,17 @@ def draw_enemy_name(surface, sprite, font):
     char = sprite.character
     # get name with render style
     name = font.render(char.name, True, COLOR_TEXT)
+    # some space between the text and the border
+    padding = 4
     # build the plate from the sprite's animated position, keeping it above its head
-    rect = pygame.Rect(0, 0, 120, 24)
-    # positions from the caller (enemy)
-    rect.centerx = int(sprite.x + sprite.offset_x)
-    rect.centery = int(sprite.y + sprite.offset_y - 40 * (sprite.scale * sprite.scale_factor) - 36)
-    # plate background + frame
-    pygame.draw.rect(surface, COLOR_BAR_BG, rect)
-    pygame.draw.rect(surface, COLOR_BORDER, rect, 2)
+    bg_rect = pygame.Rect(0, 0, name.get_width() + padding * 2, name.get_height() + padding * 2)
+    bg_rect.centerx = int(sprite.x + sprite.offset_x)
+    bg_rect.centery = int(sprite.y + sprite.offset_y - 40 * (sprite.scale * sprite.scale_factor) - 36)
+    bg = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+    bg.fill((*PANEL_BORDER, PANEL_ALPHA))
+    surface.blit(bg, bg_rect.topleft)
     # Draw the enemy's name centered in its rectangle, blit needs a tuple (x, y), not two separate numbers
-    surface.blit(name, (rect.centerx - name.get_width() // 2, rect.centery - name.get_height() // 2))
+    surface.blit(name, (bg_rect.centerx - name.get_width() // 2, bg_rect.centery - name.get_height() // 2))
 
 
 def render_outlined_text(font, text, color):
