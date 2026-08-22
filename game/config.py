@@ -9,9 +9,6 @@ Phase 2 will add window/FPS/color constants for pygame.
 """
 
 ## Battle configuration
-HERO_NAME     = "Hero"
-ENEMY_NAME    = "Dark Wisp"
-
 # Stats base
 HERO_HP          = 100
 HERO_MP          = 30
@@ -85,10 +82,6 @@ COLOR_BAR_BG    = (50, 50, 60)      # empty part of a bar
 COLOR_BORDER    = (230, 230, 230)   # bar and panel borders
 COLOR_ACCENT    = (240, 200, 80)    # highlight for the selected menu option
 
-# Colors for the placeholder characters
-COLOR_HERO      = (90, 140, 210)    # bluish knight
-COLOR_ENEMY     = (200, 90, 90)     # reddish
-
 # Colors for spells
 COLOR_FIREBALL    = (255, 100, 0)     # orange
 COLOR_SHADOW_BOLT = (128, 0, 128)     # purple
@@ -101,15 +94,16 @@ FONT_LOG_SIZE      = 20
 FONT_HUD_SIZE      = 18
 FONT_FLOAT_SIZE    = 26   # damage numbers
 FONT_CRIT_SIZE     = 36   # critical hit numbers (bigger)
+FONT_END_SIZE      = 64   # end screen text
 
 # Layout (positions in pixels)
-HERO_X    = 590
-HERO_Y    = 360
-ENEMY_X   = 400
-ENEMY_Y   = 180
-HERO_SCALE  = 1.1
-ENEMY_SCALE = 0.95     # smaller => further away
-PROJ_RADIUS = 10       # radius of the projectile (spell)
+HERO_X          = 590
+HERO_Y          = 360
+ENEMY_X         = 400
+ENEMY_Y         = 180
+HERO_SCALE      = 1.1
+ENEMY_SCALE     = 0.95     # smaller => further away
+PROJ_RADIUS     = 10       # radius of the projectile (spell)
 
 # Hero status card (fixed top-right, enemy info hidden for tension)
 CARD_WIDTH  = 150
@@ -123,6 +117,11 @@ BAR_HEIGHT = 12   # height of the HP/MP bars
 # Battle menu and log
 MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
 LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
+
+# Dark overlay alphas for different screens (0–255)
+OVERLAY_MENU   = 120
+OVERLAY_BATTLE = 100
+OVERLAY_END    = 140
 
 # Animation durations (seconds)
 LUNGE_DURATION     = 0.35   # attacker travels to the target
@@ -156,6 +155,11 @@ FLOAT_SPEED        = 40
 FLOAT_FADE_START   = 0.5
 
 # Assets
+# Title and end screen backgrounds
+TITLE_BG_PATH = "game/assets/backgrounds/rpg_battle_background_title.png"
+END_BG_PATH   = "game/assets/backgrounds/rpg_battle_background_end.png"
+
+# Battle backgrounds
 BATTLE_BACKGROUNDS = [
     "game/assets/backgrounds/rpg_battle_background_castle.png",
     "game/assets/backgrounds/rpg_battle_background_cave.png",

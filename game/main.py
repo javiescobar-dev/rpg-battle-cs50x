@@ -3,18 +3,18 @@
 
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
+from game.config import COLOR_ACCENT
 import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE,
-    HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, COLOR_HERO, COLOR_ENEMY, HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT,
-    LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, RESULT_FLED, BATTLE_BACKGROUNDS,
-    HEROES, ENEMIES, SFX, CHOSE_DELAY
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
+    HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
+    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_MENU, OVERLAY_BATTLE, OVERLAY_END, FONT_END_SIZE
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
 from game.score import add_result, summary
-from game.assets import load_character_sprites, load_background, play_sound
+from game.assets import load_character_sprites, load_background, play_sound, draw_dark_overlay
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
@@ -68,6 +68,12 @@ def main():
     # create a clock to manage the frame rate (limit game to 60 FPS and return the time since the last frame in seconds)
     clock = pygame.time.Clock()
 
+    # Menu Background
+    menu_bg = load_background(TITLE_BG_PATH)
+
+    # End Screen Background
+    end_bg  = load_background(END_BG_PATH)
+
     # create fonts for main menu
     font_title = pygame.font.SysFont(FONT_NAME, FONT_TITLE_SIZE)
     font_menu = pygame.font.SysFont(FONT_NAME, FONT_MENU_SIZE)
@@ -75,6 +81,9 @@ def main():
     # create fonts for HUD and log
     font_hud = pygame.font.SysFont(FONT_NAME, FONT_HUD_SIZE)
     font_log = pygame.font.SysFont(FONT_NAME, FONT_LOG_SIZE)
+
+    # create font for end screen
+    font_end = pygame.font.SysFont(FONT_NAME, FONT_END_SIZE)
 
     # set initial state
     state = MENU
@@ -171,19 +180,23 @@ def main():
     def handle_draw():
         """Handle drawing."""
         # use nonlocal to modify the state and other variables
-        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background
+        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background, menu_bg
         # fill the screen with the background color
         screen.fill(COLOR_BG)
 
         # draw based on state
         if state == MENU:
+            screen.blit(menu_bg, (0, 0))
+            draw_dark_overlay(screen, OVERLAY_MENU)
             draw_menu_screen(screen, font_title, main_menu)
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
             draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player, background=background)
         elif state == STATS:
             draw_stats_screen(screen, font_title, font_menu, summary())
         elif state == END:
-            draw_end_screen(screen, font_title, font_menu, battle, summary())
+            screen.blit(end_bg, (0, 0))
+            draw_dark_overlay(screen, OVERLAY_END)
+            draw_end_screen(screen, font_end, font_menu, battle, summary())
 
         # update the display
         pygame.display.flip()
@@ -221,8 +234,8 @@ def main():
         # create battle
         battle = Battle(make_hero(hero_name), make_enemy(enemy_name))
         # create sprites for hero and enemy
-        hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, COLOR_HERO, HERO_SCALE, hero_animations)
-        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, COLOR_ENEMY, ENEMY_SCALE, enemy_animations, True)
+        hero_sprite = CharacterSprite(battle.hero, HERO_X, HERO_Y, HERO_SCALE, hero_animations)
+        enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, ENEMY_SCALE, enemy_animations, True)
         # create battle log
         battle_log = LogPanel(LOG_RECT)
         # create event player
@@ -402,6 +415,7 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
 
     if background is not None:
         screen.blit(background, (0, 0))
+        draw_dark_overlay(screen, OVERLAY_BATTLE)
     else:
         screen.fill(COLOR_BG)
 
@@ -425,7 +439,7 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
         battle_menu.draw(screen)
 
 
-def draw_end_screen(screen, title_font, menu_font, battle, stats):
+def draw_end_screen(screen, font_end, menu_font, battle, stats):
     """Draw the battle result, a flavor line and the global summary."""
     # get the result of the battle
     result_text = {
@@ -433,9 +447,14 @@ def draw_end_screen(screen, title_font, menu_font, battle, stats):
         RESULT_DEFEAT: "Defeat",
         RESULT_FLED: "Fled from battle",
     }[battle.result]
-
+    # choose title color by result
+    title_color = {
+        RESULT_VICTORY: COLOR_ACCENT,
+        RESULT_DEFEAT: (255, 80, 80),
+        RESULT_FLED: COLOR_TEXT,
+    }[battle.result]
     # render the result
-    title = title_font.render(result_text, True, COLOR_TEXT)
+    title = font_end.render(result_text, True, title_color)
     screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
     # render the flavor line
     flavor = f"{battle.hero.name} vs {battle.enemy.name} - {battle.turns} turns"

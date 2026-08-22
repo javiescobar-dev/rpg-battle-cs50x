@@ -514,11 +514,10 @@ class EventPlayer:
 # Base class for sprite of characters
 class CharacterSprite:
     """Wraps a Character and draws it as a placeholder built with primitives."""
-    def __init__(self, character, x, y, color, scale=1.0, animations=None, flip_x=False):
+    def __init__(self, character, x, y, scale=1.0, animations=None, flip_x=False):
         self.character = character
         self.x = x
         self.y = y
-        self.color = color  # Color to represent the character (for placeholder purposes)
         self.scale = scale
         self.offset_x = 0   # Horizontal offset for simple animation
         self.offset_y = 0   # Vertical offset for simple animation

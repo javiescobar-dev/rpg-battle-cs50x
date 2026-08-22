@@ -68,7 +68,16 @@ def load_sound(path):
     return _sounds[path]
 
 
-
 def play_sound(path):
     """Play a sound effect."""
     load_sound(path).play()
+
+
+def draw_dark_overlay(screen, alpha):
+    """Draw a semi-transparent dark overlay over the screen."""
+    # create a transparent surface
+    overlay = pygame.Surface((screen.get_width(), screen.get_height()))
+    overlay.fill((0, 0, 0))
+    overlay.set_alpha(alpha)
+    # blit it over the screen
+    screen.blit(overlay, (0, 0))
