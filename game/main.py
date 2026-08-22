@@ -107,12 +107,14 @@ def main():
     def select(index):
         """Run the chosen main-menu option."""
         # use nonlocal to modify the state and running variables
-        nonlocal state, running
+        nonlocal state, running, fade_alpha
         if index == 0:          # Play
             start_battle()
+            fade_alpha = 255    # fade to black
             state = BATTLE
         elif index == 1:        # Statistics
             state = STATS
+            fade_alpha = 255    # fade to black
         elif index == 2:        # Quit
             running = False
         # play sound
@@ -491,6 +493,8 @@ def draw_end_screen(screen, font_end, menu_font, battle, stats):
 
 def draw_stats_screen(screen, title_font, menu_font, stats):
     """Draw the global statistics screen."""
+    screen.fill(COLOR_BG)
+
     # draw semi-transparent background panel
     panel = pygame.Surface((400, 300))
     panel.fill((0, 0, 0))
