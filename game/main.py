@@ -3,6 +3,7 @@
 
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
+from pygame import constants
 import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
@@ -393,32 +394,6 @@ def main():
 
 
 # --- Draw Helpers ---
-def format_summary_lines(stats):
-    """Turn the summary dict into a list of text lines."""
-    # create list of lines from the summary dictionary
-    lines = [
-        f"Total Battles: {stats['total_battles']}",
-        f"Victories: {stats['victories']}",
-        f"Defeats: {stats['defeats']}",
-        f"Flees: {stats['flees']}",
-    ]
-    # add the most common enemy if it exists
-    if stats['most_common_enemy']:
-        lines.append(f"Most Common Enemy: {stats['most_common_enemy']}")
-    # return the list of lines
-    return lines
-
-
-def draw_lines_centered(screen, font, lines, y):
-    """Draw lines centered on screen"""
-    for line in lines:
-        text = font.render(line, True, COLOR_TEXT)
-        text_rect = text.get_rect()
-        text_rect.center = (SCREEN_WIDTH // 2, y)
-        screen.blit(text, text_rect)
-        y += font.get_linesize()
-
-
 def draw_hint(screen, font):
     """Draw hint"""
     text = font.render("Press any key or click to continue...", True, COLOR_TEXT)
@@ -427,11 +402,31 @@ def draw_hint(screen, font):
     screen.blit(text, text_rect)
 
 
-def draw_summary_and_hint(screen, menu_font, stats, y):
-    """Draw summary and hint"""
-    # draw the summary
-    draw_lines_centered(screen, menu_font, format_summary_lines(stats), y)
-    # draw the hint
+def draw_summary_and_hint(screen, menu_font, stats, y, x_label=None, x_value=None):
+    """Draw summary stats and hint. Table style if x_label/x_value given, centered otherwise."""
+    lines = [
+        ("Total Battles", str(stats['total_battles'])),
+        ("Victories", str(stats['victories'])),
+        ("Defeats", str(stats['defeats'])),
+        ("Flees", str(stats['flees'])),
+    ]
+    if stats['most_common_enemy']:
+        lines.append(("Most Common Enemy", stats['most_common_enemy']))
+
+    for label, value in lines:
+        if x_label is not None:
+            # table style: label left, value right
+            label_surf = menu_font.render(label, True, COLOR_TEXT)
+            value_surf = menu_font.render(value, True, COLOR_ACCENT)
+            screen.blit(label_surf, (x_label, y))
+            screen.blit(value_surf, (x_value, y))
+        else:
+            # centered style (backward compatible)
+            text = menu_font.render(f"{label}: {value}", True, COLOR_TEXT)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+            screen.blit(text, text_rect)
+        y += menu_font.get_linesize()
+
     draw_hint(screen, menu_font)
 
 
@@ -487,9 +482,16 @@ def draw_end_screen(screen, font_end, menu_font, battle, stats):
     flavor = f"{battle.hero.name} vs {battle.enemy.name} - {battle.turns} turns"
     text = menu_font.render(flavor, True, COLOR_TEXT)
     screen.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 170))
+    # semi-transparent panel
+    panel_w, panel_h = 500, 280
+    panel_x = (SCREEN_WIDTH - panel_w) // 2
+    panel_y = 220
+    panel = pygame.Surface((panel_w, panel_h))
+    panel.fill((0, 0, 0))
+    panel.set_alpha(80)
+    screen.blit(panel, (panel_x, panel_y))
     # draw summary and hint
-    draw_summary_and_hint(screen, menu_font, stats, 250)
-
+    draw_summary_and_hint(screen, menu_font, stats, y=250, x_label=panel_x + 50, x_value=panel_x + 340)
 
 def draw_stats_screen(screen, title_font, menu_font, stats):
     """Draw the global statistics screen."""
@@ -512,29 +514,8 @@ def draw_stats_screen(screen, title_font, menu_font, stats):
     line_y = 160
     pygame.draw.line(screen, COLOR_BORDER, (panel_x + 30, line_y), (panel_x + panel_w - 30, line_y), 1)
 
-    # draw stats as a left-aligned table
-    y = 200
-    x_label = panel_x + 50
-    x_value = panel_x + 340
-    lines = [
-        ("Total Battles", str(stats['total_battles'])),
-        ("Victories", str(stats['victories'])),
-        ("Defeats", str(stats['defeats'])),
-        ("Flees", str(stats['flees'])),
-    ]
-    if stats['most_common_enemy']:
-        lines.append(("Most Common Enemy", stats['most_common_enemy']))
-
-    for label, value in lines:
-        label_surf = menu_font.render(label, True, COLOR_TEXT)
-        value_surf = menu_font.render(value, True, COLOR_ACCENT)
-        screen.blit(label_surf, (x_label, y))
-        screen.blit(value_surf, (x_value, y))
-        y += menu_font.get_linesize()
-
-    draw_hint(screen, menu_font)
     # draw summary and hint
-    # draw_summary_and_hint(screen, menu_font, stats, 250)
+    draw_summary_and_hint(screen, menu_font, stats, y=200, x_label=panel_x + 50, x_value=panel_x + 340)
 
 
 if __name__ == "__main__":
