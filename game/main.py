@@ -10,7 +10,7 @@ from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
     RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_MENU, OVERLAY_BATTLE, OVERLAY_END, FONT_END_SIZE,
-    FADE_DURATION
+    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -480,9 +480,20 @@ def draw_end_screen(screen, font_end, menu_font, battle, stats):
 
 def draw_stats_screen(screen, title_font, menu_font, stats):
     """Draw the global statistics screen."""
+    # draw semi-transparent background panel
+    panel = pygame.Surface((400, 300))
+    panel.fill((0, 0, 0))
+    panel.set_alpha(80)
+    screen.blit(panel, ((SCREEN_WIDTH - 400) // 2, 60))
+
     # render the title
     title = title_font.render("Statistics", True, COLOR_TEXT)
     screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
+
+    # draw horizontal line
+    line_y = 160
+    pygame.draw.line(screen, COLOR_BORDER, (280, line_y), (680, line_y), 1)
+
     # draw summary and hint
     draw_summary_and_hint(screen, menu_font, stats, 250)
 
