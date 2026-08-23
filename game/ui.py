@@ -8,14 +8,14 @@ and LogPanel renders the formatted battle log. Step 5 adds the
 animation classes here.
 """
 
-import math
-import pygame
+import math, random, pygame
 from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT, PANEL_BORDER, PANEL_ALPHA,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
-    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH
+    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
+    PARTICLE_COUNT, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS
 )
 from game.assets import play_sound
 
@@ -199,6 +199,60 @@ class AttackAnimation(Animation):
         surface.blit(self._float_surf, (self.defender.x + self.defender.offset_x - self._float_surf.get_width() // 2, y))
 
 
+class SpellParticle:
+    """A single particle trailing behind a spell projectile."""
+    def __init__(self, x, y, ux, uy, color):
+        """
+        Initialize a particle.
+
+        Args:
+            x: Initial x-coordinate
+            y: Initial y-coordinate
+            ux: Unit vector x-component of the projectile (for direction)
+            uy: Unit vector y-component of the projectile (for direction)
+            color: RGB tuple for the particle color
+        """
+        self.x = x
+        self.y = y
+        self.color = color
+        self.life = PARTICLE_LIFE
+        # direction opposite to the projectile with ±30° variation
+        angle = math.atan2(-uy, -ux) + random.uniform(-0.52, 0.52)  # ±30° in radians
+        # Randomize speed slightly around the base speed
+        speed = PARTICLE_SPEED * random.uniform(0.6, 1.0)
+        # Set velocity components
+        self.vx = math.cos(angle) * speed
+        self.vy = math.sin(angle) * speed
+        self.radius = random.uniform(PARTICLE_MIN_RADIUS, PARTICLE_MIN_RADIUS + 2)
+
+    def update(self, dt):
+        """Update the particle's position and remaining life."""
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self.life -= dt
+
+    def is_alive(self):
+        """Check if the particle is still alive."""
+        return self.life > 0
+
+    def draw(self, surface):
+        """Draw the particle."""
+        # Get the current progress (1 → 0 as time goes on)
+        progress = self.life / PARTICLE_LIFE  # 1 -> 0
+        # Calculate alpha and radius based on progress
+        alpha = int(200 * progress)
+        radius = self.radius * progress
+        # if radius or alpha are too small, don't draw the particle
+        if radius < 0.5 or alpha < 1:
+            return
+        size = int(radius * 2) + 2
+        # create an overlay surface with per-pixel alpha
+        overlay = pygame.Surface((size, size), pygame.SRCALPHA)
+        # draw the particle circle
+        pygame.draw.circle(overlay, (*self.color, alpha), (size // 2, size // 2), int(radius))
+        surface.blit(overlay, (self.x - radius, self.y - radius))
+
+
 class SpellAnimation(AttackAnimation):
     """Spell attack. Identical to AttackAnimation in Phase 2."""
     def __init__(self, attacker, defender, event, projectile_color, on_impact=None):
@@ -231,6 +285,9 @@ class SpellAnimation(AttackAnimation):
         self.trail = deque(maxlen=TRAIL_LENGTH)  # Use a deque to store the last TRAIL_LENGTH positions
         self._trail_cleared = False
 
+        # particles for the spell
+        self.particles = []
+
     def _phase(self):
         """Returns the current phase."""
         if self.elapsed < FLY_DURATION:
@@ -250,6 +307,15 @@ class SpellAnimation(AttackAnimation):
         if phase == "fly" and not self._cast_sound_played:
             play_sound(SFX["cast_spell"])
             self._cast_sound_played = True
+            # spawn particles at the attacker's position
+            dx = self.defender.x - self.attacker.x
+            dy = self.defender.y - self.attacker.y
+            # Get the distance and unit vector for direction
+            dist = max(1, math.hypot(dx, dy))
+            ux, uy = dx / dist, dy / dist
+            # Spawn particles
+            for _ in range(PARTICLE_COUNT):
+                self.particles.append(SpellParticle(self.attacker.x, self.attacker.y, ux, uy, self.projectile_color))
 
         # set the defender to hit the first time the flash phase starts
         if phase == "flash" and not self._pose_cast_done:
@@ -266,6 +332,13 @@ class SpellAnimation(AttackAnimation):
             if not self._trail_cleared:
                 self.trail.clear()
                 self._trail_cleared = True
+
+        # update particles during fly phase only
+        if phase == "fly":
+            for p in self.particles:
+                p.update(dt)
+            # Keep only living particles
+            self.particles = [p for p in self.particles if p.is_alive()]
 
         # reset offsets when animation finishes
         if self.is_done():
@@ -324,6 +397,10 @@ class SpellAnimation(AttackAnimation):
         pygame.draw.circle(overlay, (*self.projectile_color, 255), (int(halo_radius), int(halo_radius)), max(1, int(center_radius)))  # projectile center
         # blit the overlay to the surface at the projectile's position
         surface.blit(overlay, (x - halo_radius, y - halo_radius))
+
+        # draw particles
+        for p in self.particles:
+            p.draw(surface)
 
     def _draw_impact(self, surface):
         """Draw expanding rings and a brief central flash on impact."""
