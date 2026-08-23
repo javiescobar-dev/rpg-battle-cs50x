@@ -15,7 +15,7 @@ from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT, PANEL_BORDER, PANEL_ALPHA,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
-    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA
+    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED
 )
 from game.assets import play_sound
 
@@ -288,7 +288,7 @@ class SpellAnimation(AttackAnimation):
         # interpolate position from attacker to defender
         x = self.attacker.x + (self.defender.x - self.attacker.x) * progress
         y = self.attacker.y + (self.defender.y - self.attacker.y) * progress
-        radius = PROJ_RADIUS * 2
+
         # add current position to trail
         self.trail.append((x, y))
 
@@ -305,13 +305,18 @@ class SpellAnimation(AttackAnimation):
             # blit the trail to the surface at the current position
             surface.blit(trail_overlay, (tx - trail_radius, ty - trail_radius))
 
+        # Halo pulse around the projectile
+        pulse = PULSE_AMPLITUDE * math.sin(PULSE_SPEED * self.elapsed)
+        halo_radius = PROJ_RADIUS * 2 + pulse
+        center_radius = PROJ_RADIUS // 2 + pulse * 0.5
+        size = int(halo_radius * 2)
         # create an overlay surface with per-pixel alpha
-        overlay = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        overlay = pygame.Surface((size, size), pygame.SRCALPHA)
         # draw a semi-transparent halo around the projectile
-        pygame.draw.circle(overlay, (*self.projectile_color, 80), (radius, radius), radius)  # halo effect around the projectile
-        pygame.draw.circle(overlay, (*self.projectile_color, 255), (radius, radius), PROJ_RADIUS // 2)   # projectile center
+        pygame.draw.circle(overlay, (*self.projectile_color, 80), (int(halo_radius), int(halo_radius)), int(halo_radius))  # halo effect around the projectile
+        pygame.draw.circle(overlay, (*self.projectile_color, 255), (int(halo_radius), int(halo_radius)), max(1, int(center_radius)))  # projectile center
         # blit the overlay to the surface at the projectile's position
-        surface.blit(overlay, (x - radius, y - radius))
+        surface.blit(overlay, (x - halo_radius, y - halo_radius))
 
 
 class TextAnimation(Animation):
