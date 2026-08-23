@@ -122,6 +122,10 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   black border. The hero status card shows a cropped portrait from the
   character's idle sprite alongside name and HP/MP bars. Battle input is
   locked during the action delay to prevent duplicate confirmations.
+- Spell projectiles (Fireball and Shadow Bolt) feature a trailing
+  afterimage, a pulsating glow, decorative particles that fly backward
+  during travel, and an impact explosion with two expanding color-shifting
+  rings.
 
 ## Repository structure
 
