@@ -795,11 +795,23 @@ class LogPanel:
 # class menu (with methods to draw options and manage keyboard/mouse input)
 class Menu:
     """Show menu options, manage selection and highlight"""
-    def __init__(self, rect, options, font):
+    def __init__(self, rect, options, font, border_color=None, accent_color=None, option_text_color=None):
         self.rect = pygame.Rect(rect)  # panel for menu
         self.options = options  # list of options (attack, skill, etc)
         self.font = font  # font to render options
         self.cursor = 0  # index of the currently selected option
+        if border_color is None:
+            self.border_color = PANEL_BORDER
+        else:
+            self.border_color = border_color
+        if accent_color is None:
+            self.accent_color = COLOR_ACCENT
+        else:
+            self.accent_color = accent_color
+        if option_text_color is None:
+            self.option_text_color = COLOR_TEXT
+        else:
+            self.option_text_color = option_text_color
 
     def move_cursor(self, delta):
         """Move cursor up or down, wrapping around the ends.
@@ -863,11 +875,11 @@ class Menu:
 
         # Draw the background of the menu panel
         bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((*PANEL_BORDER, PANEL_ALPHA))
+        bg.fill((*self.border_color, PANEL_ALPHA))
         surface.blit(bg, self.rect.topleft)
 
         # Draw the border of the menu panel
-        pygame.draw.rect(surface, PANEL_BORDER, self.rect, 2)
+        pygame.draw.rect(surface, self.border_color, self.rect, 2)
 
         # get the height of each row (option)
         row_height = self.font.get_height() + 8
@@ -880,10 +892,10 @@ class Menu:
             # highlight row if cursor is on it (is the current option selected by keyboard or mouse)
             if i == self.cursor:
                 hl = pygame.Surface((row_rect.width, row_rect.height), pygame.SRCALPHA)
-                hl.fill((*COLOR_ACCENT, 200))
+                hl.fill((*self.accent_color, 200))
                 surface.blit(hl, row_rect.topleft)
             # render option text
-            text = self.font.render(option, True, COLOR_TEXT)
+            text = self.font.render(option, True, self.option_text_color)
             # blit (draw) the option text centered in its row (half of the row height and half of the text height)
             surface.blit(text, (row_rect.centerx - text.get_width() // 2, row_rect.centery - text.get_height() // 2))
 

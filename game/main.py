@@ -10,7 +10,7 @@ from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
     RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_END, FONT_END_SIZE,
-    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER
+    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -38,13 +38,13 @@ def make_main_menu(font):
     # create rect for menu, centered horizontally and with a little offset vertically
     rect = ((SCREEN_WIDTH - width) // 2, (SCREEN_HEIGHT - height) // 2 + 60, width, height)
     # create menu widget
-    return Menu(rect, ["Play", "Statistics", "Quit"], font)
+    return Menu(rect, ["Play", "Statistics", "Quit"], font, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN)
 
 
 def draw_menu_screen(screen, title_font, menu):
     """Draw the title and the main menu."""
     # render the title
-    title = title_font.render("RPG Battle", True, COLOR_TEXT)
+    title = title_font.render("RPG Battle", True, COLOR_TEXT_MAIN)
     # draw the title
     screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
     # draw the menu

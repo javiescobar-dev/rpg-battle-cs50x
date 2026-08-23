@@ -74,13 +74,15 @@ SCREEN_HEIGHT    = 640
 FPS              = 60
 
 # Colors (RGB)
-COLOR_BG        = (20, 20, 30)      # dark blue-grey background
-COLOR_TEXT      = (230, 230, 230)   # light grey text
-COLOR_HP_BAR    = (70, 200, 70)     # green
-COLOR_MP_BAR    = (70, 130, 220)    # blue
-COLOR_BAR_BG    = (50, 50, 60)      # empty part of a bar
-COLOR_BORDER    = (230, 230, 230)   # bar and panel borders
-COLOR_ACCENT    = (240, 200, 80)    # highlight for the selected menu option
+COLOR_BG             = (20, 20, 30)      # dark blue-grey background
+COLOR_TEXT           = (230, 230, 230)   # light grey text
+COLOR_TEXT_MAIN      = (78, 78, 78)      # light grey text for Main menu
+COLOR_HP_BAR         = (70, 200, 70)     # green
+COLOR_MP_BAR         = (70, 130, 220)    # blue
+COLOR_BAR_BG         = (50, 50, 60)      # empty part of a bar
+COLOR_BORDER         = (230, 230, 230)   # bar and panel borders
+COLOR_ACCENT         = (240, 200, 80)    # highlight for the selected menu option
+COLOR_ACCENT_MAIN    = (80, 200, 240)    # highlight for the selected menu option (Main menu)
 
 # Colors for spells
 COLOR_FIREBALL    = (255, 100, 0)     # orange
@@ -116,8 +118,9 @@ FONT_CRIT_SIZE     = 36   # critical hit numbers (bigger)
 FONT_END_SIZE      = 64   # end screen text
 
 # Panel styling
-PANEL_ALPHA   = 140   # alpha for semi-transparent panels
-PANEL_BORDER  = (0, 0, 0)  # black border for panels
+PANEL_ALPHA          = 140   # alpha for semi-transparent panels
+PANEL_BORDER         = (0, 0, 0)  # black border for panels
+PANEL_BORDER_MAIN    = (255, 255, 255)  # border for the main panel
 
 # Layout (positions in pixels)
 HERO_X          = 590
