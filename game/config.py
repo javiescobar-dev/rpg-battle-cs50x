@@ -86,6 +86,25 @@ COLOR_ACCENT    = (240, 200, 80)    # highlight for the selected menu option
 COLOR_FIREBALL    = (255, 100, 0)     # orange
 COLOR_SHADOW_BOLT = (128, 0, 128)     # purple
 
+# Spell projectile effects
+TRAIL_LENGTH        = 8      # trail length (previous position)
+TRAIL_MIN_RADIUS    = 2      # smallest trail radius
+TRAIL_MIN_ALPHA     = 40     # lowest trail alpha
+PULSE_AMPLITUDE     = 3      # halo radius oscillation
+PULSE_SPEED         = 8      # oscillation speed (sin)
+
+# Impact explosion
+IMPACT_RING_COUNT         = 2      # expanding rings on impact
+IMPACT_RING_SPEED         = 120    # px/s expansion radius
+IMPACT_RING_MAX_RADIUS    = 35     # maximum ring radius
+IMPACT_RING_WIDTH         = 3      # ring border width
+
+# Particles
+PARTICLE_COUNT         = 5      # particles per projectile flight
+PARTICLE_LIFE          = 0.3    # particle duration (s)
+PARTICLE_SPEED         = 80     # particle speed (px/s)
+PARTICLE_MIN_RADIUS    = 1      # minimum particle radius
+
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
 FONT_TITLE_SIZE    = 48
