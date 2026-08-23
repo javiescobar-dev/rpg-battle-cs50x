@@ -15,7 +15,7 @@ from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT, PANEL_BORDER, PANEL_ALPHA,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
-    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED
+    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH
 )
 from game.assets import play_sound
 
@@ -214,6 +214,13 @@ class SpellAnimation(AttackAnimation):
         # set the projectile color
         self.projectile_color = projectile_color
 
+        # secondary color for the impact rings (darker version)
+        self.impact_color = (
+            max(0, self.projectile_color[0] - 100),
+            max(0, self.projectile_color[1] - 50),
+            max(0, self.projectile_color[2] - 70),
+        )
+
         # flag to indicate if the cast pose has been set
         self._pose_cast_done = False
 
@@ -277,7 +284,7 @@ class SpellAnimation(AttackAnimation):
         if phase == "fly":
             self._draw_projectile(surface)
         elif phase == "flash":
-            super()._draw_flash(surface)
+            self._draw_impact(surface)
         elif phase == "float":
             super()._draw_float(surface)
 
@@ -317,6 +324,48 @@ class SpellAnimation(AttackAnimation):
         pygame.draw.circle(overlay, (*self.projectile_color, 255), (int(halo_radius), int(halo_radius)), max(1, int(center_radius)))  # projectile center
         # blit the overlay to the surface at the projectile's position
         surface.blit(overlay, (x - halo_radius, y - halo_radius))
+
+    def _draw_impact(self, surface):
+        """Draw expanding rings and a brief central flash on impact."""
+        impact_elapsed = self.elapsed - FLY_DURATION  # time since impact
+        center_x = self.defender.x + self.defender.offset_x
+        center_y = self.defender.y + self.defender.offset_y
+
+        # create expanding rings for the impact
+        for i in range(IMPACT_RING_COUNT):
+            delay = i * 0.15  # stagger start: ring 0 starts at 0s, ring 1 at 0.15s
+            ring_elapsed = impact_elapsed - delay
+            # if the ring has not started yet, skip it
+            if ring_elapsed <= 0:
+                continue
+            # get the current ring progress (0 -> 1)
+            ring_progress = ring_elapsed / FLASH_DURATION  # 0 -> 1
+            # if the ring has finished expanding, skip it
+            if ring_progress > 1:
+                continue
+            # calculate the radius and alpha of the current ring
+            radius = IMPACT_RING_SPEED * ring_progress
+            alpha = int(255 * (1 - ring_progress))
+            width = max(1, IMPACT_RING_WIDTH - int(ring_progress * 2))  # width of the ring decreases as it expands
+            # interpolate between primary and secondary color
+            color = tuple(
+                int(self.projectile_color[c] * (1 - ring_progress) + self.impact_color[c] * ring_progress)  # primary + secondary color
+                for c in range(3)
+            )
+            # create a surface for the current ring
+            ring_overlay = pygame.Surface((int(radius * 2) + 4, int(radius * 2) + 4), pygame.SRCALPHA)
+            # draw the ring
+            pygame.draw.circle(ring_overlay, (*color, alpha), (int(radius) + 2, int(radius) + 2), int(radius), width)
+            # blit the ring to the surface at the impact position
+            surface.blit(ring_overlay, (center_x - radius - 2, center_y - radius - 2))
+
+        # brief central flash (0.05s) at the moment of impact
+        if impact_elapsed < 0.05:
+            flash_alpha = int(255 * (1 - impact_elapsed / 0.05))
+            flash_radius = FLASH_RADIUS
+            flash_overlay = pygame.Surface((flash_radius * 2, flash_radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(flash_overlay, (*self.projectile_color, flash_alpha), (flash_radius, flash_radius), flash_radius)
+            surface.blit(flash_overlay, (center_x - flash_radius, center_y - flash_radius))
 
 
 class TextAnimation(Animation):
