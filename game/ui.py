@@ -14,7 +14,8 @@ from collections import deque
 from game.config import (
     COLOR_BORDER, COLOR_TEXT, COLOR_BAR_BG, BAR_HEIGHT, COLOR_HP_BAR, COLOR_MP_BAR, COLOR_ACCENT, COLOR_FIREBALL, COLOR_SHADOW_BOLT, PANEL_BORDER, PANEL_ALPHA,
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
-    FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX
+    FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
+    TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA
 )
 from game.assets import play_sound
 
@@ -219,6 +220,10 @@ class SpellAnimation(AttackAnimation):
         # flag to indicate if the cast sound effect has been played
         self._cast_sound_played = False
 
+        # trail positions and fade for the projectile (spell effect)
+        self.trail = deque(maxlen=TRAIL_LENGTH)  # Use a deque to store the last TRAIL_LENGTH positions
+        self._trail_cleared = False
+
     def _phase(self):
         """Returns the current phase."""
         if self.elapsed < FLY_DURATION:
@@ -250,6 +255,10 @@ class SpellAnimation(AttackAnimation):
             self._impact_fired = True
             if self.on_impact:
                 self.on_impact()
+            # Clear the trail when the spell hits the target (visual effect)
+            if not self._trail_cleared:
+                self.trail.clear()
+                self._trail_cleared = True
 
         # reset offsets when animation finishes
         if self.is_done():
@@ -280,6 +289,22 @@ class SpellAnimation(AttackAnimation):
         x = self.attacker.x + (self.defender.x - self.attacker.x) * progress
         y = self.attacker.y + (self.defender.y - self.attacker.y) * progress
         radius = PROJ_RADIUS * 2
+        # add current position to trail
+        self.trail.append((x, y))
+
+        # draw the trail (spell effect) before drawing the projectile
+        for i, (tx, ty) in enumerate(self.trail):  # iterate through the trail
+            # i goes from 0 (oldest) to len-1 (most recent)
+            t = (i + 1) / len(self.trail)  # 0 -> 1, from oldest to most recent
+            trail_radius = TRAIL_MIN_RADIUS + (PROJ_RADIUS - TRAIL_MIN_RADIUS) * t  # radius of each point in the trail
+            trail_alpha = int(TRAIL_MIN_ALPHA + (200 - TRAIL_MIN_ALPHA) * t)  # alpha of each point in the trail
+            # create a surface for each point in the trail
+            trail_overlay = pygame.Surface((trail_radius * 2, trail_radius * 2), pygame.SRCALPHA)
+            # draw a semi-transparent circle for each point in the trail
+            pygame.draw.circle(trail_overlay, (*self.projectile_color, trail_alpha), (trail_radius, trail_radius), trail_radius)
+            # blit the trail to the surface at the current position
+            surface.blit(trail_overlay, (tx - trail_radius, ty - trail_radius))
+
         # create an overlay surface with per-pixel alpha
         overlay = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
         # draw a semi-transparent halo around the projectile
