@@ -77,6 +77,7 @@ FPS              = 60
 COLOR_BG             = (20, 20, 30)      # dark blue-grey background
 COLOR_TEXT           = (230, 230, 230)   # light grey text
 COLOR_TEXT_MAIN      = (78, 78, 78)      # light grey text for Main menu
+COLOR_TEXT_TITLE     = (33, 33, 33)      # black text for Title
 COLOR_HP_BAR         = (70, 200, 70)     # green
 COLOR_MP_BAR         = (70, 130, 220)    # blue
 COLOR_BAR_BG         = (50, 50, 60)      # empty part of a bar
@@ -109,7 +110,8 @@ PARTICLE_MIN_RADIUS    = 1      # minimum particle radius
 
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
-FONT_TITLE_SIZE    = 48
+FONT_NAME_TITLE    = "game/assets/fonts/finalf.ttf"
+FONT_TITLE_SIZE    = 64
 FONT_MENU_SIZE     = 28
 FONT_LOG_SIZE      = 20
 FONT_HUD_SIZE      = 18

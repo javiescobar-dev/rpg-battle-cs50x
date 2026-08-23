@@ -7,10 +7,10 @@ from pygame import constants
 import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_NAME_TITLE, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
     RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, OVERLAY_END, FONT_END_SIZE,
-    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN
+    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -44,7 +44,7 @@ def make_main_menu(font):
 def draw_menu_screen(screen, title_font, menu):
     """Draw the title and the main menu."""
     # render the title
-    title = title_font.render("RPG Battle", True, COLOR_TEXT_MAIN)
+    title = title_font.render("RPG BATTLE", True, COLOR_TEXT_TITLE)
     # draw the title
     screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
     # draw the menu
@@ -76,7 +76,8 @@ def main():
         menu_bg = None
 
     # create fonts for main menu
-    font_title = pygame.font.SysFont(FONT_NAME, FONT_TITLE_SIZE)
+    font_title = pygame.font.Font(FONT_NAME_TITLE, FONT_TITLE_SIZE)
+    font_statistics = pygame.font.SysFont(FONT_NAME, FONT_TITLE_SIZE)
     font_menu = pygame.font.SysFont(FONT_NAME, FONT_MENU_SIZE)
 
     # create fonts for HUD and log
@@ -198,7 +199,7 @@ def main():
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
             draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player, background=background)
         elif state == STATS:
-            draw_stats_screen(screen, font_title, font_menu, summary())
+            draw_stats_screen(screen, font_statistics, font_menu, summary())
         elif state == END:
             if background is None:
                 screen.fill(COLOR_BG)
