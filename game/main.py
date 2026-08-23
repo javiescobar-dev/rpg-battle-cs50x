@@ -9,7 +9,7 @@ from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
-    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_MENU, OVERLAY_BATTLE, OVERLAY_END, FONT_END_SIZE,
+    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, END_BG_PATH, OVERLAY_END, FONT_END_SIZE,
     FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER
 )
 from game.entities import make_hero, make_enemy
@@ -200,7 +200,6 @@ def main():
                 screen.fill(COLOR_BG)
             else:
                 screen.blit(menu_bg, (0, 0))
-            draw_dark_overlay(screen, OVERLAY_MENU)
             draw_menu_screen(screen, font_title, main_menu)
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
             draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player, background=background)
@@ -437,7 +436,6 @@ def draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, 
 
     if background is not None:
         screen.blit(background, (0, 0))
-        draw_dark_overlay(screen, OVERLAY_BATTLE)
     else:
         screen.fill(COLOR_BG)
 

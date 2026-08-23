@@ -123,8 +123,6 @@ MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
 LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
 
 # Dark overlay alphas for different screens (0–255)
-OVERLAY_MENU   = 120
-OVERLAY_BATTLE = 100
 OVERLAY_END    = 140
 
 # Fade screen effect duration
