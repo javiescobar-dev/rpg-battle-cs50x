@@ -182,9 +182,8 @@ FLOAT_SPEED        = 40
 FLOAT_FADE_START   = 0.5
 
 # Assets
-# Title and end screen backgrounds
+# Title screen background
 TITLE_BG_PATH = "game/assets/backgrounds/rpg_battle_background_title.png"
-END_BG_PATH   = "game/assets/backgrounds/rpg_battle_background_end.png"
 
 # Battle backgrounds
 BATTLE_BACKGROUNDS = [
