@@ -15,7 +15,8 @@ from game.config import (
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
-    PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE
+    PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
+    FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS
 )
 from game.assets import play_sound
 
@@ -201,7 +202,7 @@ class AttackAnimation(Animation):
 
 class SpellParticle:
     """A single particle trailing behind a spell projectile."""
-    def __init__(self, x, y, ux, uy, color):
+    def __init__(self, x, y, ux, uy, colors):
         """
         Initialize a particle.
 
@@ -214,7 +215,7 @@ class SpellParticle:
         """
         self.x = x
         self.y = y
-        self.color = color
+        self.color = random.choice(colors)
         self.life = PARTICLE_LIFE
         # direction opposite to the projectile with ±30° variation
         angle = math.atan2(-uy, -ux) + random.uniform(-0.52, 0.52)  # ±30° in radians
@@ -255,7 +256,7 @@ class SpellParticle:
 
 class SpellAnimation(AttackAnimation):
     """Spell attack. Identical to AttackAnimation in Phase 2."""
-    def __init__(self, attacker, defender, event, projectile_color, projectile_color_core, on_impact=None):
+    def __init__(self, attacker, defender, event, projectile_color, projectile_color_core, particle_colors, on_impact=None):
         # set base duration all animations will last this amount of time (seconds)
         duration = FLY_DURATION + FLASH_DURATION + FLOAT_DURATION
         super().__init__(attacker, defender, event, on_impact, duration)
@@ -268,6 +269,7 @@ class SpellAnimation(AttackAnimation):
         # set the projectile color
         self.projectile_color = projectile_color
         self.projectile_color_core = projectile_color_core
+        self.particle_colors = particle_colors
 
         # secondary color for the impact rings (darker version)
         self.impact_color = (
@@ -321,7 +323,7 @@ class SpellAnimation(AttackAnimation):
             ux, uy = dx / dist, dy / dist
             # Spawn particles
             for _ in range(PARTICLE_INITIAL_BURST):
-                self.particles.append(SpellParticle(self.attacker.x, self.attacker.y, ux, uy, self.projectile_color))
+                self.particles.append(SpellParticle(self.attacker.x, self.attacker.y, ux, uy, self.particle_colors))
 
         # set the defender to hit the first time the flash phase starts
         if phase == "flash" and not self._pose_cast_done:
@@ -351,7 +353,7 @@ class SpellAnimation(AttackAnimation):
                 dy = self.defender.y - self.attacker.y
                 dist = max(1, math.hypot(dx, dy))
                 ux, uy = dx / dist, dy / dist
-                self.particles.append(SpellParticle(proj_x, proj_y, ux, uy, self.projectile_color))
+                self.particles.append(SpellParticle(proj_x, proj_y, ux, uy, self.particle_colors))
 
         # reset offsets when animation finishes
         if self.is_done():
@@ -595,6 +597,7 @@ class EventPlayer:
                     event,
                     COLOR_FIREBALL if is_hero else COLOR_SHADOW_BOLT,
                     COLOR_FIREBALL_CORE if is_hero else COLOR_SHADOW_BOLT_CORE,
+                    FIREBALL_PARTICLE_COLORS if is_hero else SHADOW_BOLT_PARTICLE_COLORS,
                     on_impact=lambda: self._apply_display(defender, hp=hp)  # update the HUD when the animation impacts
                 )
 

@@ -93,6 +93,18 @@ COLOR_SHADOW_BOLT = (128, 0, 128)     # purple
 COLOR_FIREBALL_CORE    = (255, 240, 100)   # bright yellow
 COLOR_SHADOW_BOLT_CORE = (200, 50, 255)    # bright purple
 
+# Spell particle color palettes (3 colors each, chosen randomly per particle)
+FIREBALL_PARTICLE_COLORS = [
+    (255, 180, 50),   # bright yellow-orange
+    (255, 100, 0),    # orange
+    (255, 50, 0),     # red-orange
+]
+SHADOW_BOLT_PARTICLE_COLORS = [
+    (180, 0, 255),    # bright purple
+    (100, 0, 180),    # dark purple
+    (50, 200, 50),    # green spark
+]
+
 # Spell projectile effects
 TRAIL_LENGTH        = 8      # trail length (previous position)
 TRAIL_MIN_RADIUS    = 2      # smallest trail radius
