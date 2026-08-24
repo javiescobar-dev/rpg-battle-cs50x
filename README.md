@@ -44,7 +44,7 @@ the Phase 1 engine (unchanged battle logic).
   `format_event` messages with word wrapping.
 - Main menu (Play / Statistics / Quit) with a single cursor shared by keyboard
   (arrow keys + Enter, number shortcuts 1-3) and mouse (hover moves the cursor,
-  click confirms).
+  click confirms). A copyright footer is displayed at the bottom of the screen.
 - Suikoden II-style two-level battle menu: Attack / Skill / Potion / Flee, where
   choosing Skill swaps the panel for the rune submenu Fireball / Guard / Heal / Back.
   Same navigation as the main menu (arrows + Enter, keys 1-4, mouse).
@@ -125,7 +125,10 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Spell projectiles (Fireball and Shadow Bolt) feature a trailing
   afterimage, a pulsating glow, decorative particles that fly backward
   during travel, and an impact explosion with two expanding color-shifting
-  rings.
+  rings. Each spell uses a three-color particle palette (yellow-orange-red
+  for Fireball, purple-green for Shadow Bolt) with continuous emission
+  during flight and a radial burst on impact. The projectile core glows
+  in a brighter, differentiated color through a three-layer radial gradient.
 
 ## Repository structure
 
