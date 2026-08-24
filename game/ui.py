@@ -385,18 +385,35 @@ class SpellAnimation(AttackAnimation):
             # blit the trail to the surface at the current position
             surface.blit(trail_overlay, (tx - trail_radius, ty - trail_radius))
 
-        # Halo pulse around the projectile
+        # 3-Layer radical glow around the projectile
         pulse = PULSE_AMPLITUDE * math.sin(PULSE_SPEED * self.elapsed)
-        halo_radius = PROJ_RADIUS * 2 + pulse
         center_radius = PROJ_RADIUS // 2 + pulse * 0.5
-        size = int(halo_radius * 2)
-        # create an overlay surface with per-pixel alpha
-        overlay = pygame.Surface((size, size), pygame.SRCALPHA)
-        # draw a semi-transparent halo around the projectile
-        pygame.draw.circle(overlay, (*self.projectile_color, 80), (int(halo_radius), int(halo_radius)), int(halo_radius))  # halo effect around the projectile
-        pygame.draw.circle(overlay, (*self.projectile_color, 255), (int(halo_radius), int(halo_radius)), max(1, int(center_radius)))  # projectile center
-        # blit the overlay to the surface at the projectile's position
-        surface.blit(overlay, (x - halo_radius, y - halo_radius))
+        # layer data: (radius multiplier, alpha)
+        glow_layers = [
+            (2.5, 40),   # outer: large, very transparent
+            (1.5, 70),   # middle: medium, semi-transparent
+            (1.0, 100),  # inner: small, strongest glow
+        ]
+        # draw each glow layer from largest (outer) to smallest (inner)
+        for multiplier, alpha in glow_layers:
+            # calculate radius with pulse effect
+            r = PROJ_RADIUS * multiplier + pulse
+            size = int(r * 2)
+            # create surface for the glow layer
+            overlay = pygame.Surface((size, size), pygame.SRCALPHA)
+            # draw the glow layer
+            pygame.draw.circle(overlay, (*self.projectile_color, alpha), (int(r), int(r)), int(r))
+            # blit the glow layer to the surface at the projectile's position
+            surface.blit(overlay, (x - r, y - r))
+
+        # bright core (center circle)
+        core_size = int(center_radius * 2) + 2
+        # create surface for the bright core
+        core_overlay = pygame.Surface((core_size, core_size), pygame.SRCALPHA)
+        # draw the bright core
+        pygame.draw.circle(core_overlay, (*self.projectile_color, 255), (core_size // 2, core_size // 2), max(1, int(center_radius)))
+        # blit the bright core to the surface at the projectile's position
+        surface.blit(core_overlay, (x - core_size // 2, y - core_size // 2))
 
         # draw particles
         for p in self.particles:
