@@ -15,7 +15,7 @@ from game.config import (
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
-    PARTICLE_COUNT, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE
+    PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE
 )
 from game.assets import play_sound
 
@@ -304,6 +304,11 @@ class SpellAnimation(AttackAnimation):
 
         phase = self._phase()
 
+        # current projectile position (needed for continuous particle spawn)
+        fly_progress = self.elapsed / FLY_DURATION if self.elapsed < FLY_DURATION else 1.0
+        proj_x = self.attacker.x + (self.defender.x - self.attacker.x) * fly_progress
+        proj_y = self.attacker.y + (self.defender.y - self.attacker.y) * fly_progress
+
         # play spell cast sound effect the first time the fly phase starts
         if phase == "fly" and not self._cast_sound_played:
             play_sound(SFX["cast_spell"])
@@ -315,7 +320,7 @@ class SpellAnimation(AttackAnimation):
             dist = max(1, math.hypot(dx, dy))
             ux, uy = dx / dist, dy / dist
             # Spawn particles
-            for _ in range(PARTICLE_COUNT):
+            for _ in range(PARTICLE_INITIAL_BURST):
                 self.particles.append(SpellParticle(self.attacker.x, self.attacker.y, ux, uy, self.projectile_color))
 
         # set the defender to hit the first time the flash phase starts
@@ -340,6 +345,13 @@ class SpellAnimation(AttackAnimation):
                 p.update(dt)
             # Keep only living particles
             self.particles = [p for p in self.particles if p.is_alive()]
+            # continuous particle emission from current projectile position
+            for _ in range(PARTICLES_PER_FRAME):
+                dx = self.defender.x - self.attacker.x
+                dy = self.defender.y - self.attacker.y
+                dist = max(1, math.hypot(dx, dy))
+                ux, uy = dx / dist, dy / dist
+                self.particles.append(SpellParticle(proj_x, proj_y, ux, uy, self.projectile_color))
 
         # reset offsets when animation finishes
         if self.is_done():

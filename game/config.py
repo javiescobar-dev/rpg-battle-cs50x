@@ -107,7 +107,8 @@ IMPACT_RING_MAX_RADIUS    = 35     # maximum ring radius
 IMPACT_RING_WIDTH         = 3      # ring border width
 
 # Particles
-PARTICLE_COUNT         = 5      # particles per projectile flight
+PARTICLE_INITIAL_BURST = 8      # particles spawned at cast (initial burst)
+PARTICLES_PER_FRAME    = 1      # particles spawned per frame during flight
 PARTICLE_LIFE          = 0.3    # particle duration (s)
 PARTICLE_SPEED         = 80     # particle speed (px/s)
 PARTICLE_MIN_RADIUS    = 1      # minimum particle radius
