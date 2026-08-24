@@ -10,7 +10,7 @@ from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_NAME_TITLE, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
     RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, OVERLAY_END, FONT_END_SIZE,
-    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE
+    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE, COLOR_TEXT_FOOTER, FONT_FOOTER_SIZE
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -41,7 +41,7 @@ def make_main_menu(font):
     return Menu(rect, ["Play", "Statistics", "Quit"], font, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN)
 
 
-def draw_menu_screen(screen, title_font, menu):
+def draw_menu_screen(screen, title_font, menu, font_footer):
     """Draw the title and the main menu."""
     # render the title
     title = title_font.render("RPG BATTLE", True, COLOR_TEXT_TITLE)
@@ -49,6 +49,9 @@ def draw_menu_screen(screen, title_font, menu):
     screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
     # draw the menu
     menu.draw(screen)
+    # draw footer text
+    footer = font_footer.render("© 2026 Javi Escobar Fernández · CS50x Final Project", True, COLOR_TEXT_FOOTER)
+    screen.blit(footer, ((SCREEN_WIDTH - footer.get_width()) // 2, SCREEN_HEIGHT - 24))
 
 
 def main():
@@ -79,6 +82,7 @@ def main():
     font_title = pygame.font.Font(FONT_NAME_TITLE, FONT_TITLE_SIZE)
     font_statistics = pygame.font.SysFont(FONT_NAME, FONT_TITLE_SIZE)
     font_menu = pygame.font.SysFont(FONT_NAME, FONT_MENU_SIZE)
+    font_footer = pygame.font.SysFont(FONT_NAME, FONT_FOOTER_SIZE)
 
     # create fonts for HUD and log
     font_hud = pygame.font.SysFont(FONT_NAME, FONT_HUD_SIZE)
@@ -187,7 +191,7 @@ def main():
     def handle_draw():
         """Handle drawing."""
         # use nonlocal to modify the state and other variables
-        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background, menu_bg, fade_alpha
+        nonlocal state, hero_sprite, enemy_sprite, battle_log, event_player, battle_menu, font_hud, font_log, background, menu_bg, fade_alpha, font_title, font_footer
 
         # draw based on state
         if state == MENU:
@@ -195,7 +199,7 @@ def main():
                 screen.fill(COLOR_BG)
             else:
                 screen.blit(menu_bg, (0, 0))
-            draw_menu_screen(screen, font_title, main_menu)
+            draw_menu_screen(screen, font_title, main_menu, font_footer)
         elif state in (BATTLE, ANIM):  # draw battle screen (ANIM is not handled, it is automatic, but we still need to draw the battle screen)
             draw_battle_screen(screen, hero_sprite, enemy_sprite, font_hud, battle_log, font_log, battle_menu, show_menu=(state == BATTLE), event_player=event_player, background=background)
         elif state == STATS:

@@ -84,6 +84,7 @@ COLOR_BAR_BG         = (50, 50, 60)      # empty part of a bar
 COLOR_BORDER         = (230, 230, 230)   # bar and panel borders
 COLOR_ACCENT         = (240, 200, 80)    # highlight for the selected menu option
 COLOR_ACCENT_MAIN    = (80, 200, 240)    # highlight for the selected menu option (Main menu)
+COLOR_TEXT_FOOTER    = (80, 80, 80)      # medium grey
 
 # Colors for spells
 COLOR_FIREBALL    = (255, 100, 0)     # orange
@@ -138,6 +139,7 @@ FONT_HUD_SIZE      = 18
 FONT_FLOAT_SIZE    = 26   # damage numbers
 FONT_CRIT_SIZE     = 36   # critical hit numbers (bigger)
 FONT_END_SIZE      = 64   # end screen text
+FONT_FOOTER_SIZE = 14
 
 # Panel styling
 PANEL_ALPHA          = 140   # alpha for semi-transparent panels
