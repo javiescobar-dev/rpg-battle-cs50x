@@ -15,7 +15,7 @@ from game.config import (
     LUNGE_DURATION, FLASH_DURATION, RECOIL_DURATION, FLOAT_DURATION, FLY_DURATION, LUNGE_GAP, RECOIL_DISTANCE, RETURN_JUMP_HEIGHT, LUNGE_SCALE_DEPTH, FLASH_RADIUS, PROJ_RADIUS,
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
-    PARTICLE_COUNT, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS
+    PARTICLE_COUNT, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE
 )
 from game.assets import play_sound
 
@@ -255,7 +255,7 @@ class SpellParticle:
 
 class SpellAnimation(AttackAnimation):
     """Spell attack. Identical to AttackAnimation in Phase 2."""
-    def __init__(self, attacker, defender, event, projectile_color, on_impact=None):
+    def __init__(self, attacker, defender, event, projectile_color, projectile_color_core, on_impact=None):
         # set base duration all animations will last this amount of time (seconds)
         duration = FLY_DURATION + FLASH_DURATION + FLOAT_DURATION
         super().__init__(attacker, defender, event, on_impact, duration)
@@ -267,6 +267,7 @@ class SpellAnimation(AttackAnimation):
 
         # set the projectile color
         self.projectile_color = projectile_color
+        self.projectile_color_core = projectile_color_core
 
         # secondary color for the impact rings (darker version)
         self.impact_color = (
@@ -411,7 +412,7 @@ class SpellAnimation(AttackAnimation):
         # create surface for the bright core
         core_overlay = pygame.Surface((core_size, core_size), pygame.SRCALPHA)
         # draw the bright core
-        pygame.draw.circle(core_overlay, (*self.projectile_color, 255), (core_size // 2, core_size // 2), max(1, int(center_radius)))
+        pygame.draw.circle(core_overlay, (*self.projectile_color_core, 255), (core_size // 2, core_size // 2), max(1, int(center_radius)))
         # blit the bright core to the surface at the projectile's position
         surface.blit(core_overlay, (x - core_size // 2, y - core_size // 2))
 
@@ -575,11 +576,13 @@ class EventPlayer:
                 )
             # create an SpellAnimation for the spell event
             else:
+                is_hero = self._sides[event["attacker"]] == "hero"
                 return SpellAnimation(
                     self._sprite_of(event["attacker"]),
                     self._sprite_of(defender),
                     event,
-                    COLOR_FIREBALL if self._sides[event["attacker"]] == "hero" else COLOR_SHADOW_BOLT,
+                    COLOR_FIREBALL if is_hero else COLOR_SHADOW_BOLT,
+                    COLOR_FIREBALL_CORE if is_hero else COLOR_SHADOW_BOLT_CORE,
                     on_impact=lambda: self._apply_display(defender, hp=hp)  # update the HUD when the animation impacts
                 )
 
