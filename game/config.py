@@ -124,6 +124,9 @@ PARTICLES_PER_FRAME    = 1      # particles spawned per frame during flight
 PARTICLE_LIFE          = 0.3    # particle duration (s)
 PARTICLE_SPEED         = 80     # particle speed (px/s)
 PARTICLE_MIN_RADIUS    = 1      # minimum particle radius
+IMPACT_PARTICLE_COUNT  = 12     # particles burst on impact
+IMPACT_PARTICLE_SPEED  = 150    # impact particle speed (px/s)
+IMPACT_PARTICLE_LIFE   = 0.4    # impact particle duration (s)
 
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing

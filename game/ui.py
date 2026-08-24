@@ -16,7 +16,7 @@ from game.config import (
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
-    FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS
+    FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE
 )
 from game.assets import play_sound
 
@@ -202,7 +202,7 @@ class AttackAnimation(Animation):
 
 class SpellParticle:
     """A single particle trailing behind a spell projectile."""
-    def __init__(self, x, y, ux, uy, colors):
+    def __init__(self, x, y, ux, uy, colors, radial=False, speed_mult=1.0, life=None):
         """
         Initialize a particle.
 
@@ -216,11 +216,17 @@ class SpellParticle:
         self.x = x
         self.y = y
         self.color = random.choice(colors)
-        self.life = PARTICLE_LIFE
-        # direction opposite to the projectile with ±30° variation
-        angle = math.atan2(-uy, -ux) + random.uniform(-0.52, 0.52)  # ±30° in radians
+        # if radial is True, the particle will be spawned in a random direction (for explosions)
+        # otherwise, it will be spawned in the direction opposite to the projectile
+        self.life = life if life is not None else PARTICLE_LIFE
+        if radial:
+            angle = random.uniform(0, 2 * math.pi)  # full 360°
+        else:  # direction opposite to the projectile with ±30° variation
+            angle = math.atan2(-uy, -ux) + random.uniform(-0.52, 0.52)  # ±30° opposite
+
         # Randomize speed slightly around the base speed
-        speed = PARTICLE_SPEED * random.uniform(0.6, 1.0)
+        speed = PARTICLE_SPEED * speed_mult * random.uniform(0.6, 1.0)
+
         # Set velocity components
         self.vx = math.cos(angle) * speed
         self.vy = math.sin(angle) * speed
@@ -340,14 +346,28 @@ class SpellAnimation(AttackAnimation):
             if not self._trail_cleared:
                 self.trail.clear()
                 self._trail_cleared = True
+            # spawn impact burst particles at defender position
+            self.particles.clear()
+            for _ in range(IMPACT_PARTICLE_COUNT):
+                self.particles.append(SpellParticle(
+                    self.defender.x + self.defender.offset_x,
+                    self.defender.y + self.defender.offset_y,
+                    0, 0,  # ux, uy ignored when radial=True
+                    self.particle_colors,
+                    radial=True,
+                    speed_mult=IMPACT_PARTICLE_SPEED / PARTICLE_SPEED,
+                    life=IMPACT_PARTICLE_LIFE,
+                ))
 
-        # update particles during fly phase only
-        if phase == "fly":
+        # update particles during fly and flash phases
+        if phase in ("fly", "flash"):
             for p in self.particles:
                 p.update(dt)
             # Keep only living particles
             self.particles = [p for p in self.particles if p.is_alive()]
-            # continuous particle emission from current projectile position
+
+        # continuous particle emission from current projectile position (fly only)
+        if phase == "fly":
             for _ in range(PARTICLES_PER_FRAME):
                 dx = self.defender.x - self.attacker.x
                 dy = self.defender.y - self.attacker.y
@@ -475,6 +495,10 @@ class SpellAnimation(AttackAnimation):
             flash_overlay = pygame.Surface((flash_radius * 2, flash_radius * 2), pygame.SRCALPHA)
             pygame.draw.circle(flash_overlay, (*self.projectile_color, flash_alpha), (flash_radius, flash_radius), flash_radius)
             surface.blit(flash_overlay, (center_x - flash_radius, center_y - flash_radius))
+
+        # draw impact burst particles
+        for p in self.particles:
+            p.draw(surface)
 
 
 class TextAnimation(Animation):
