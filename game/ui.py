@@ -216,9 +216,12 @@ class SpellParticle:
         self.x = x
         self.y = y
         self.color = random.choice(colors)
+        # if life is not specified, use the default particle life
+        self.life = life if life is not None else PARTICLE_LIFE
+        # Store the maximum life of the particle
+        self.max_life = self.life
         # if radial is True, the particle will be spawned in a random direction (for explosions)
         # otherwise, it will be spawned in the direction opposite to the projectile
-        self.life = life if life is not None else PARTICLE_LIFE
         if radial:
             angle = random.uniform(0, 2 * math.pi)  # full 360°
         else:  # direction opposite to the projectile with ±30° variation
@@ -244,8 +247,8 @@ class SpellParticle:
 
     def draw(self, surface):
         """Draw the particle."""
-        # Get the current progress (1 → 0 as time goes on)
-        progress = self.life / PARTICLE_LIFE  # 1 -> 0
+        # Get the current progress (1 -> 0 as time goes on)
+        progress = self.life / self.max_life
         # Calculate alpha and radius based on progress
         alpha = int(200 * progress)
         radius = self.radius * progress
