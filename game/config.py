@@ -253,7 +253,7 @@ SFX = {
     "flee_fail":    f"{SFX_DIR}/flee.wav",
     "defeated":     f"{SFX_DIR}/defeated.wav",
     "victory":      f"{SFX_DIR}/victory.wav",
-    "defeat":       f"{SFX_DIR}/defeated.wav",
+    "defeat":       f"{SFX_DIR}/defeat.mp3",
     "cursor":       f"{SFX_DIR}/cursor.wav",
     "confirm":      f"{SFX_DIR}/confirm.wav",
 }
