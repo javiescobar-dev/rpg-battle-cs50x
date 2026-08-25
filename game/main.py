@@ -108,6 +108,11 @@ def main():
         """Run the chosen main-menu option."""
         # use nonlocal to modify the state and running variables
         nonlocal state, running, fade_alpha
+
+        # prevent play sound if index is None (occurs when mouse is not over any option)
+        if index is None:
+            return
+
         if index == 0:          # Play
             start_battle()
             fade_alpha = 255    # fade to black
@@ -272,8 +277,8 @@ def main():
         """Select action in the battle menu."""
         # use nonlocal to modify menu_level
         nonlocal menu_level, pending_action, action_timer
-        if pending_action is not None:
-            return  # Already choosing action
+        if pending_action is not None or index is None:
+            return  # Already choosing action or index is None (mouse not over any option)
 
         if menu_level == MAIN_MENU:
             if index == 0:    # Attack
