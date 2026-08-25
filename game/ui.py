@@ -758,7 +758,7 @@ class CharacterSprite:
 
     def set_idle_pose(self):
         """Set the current animation to idle or caution based on HP."""
-        if self.character.hp / self.character.max_hp > 0.2:
+        if self.display_hp / self.character.max_hp > 0.2:  # use display_hp instead of character.hp to show the current HP
             self.set_animation("idle")
         else:
             self.set_animation("caution")
