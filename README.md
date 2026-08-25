@@ -1,8 +1,9 @@
 # RPG Battle — CS50x Final Project
 
-Turn-based RPG battle game (Pygame) paired with a customTkinter launcher that
-downloads the game from GitHub Releases and displays a news feed served from a
-JSON file in this repository. Final project for CS50x 2026.
+Turn-based RPG battle game built with Pygame, paired with a customTkinter
+launcher that downloads the game from GitHub Releases and displays a news
+feed. Features Suikoden II-style combat animations, real sprite graphics,
+and a polished battle UI. Final project for CS50x 2026.
 
 ## Features
 
@@ -78,7 +79,7 @@ the Phase 1 engine (unchanged battle logic).
   (including guard and heal), the defender's HP drops exactly at the moment of
   impact, and heals/potions raise HP as their animation plays.
 
-### Polished graphics (Phase 3 — in progress)
+### Polished graphics (Phase 3)
 
 Sprites and asset pipeline replacing the Phase 2 placeholders.
 
@@ -122,6 +123,7 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   black border. The hero status card shows a cropped portrait from the
   character's idle sprite alongside name and HP/MP bars. Battle input is
   locked during the action delay to prevent duplicate confirmations.
+  Clicking outside a menu no longer triggers a confirm sound.
 - Spell projectiles (Fireball and Shadow Bolt) feature a trailing
   afterimage, a pulsating glow, decorative particles that fly backward
   during travel, and an impact explosion with two expanding color-shifting
@@ -132,6 +134,7 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 
 ## Repository structure
 
-- `game/` — the Pygame battle game.
+- `game/` — the Pygame battle game (`python -m game.main`).
+- `game/assets/` — sprites, backgrounds, sound effects, and fonts.
 - `launcher/` — the customTkinter downloader/runner.
 - `news/` — the JSON news feed consumed by the launcher.
