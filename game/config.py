@@ -1,12 +1,7 @@
 # RPG Battle - CS50x Final Project
 # Developed with the assistance of an AI coding assistant (opencode).
 
-"""Global constants and game balance configuration.
-
-Holds: the hero and enemy stat templates, the skill definitions, potions,
-the damage formula, fleeing, enemy AI weights and battle result states.
-Phase 2 will add window/FPS/color constants for pygame.
-"""
+"""Global constants and game balance configuration."""
 
 ## Battle configuration
 # Stats base
