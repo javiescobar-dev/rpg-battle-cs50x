@@ -1,0 +1,5 @@
+# RPG Battle - CS50x Final Project
+# Developed with the assistance of an AI coding assistant (opencode).
+customTkinter>=5.4
+platformdirs>=4
+packaging>=24
