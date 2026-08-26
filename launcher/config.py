@@ -1,0 +1,20 @@
+# RPG Battle - CS50x Final Project
+# Developed with the assistance of an AI coding assistant (opencode).
+
+"""Launcher configuration."""
+
+# Game info
+APP_NAME = "RPG Battle"
+APP_VERSION = "1.0.0"
+
+# GitHub API
+REPO_API_URL = "https://api.github.com/repos/javiescobar-dev/rpg-battle-cs50x/releases/latest"
+
+# News
+NEWS_URL = "https://raw.githubusercontent.com/javiescobar-dev/rpg-battle-cs50x/main/news/news.json"
+
+# Game asset pattern
+GAME_ASSET_PATTERN = "rpg-battle-{tag}-{platform}.zip"
+
+# Cache
+NEWS_CACHE_TTL = 3600  # 1 hour in seconds
