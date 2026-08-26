@@ -132,9 +132,29 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   during flight and a radial burst on impact. The projectile core glows
   in a brighter, differentiated color through a three-layer radial gradient.
 
+### customTkinter launcher (Phase 4 — in progress)
+
+A separate launcher app that downloads, updates, and launches the game.
+
+- Final Fantasy-inspired aesthetic: warm cream backgrounds (`#F5F0EB`), gold
+  accents (`#C9A96E`), serif titles, and elegant panel borders.
+- Horizontal layout (~800x450 px) with a left sidebar for navigation (News,
+  Settings) and a scrollable content panel.
+- Downloads the game from GitHub Releases: fetches the latest release via the
+  GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
+  downloads it with a progress bar, extracts it, and saves the installed version.
+- News feed: fetches `news.json` from the remote GitHub raw URL, displays
+  headlines with images and dates. Falls back to a local cache (1-hour TTL)
+  when offline.
+- Version management: tracks the installed game version in `version.txt` inside
+  the platform-specific data directory (`platformdirs`). The Play button is
+  disabled when no game is installed and enabled after a successful update.
+- Cross-platform paths via `platformdirs`: game data lives in the OS-specific
+  user data directory, not hardcoded paths.
+
 ## Repository structure
 
 - `game/` — the Pygame battle game (`python -m game.main`).
 - `game/assets/` — sprites, backgrounds, sound effects, and fonts.
-- `launcher/` — the customTkinter downloader/runner.
+- `launcher/` — the customTkinter launcher (config, paths, updater, news, UI).
 - `news/` — the JSON news feed consumed by the launcher.
