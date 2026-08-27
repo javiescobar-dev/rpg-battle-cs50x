@@ -1,0 +1,10 @@
+{
+    "items": [
+        {
+            "title": "Welcome to RPG Battle!",
+            "body": "A Suikoden II-inspired turn-based RPG battle game built with Pygame. Fight enemies, collect spoils, and enjoy the journey.",
+            "image": "",
+            "date": "2026-08-25"
+        }
+    ]
+}
