@@ -79,3 +79,15 @@ class LauncherApp(ctk.CTk):
             command=lambda: self._show_tab("settings")
         )
         self._btn_settings.pack(fill="x", padx=8, pady=4)
+
+    def _show_tab(self, tab_name):
+        """Show the indicated tab and hide the others."""
+        self._current_tab = tab_name  # set the current tab
+
+        # show or hide the news tab
+        if tab_name == "news":
+            self._news_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 10))  # show news tab
+            self._settings_frame.pack_forget()  # hide settings tab
+        else:
+            self._settings_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 10))  # show settings tab
+            self._news_frame.pack_forget()  # hide news tab
