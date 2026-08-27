@@ -51,3 +51,31 @@ class LauncherApp(ctk.CTk):
         # temp: prints in console for verification
         print("Release:", self._latest_release.get("tag_name") if self._latest_release else "None")
         print("Installed:", installed_version())
+
+    def _build_sidebar(self):
+        """Left sidebar with navigation buttons."""
+        # Sidebar frame
+        self._sidebar = ctk.CTkFrame(self, width=SIDEBAR_WIDTH, fg_color=SIDEBAR_BG, corner_radius=0)
+        self._sidebar.pack(side="left", fill="y")
+        self._sidebar.pack_propagate(False)  # prevents sidebar from resizing
+
+        # Sidebar title (vertical)
+        ctk.CTkLabel(self._sidebar, text="RPG\nB", font=("Georgia", 14, "bold"), text_color=ACCENT_COLOR).pack(pady=(20, 30))
+
+        # news button
+        self._btn_news = ctk.CTkButton(
+            self._sidebar, text="NEWS",
+            font=FONT_SIDEBAR, fg_color="transparent",
+            text_color=TEXT_TITLE, hover_color=BORDER_COLOR,
+            command=lambda: self._show_tab("news")
+        )
+        self._btn_news.pack(fill="x", padx=8, pady=4)
+
+        # settings button
+        self._btn_settings = ctk.CTkButton(
+            self._sidebar, text="SETTINGS",
+            font=FONT_SIDEBAR, fg_color="transparent",
+            text_color=TEXT_TITLE, hover_color=BORDER_COLOR,
+            command=lambda: self._show_tab("settings")
+        )
+        self._btn_settings.pack(fill="x", padx=8, pady=4)
