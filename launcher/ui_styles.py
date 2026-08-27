@@ -18,3 +18,15 @@ BUTTON_BG         = "#C9A96E"   # gold (button background)
 BUTTON_HOVER      = "#B8944A"   # darker gold (hover)
 BUTTON_TEXT       = "#FFFFFF"   # white (button text)
 SCROLLBAR_COLOR   = "#C9B99A"   # thin scrollbar
+
+# Fonts
+FONT_TITLE    = ("Georgia", 18, "bold")
+FONT_BODY     = ("Arial", 13)
+FONT_DATE     = ("Arial", 11)
+FONT_SIDEBAR  = ("Arial", 12, "bold")
+
+# Dimensions
+WINDOW_WIDTH   = 800
+WINDOW_HEIGHT  = 450
+SIDEBAR_WIDTH  = 80
+CARD_PADDING   = 12
