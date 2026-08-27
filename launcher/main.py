@@ -272,13 +272,80 @@ class LauncherApp(ctk.CTk):
         # Not packed here - shown only during download
 
     def _on_check_click(self):
-        """Check the latest remote version."""
-        pass
+        """Check the latest remote version (runs in a background thread)."""
+        # default state and text of the check button
+        self._btn_check.configure(state="disabled", text="Checking...")
+
+        # thread to check the latest remote version
+        def _check():
+            try:
+                # fetch the latest release
+                release = fetch_latest_release()
+                self._latest_release = release
+                tag = release.get("tag_name", "?")
+                # update the latest remote version label
+                self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))
+            except Exception:
+                # update the latest remote version label
+                self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))
+            finally:
+                # restore the check button
+                self.after(0, lambda: self._btn_check.configure(state="normal", text="Check"))
+
+        # start the thread
+        threading.Thread(target=_check, daemon=True).start()
 
     def _on_play_click(self):
         """Launch the game."""
-        pass
+        try:
+            # don't need threading because subprocess.Popen inside launch_game has their own process
+            launch_game()
+        except Exception as e:
+            self._lbl_installed.configure(text=f"Error: {e}")
 
     def _on_download_click(self):
-        """Download or update the game."""
-        pass
+        """Download or update the game (runs in a background thread)."""
+        # if latest release is not fetched, return
+        if self._latest_release is None:
+            return
+
+        # get tag
+        tag = self._latest_release.get("tag_name")
+        if not tag:
+            return
+
+        # disable buttons and show progress bar
+        self._btn_download.configure(state="disabled", text="Downloading...")
+        self._btn_play.configure(state="disabled")
+        self._btn_check.configure(state="disabled")
+        self._progress.set(0)
+        self._progress.pack(fill="x", padx=16, pady=(0, 8))
+
+        # thread to download the game
+        def _do_update():
+            # progress callback
+            def on_progress(fraction):
+                self.after(0, lambda: self._progress.set(fraction))
+
+            # download the game
+            success = update(tag, progress_callback=on_progress)
+
+            # finish download (after GUI is ready)
+            def _finish():
+                # hide progress bar
+                self._progress.pack_forget()
+                # restore buttons
+                self._btn_download.configure(state="normal", text="Download")
+                self._btn_check.configure(state="normal")
+                # update installed version if successful
+                if success:
+                    self._lbl_installed.configure(text=f"Installed: {tag}")
+                    self._btn_play.configure(state="normal")
+                else:
+                    self._btn_download.configure(text="Retry")
+
+            # call finish (after GUI is ready)
+            self.after(0, _finish)
+
+        # start the thread
+        threading.Thread(target=_do_update, daemon=True).start()
