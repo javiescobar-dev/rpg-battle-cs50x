@@ -16,7 +16,8 @@ from game.config import (
     FLASH_COLOR, COLOR_DAMAGE, COLOR_CRIT, FLOAT_SPEED, FLOAT_FADE_START, FONT_FLOAT_SIZE, FONT_CRIT_SIZE, FONT_NAME, COLOR_HEAL, COLOR_GUARD, COLOR_GRAY, SFX,
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
-    FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE
+    FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
+    HEAL_EFFECT_DURATION, HEAL_BEAM_WIDTH, HEAL_BEAM_COLOR_CORE, HEAL_BEAM_COLOR_EDGE, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
 )
 from game.assets import play_sound
 
@@ -37,6 +38,48 @@ class Animation:
     def draw(self, surface):
         """Draw the effect. Base class draws nothing."""
         pass
+
+
+class HealEffectAnimation(Animation):
+    """A vertical beam of light covering the character, with the healing text."""
+    def __init__(self, sprite, text, color):
+        super().__init__(HEAL_EFFECT_DURATION)
+        self.sprite = sprite
+        self.text = text
+        self.color = color
+        self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
+        self._surf = render_outlined_text(self.font, text, color)  # floating text surface
+        self.beam_h = int(sprite.scale * 140)   # beam height
+        self._beam = pygame.Surface((HEAL_BEAM_WIDTH, self.beam_h), pygame.SRCALPHA)  # beam surface
+        self._edge = pygame.Surface((6, self.beam_h), pygame.SRCALPHA)  # beam edges (overlay borders)
+
+    def draw(self, surface):
+        # beam alpha: fade in (0-20%), hold (20-70%), fade out (70-100%)
+        p = self.elapsed / self.duration
+        if p < 0.2:
+            alpha = int(255 * p / 0.2)
+        elif p < 0.7:
+            alpha = 255
+        else:
+            alpha = int(255 * (1 - p) / 0.3)
+
+        # beam centered horizontally, its bottom resting just below the sprite
+        x = self.sprite.x - HEAL_BEAM_WIDTH // 2
+        y = self.sprite.y - self.beam_h + 10
+
+        # fill the beam white and the edges green, both with the current alpha
+        self._beam.fill((*HEAL_BEAM_COLOR_CORE, alpha))
+        self._edge.fill((*HEAL_BEAM_COLOR_EDGE, alpha))
+        self._beam.blit(self._edge, (0, 0))
+        self._beam.blit(self._edge, (HEAL_BEAM_WIDTH - 6, 0))
+        surface.blit(self._beam, (x, y))
+
+        # floating text (same as TextAnimation)
+        progress = self.elapsed / FLOAT_DURATION
+        fade = (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START)
+        self._surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))
+        ty = self.sprite.y - 30 * self.sprite.scale - FLOAT_SPEED * self.elapsed
+        surface.blit(self._surf, (self.sprite.x - self._surf.get_width() // 2, ty))
 
 
 class AttackAnimation(Animation):
