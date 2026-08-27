@@ -35,22 +35,106 @@ class LauncherApp(ctk.CTk):
         self._build_footer()                              # build the footer
 
         # initial load in background
-        self.after(100, self._startup)                  # start loading data in background (call _startup after 100ms)
+        self.after(100, self._startup)                    # start loading data in background (call _startup after 100ms)
 
     def _startup(self):
         """Load initial data in background."""
         threading.Thread(target=self._load_data, daemon=True).start()
 
     def _load_data(self):
-        """Load release info and news from server."""
+        """Get release info and news from server (runs in background)."""
+        # Release
         try:
-            self._latest_release = fetch_latest_release()
+            release = fetch_latest_release()
+            self._latest_release = release
+            tag = release.get("tag_name", "?")
+            self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))  # Set the latest release tag in background
         except Exception:
-            self._latest_release = None
+            self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))  # Set the latest release tag to — if fetch fails
 
-        # temp: prints in console for verification
-        print("Release:", self._latest_release.get("tag_name") if self._latest_release else "None")
-        print("Installed:", installed_version())
+        # News
+        items = get_news()
+        self.after(0, lambda: self._populate_news(items))
+
+    def _populate_news(self, items):
+        """Populates the news frame with the received items."""
+        # Remove placeholder
+        self._news_placeholder.destroy()
+
+        # If no news available, show a message
+        if not items:
+            ctk.CTkLabel(self._news_frame, text="No news available.", font=FONT_BODY, text_color=TEXT_DATE).pack(pady=40)
+            return
+
+        # Add each news item card to the news frame
+        for item in items:
+            self._add_news_card(item)
+
+    def _add_news_card(self, item):
+        """Adds a news card to the news frame."""
+        # Card frame
+        card = ctk.CTkFrame(
+            self._news_frame, fg_color=SIDEBAR_BG,
+            border_width=1, border_color=BORDER_COLOR,
+            corner_radius=8
+        )
+        card.pack(fill="x", pady=(0, CARD_PADDING))
+
+        # Image (loads in background)
+        image_url = item.get("image")
+        img_label = ctk.CTkLabel(card, text="", height=140)
+        img_label.pack(fill="x", padx=CARD_PADDING, pady=(CARD_PADDING, 0))
+
+        # Load image in background (using threading to avoid freezing the UI)
+        if image_url:
+            threading.Thread(target=self._load_image, args=(image_url, img_label), daemon=True).start()
+
+        # Title + Date
+        header = ctk.CTkFrame(card, fg_color="transparent")
+        header.pack(fill="x", padx=CARD_PADDING, pady=(6, 0))
+
+        # Title
+        ctk.CTkLabel(
+            header, text=item.get("title", "Untitled"),
+            font=FONT_TITLE, text_color=TEXT_TITLE, anchor="w"
+        ).pack(side="left", fill="x", expand=True)
+
+        # Date
+        ctk.CTkLabel(
+            header, text=item.get("date", ""),
+            font=FONT_DATE, text_color=TEXT_DATE
+        ).pack(side="right")
+
+        # Body
+        ctk.CTkLabel(
+            card, text=item.get("body", ""),
+            font=FONT_BODY, text_color=TEXT_BODY,
+            wraplength=550, justify="left", anchor="w"
+        ).pack(fill="x", padx=CARD_PADDING, pady=(4, CARD_PADDING))
+
+    def _load_image(self, url, label):
+        """Downloads an image and displays it in the label (in background)."""
+        try:
+            # Request the image from the URL
+            req = urllib.request.Request(url)
+            # Open the URL and read the data
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = resp.read()
+            # Open the image from the data
+            img = Image.open(io.BytesIO(data))
+
+            # Resize image to fit the content panel width (~580px)
+            width, height = img.size
+            new_width = 580  # Content panel width
+            new_height = int(height * (new_width / width))  # Maintain aspect ratio
+            img = img.resize((new_width, new_height), Image.LANCZOS)  # LANCZOS used for high-quality resizing
+
+            # Create CTkImage and configure the label in the UI thread
+            ctk_img = ctk.CTkImage(light_image=img, size=(new_width, new_height))
+            self.after(0, lambda: label.configure(image=ctk_img, text=""))
+        except Exception:
+            # Show error message if image fails to load
+            self.after(0, lambda: label.configure(text="[Image not available]", text_color=TEXT_DATE ))
 
     def _build_sidebar(self):
         """Left sidebar with navigation buttons."""
