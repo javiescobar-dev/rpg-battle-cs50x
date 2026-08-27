@@ -17,7 +17,7 @@ from game.config import (
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
     FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
-    HEAL_EFFECT_DURATION, HEAL_BEAM_WIDTH, HEAL_BEAM_COLOR_CORE, HEAL_BEAM_COLOR_EDGE, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
+    HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
 )
 from game.assets import play_sound
 
@@ -41,7 +41,7 @@ class Animation:
 
 
 class HealEffectAnimation(Animation):
-    """A vertical beam of light covering the character, with the healing text."""
+    """Animation of particles of light covering the character, with the healing text."""
     def __init__(self, sprite, text, color):
         super().__init__(HEAL_EFFECT_DURATION)
         self.sprite = sprite
@@ -49,32 +49,40 @@ class HealEffectAnimation(Animation):
         self.color = color
         self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
         self._surf = render_outlined_text(self.font, text, color)  # floating text surface
-        self.beam_h = int(sprite.scale * 140)   # beam height
-        self._beam = pygame.Surface((HEAL_BEAM_WIDTH, self.beam_h), pygame.SRCALPHA)  # beam surface
-        self._edge = pygame.Surface((6, self.beam_h), pygame.SRCALPHA)  # beam edges (overlay borders)
+        self.particles = []  # particles that will be used to create the healing effect
+
+    def update(self, dt):
+        """Advance the particle animation by dt (seconds)."""
+        super().update(dt)
+        for _ in range(HEAL_PARTICLE_PER_FRAME):
+            if self.elapsed >= self.duration * 0.7:  # stop spawning particles after 70% of the duration
+                break
+            # spawn particles at the character's position
+            x = self.sprite.x + random.uniform(-25, 25)
+            y = self.sprite.y + random.uniform(-35, 35)
+            # get the angle for the particle (random, but with a slight upward bias)
+            lat = random.uniform(-1, 1)
+            # convert the angle to radians
+            ang = math.radians(-90) + lat * 0.6  # -90 is the angle for straight up, 0.6 is the random variation
+            # get the unit vector for the particle
+            ux = -math.cos(ang)
+            uy = -math.sin(ang)
+            # create the particle with random colors
+            self.particles.append(
+                SpellParticle(x, y, ux, uy, HEAL_PARTICLE_COLORS,
+                            speed_mult=random.uniform(1.5, 3.0),
+                            life=random.uniform(0.5, HEAL_PARTICLE_LIFE))
+            )
+        # remove particles that are no longer alive
+        self.particles = [p for p in self.particles if p.is_alive()]
 
     def draw(self, surface):
-        # beam alpha: fade in (0-20%), hold (20-70%), fade out (70-100%)
-        p = self.elapsed / self.duration
-        if p < 0.2:
-            alpha = int(255 * p / 0.2)
-        elif p < 0.7:
-            alpha = 255
-        else:
-            alpha = int(255 * (1 - p) / 0.3)
+        """Draw the healing effect."""
+        # Draw particles
+        for p in self.particles:
+            p.draw(surface)
 
-        # beam centered horizontally, its bottom resting just below the sprite
-        x = self.sprite.x - HEAL_BEAM_WIDTH // 2
-        y = self.sprite.y - self.beam_h + 10
-
-        # fill the beam white and the edges green, both with the current alpha
-        self._beam.fill((*HEAL_BEAM_COLOR_CORE, alpha))
-        self._edge.fill((*HEAL_BEAM_COLOR_EDGE, alpha))
-        self._beam.blit(self._edge, (0, 0))
-        self._beam.blit(self._edge, (HEAL_BEAM_WIDTH - 6, 0))
-        surface.blit(self._beam, (x, y))
-
-        # floating text (same as TextAnimation)
+        # Draw floating text
         progress = self.elapsed / FLOAT_DURATION
         fade = (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START)
         self._surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))

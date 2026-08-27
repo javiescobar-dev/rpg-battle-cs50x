@@ -129,10 +129,14 @@ HEAL_EFFECT_DURATION    = 1.0
 GUARD_EFFECT_DURATION   = 0.8
 POTION_EFFECT_DURATION  = 0.8
 
-# Heal beam
-HEAL_BEAM_WIDTH         = 50
-HEAL_BEAM_COLOR_CORE    = (255, 255, 255)   # white center
-HEAL_BEAM_COLOR_EDGE    = (120, 230, 120)   # green edges
+# Heal particles
+HEAL_PARTICLE_PER_FRAME   = 6      # number of particles to spawn per frame
+HEAL_PARTICLE_LIFE        = 0.6    # particle duration (s)
+HEAL_PARTICLE_COLORS      = [
+    (120, 230, 120),  # bright green
+    (80, 200, 80),    # green
+    (160, 255, 160)   # very bright green
+]
 
 # Guard shield
 GUARD_SHIELD_RADIUS     = 40
