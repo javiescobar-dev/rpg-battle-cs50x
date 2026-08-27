@@ -675,6 +675,9 @@ class EventPlayer:
         actor = self._sprite_of(event.get("actor") or event.get("defender"))
         # get the text and color for the event
         text, color = self._text_for(event)
+        # special visual effects for heal, guard, potion; else plain floating text
+        if action == "heal":
+            return HealEffectAnimation(actor, text, color)
         # create a TextAnimation for the event
         return TextAnimation(actor, text, color)
 
