@@ -349,3 +349,8 @@ class LauncherApp(ctk.CTk):
 
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()
+
+
+if __name__ == "__main__":
+    app = LauncherApp()
+    app.mainloop()
