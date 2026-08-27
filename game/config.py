@@ -124,6 +124,28 @@ IMPACT_PARTICLE_COUNT  = 12     # particles burst on impact
 IMPACT_PARTICLE_SPEED  = 150    # impact particle speed (px/s)
 IMPACT_PARTICLE_LIFE   = 0.4    # impact particle duration (s)
 
+# Status effect durations
+HEAL_EFFECT_DURATION    = 1.0
+GUARD_EFFECT_DURATION   = 0.8
+POTION_EFFECT_DURATION  = 0.8
+
+# Heal beam
+HEAL_BEAM_WIDTH         = 50
+HEAL_BEAM_COLOR_CORE    = (255, 255, 255)   # white center
+HEAL_BEAM_COLOR_EDGE    = (120, 230, 120)   # green edges
+
+# Guard shield
+GUARD_SHIELD_RADIUS     = 40
+GUARD_SHIELD_COLOR      = (120, 180, 255)   # light blue
+
+# Potion sparkles
+POTION_SPARKLE_COUNT    = 10
+POTION_SPARKLE_COLORS   = [
+    (120, 230, 120),  # bright green
+    (80, 200, 80),    # green
+    (160, 255, 160)   # very bright green
+]
+
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
 FONT_NAME_TITLE    = "game/assets/fonts/finalf.ttf"
