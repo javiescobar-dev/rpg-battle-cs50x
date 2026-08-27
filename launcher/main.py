@@ -91,3 +91,42 @@ class LauncherApp(ctk.CTk):
         else:
             self._settings_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 10))  # show settings tab
             self._news_frame.pack_forget()  # hide news tab
+
+    def _build_content(self):
+        """Central scrollable panel containing the tabs."""
+        # Central panel
+        self._content = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
+        self._content.pack(side="left", fill="both", expand=True)
+
+        # News frame (scrollable)
+        self._news_frame = ctk.CTkScrollableFrame(
+            self._content, fg_color=BG_COLOR,
+            scrollbar_button_color=SCROLLBAR_COLOR,
+            scrollbar_button_hover_color=ACCENT_COLOR
+        )
+
+        # Placeholder: message while loading
+        self._news_placeholder = ctk.CTkLabel(
+            self._news_frame, text="Loading news...",
+            font=FONT_BODY, text_color=TEXT_DATE
+        )
+        self._news_placeholder.pack(pady=40)
+
+        # Settings frame (placeholder)
+        self._settings_frame = ctk.CTkFrame(
+            self._content, fg_color=BG_COLOR
+        )
+        self._settings_frame.pack_forget()  # hidden at the start
+
+        # Settings header
+        ctk.CTkLabel(self._settings_frame, text="Settings", font=FONT_TITLE, text_color=TEXT_TITLE).pack(pady=(40, 10))
+
+        # Settings body
+        ctk.CTkLabel(
+            self._settings_frame,
+            text=f"{APP_NAME} v{APP_VERSION}\n\nGame data is stored in your\nplatform's user data directory.",
+            font=FONT_BODY, text_color=TEXT_BODY, justify="center"
+        ).pack(pady=10)
+
+        # Show news by default
+        self._show_tab("news")
