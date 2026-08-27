@@ -130,3 +130,71 @@ class LauncherApp(ctk.CTk):
 
         # Show news by default
         self._show_tab("news")
+
+    def _build_footer(self):
+        """Bottom bar: versions, buttons and progress bar."""
+        # Footer frame
+        footer = ctk.CTkFrame(self, fg_color=SIDEBAR_BG, corner_radius=0, height=60)
+        footer.pack(side="bottom", fill="x")
+        footer.pack_propagate(False)
+
+        # Top row: labels + buttons
+        row = ctk.CTkFrame(footer, fg_color="transparent")
+        row.pack(fill="x", padx=16, pady=(8, 2))
+
+        # Installed version
+        installed = installed_version()
+        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=FONT_DATE, text_color=TEXT_BODY)
+        self._lbl_installed.pack(side="left")
+
+        # Remote version (filled later)
+        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=FONT_DATE, text_color=TEXT_BODY)
+        self._lbl_latest.pack(side="left", padx=(20, 0))
+
+        # Check button
+        self._btn_check = ctk.CTkButton(
+            row, text="Check", width=70, height=28,
+            font=FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            command=self._on_check_click
+        )
+        self._btn_check.pack(side="right", padx=(8, 0))
+
+        # Play button
+        self._btn_play = ctk.CTkButton(
+            row, text="Play", width=90, height=28,
+            font=FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            command=self._on_play_click
+        )
+        self._btn_play.pack(side="right", padx=(8, 0))
+
+        # Download / Update button
+        self._btn_download = ctk.CTkButton(
+            row, text="Download", width=90, height=28,
+            font=FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            command=self._on_download_click
+        )
+        self._btn_download.pack(side="right")
+
+        # Initial state of the Play button (disabled if the game is not installed)
+        if not is_game_installed():
+            self._btn_play.configure(state="disabled")
+
+        # Bottom row: progress bar (hidden at the start)
+        self._progress = ctk.CTkProgressBar(footer, fg_color=BORDER_COLOR, progress_color=ACCENT_COLOR, height=6)
+        self._progress.set(0)
+        # Not packed here - shown only during download
+
+    def _on_check_click(self):
+        """Check the latest remote version."""
+        pass
+
+    def _on_play_click(self):
+        """Launch the game."""
+        pass
+
+    def _on_download_click(self):
+        """Download or update the game."""
+        pass
