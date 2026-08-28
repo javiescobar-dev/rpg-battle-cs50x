@@ -603,12 +603,12 @@ class SpellAnimation(AttackAnimation):
 
 class GuardEffectAnimation(Animation):
     """Draws a shield-shaped arc with text floating above the defender."""
-    def __init__(self, sprite, text, color, side=1):
+    def __init__(self, sprite, text, color, angle):
         super().__init__(GUARD_EFFECT_DURATION)
         self.sprite = sprite
         self.text = text
         self.color = color
-        self.side = side   # +1 = arc bulges LEFT, -1 = arc bulges RIGHT
+        self.angle = angle   # radians: direction actor -> rival (for 3D depth)
         self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
         self._surf = render_outlined_text(self.font, text, color)
 
@@ -628,35 +628,26 @@ class GuardEffectAnimation(Animation):
         else:
             env = 1 - (p - 0.7) / 0.3
         alpha = int(pulse * env)
-        # ellipse rectangle: bulge towards the enemy side
-        if self.side > 0:      # bulge to the left
-            rect = pygame.Rect(self.sprite.x - radius, self.sprite.head_y, 2*radius, body_h)
-            start, stop = math.pi/2, 3*math.pi/2
-        else:                  # bulge to the right
-            rect = pygame.Rect(self.sprite.x, self.sprite.head_y, 2*radius, body_h)
-            start, stop = -math.pi/2, math.pi/2
-        # thickness step between concentric layers
+        # arc drawn on the +x half; we rotate it to point toward the enemy
         step = GUARD_SHIELD_THICKNESS // (GUARD_SHIELD_LAYERS - 1)
-        # maximum radius (outermost layer) -> size the surface to fit all layers
         max_radius = radius + step * (GUARD_SHIELD_LAYERS - 1)
         # create a surface big enough for the outer arc
         arc_surf = pygame.Surface((2 * max_radius, body_h), pygame.SRCALPHA)
         # draw several concentric arc layers for depth/thickness
         for layer in range(GUARD_SHIELD_LAYERS):
             layer_radius = radius + step * layer
-            # local x offset so the arc is centered within arc_surf
             x0 = max_radius - layer_radius
             rect = pygame.Rect(x0, 0, 2 * layer_radius, body_h)
-            if self.side > 0:   # bulge to the left (enemy on the left)
-                start, stop = math.pi / 2, 3 * math.pi / 2
-            else:               # bulge to the right (enemy on the right)
-                start, stop = -math.pi / 2, math.pi / 2
+            # right half of the ellipse (bulge toward +x); rotated afterwards
+            start, stop = -math.pi / 2, math.pi / 2
             layer_alpha = int(alpha * (1.0 - layer * 0.3))
             pygame.draw.arc(arc_surf, (*GUARD_SHIELD_COLOR, layer_alpha),
                             rect, start, stop, 6)
-        # blit at the correct position (bulge toward the enemy)
-        blit_x = self.sprite.x - max_radius if self.side > 0 else self.sprite.x
-        surface.blit(arc_surf, (blit_x, self.sprite.head_y))
+        # rotate so the bulge points along the diagonal toward the enemy (degrees, counter-clockwise)
+        rotated = pygame.transform.rotate(arc_surf, -math.degrees(self.angle))
+        # blit centered on the character's body
+        center = (self.sprite.x, (self.sprite.head_y + self.sprite.feet_y) // 2)
+        surface.blit(rotated, rotated.get_rect(center=center))
 
 
 class TextAnimation(Animation):
@@ -793,10 +784,10 @@ class EventPlayer:
         if action == "guard":
             # get the rival sprite
             rival = next(s for s in self.sprites.values() if s is not actor)
-            # determine the side of the guard
-            side = -1 if rival.x > actor.x else 1
+            # determine the direction (radians) from the actor toward the rival (pygame: y grows down)
+            angle = math.atan2(rival.y - actor.y, rival.x - actor.x)
             # return a GuardEffectAnimation for the guard event
-            return GuardEffectAnimation(actor, text, color, side)
+            return GuardEffectAnimation(actor, text, color, angle)
 
         # create a TextAnimation for the event
         return TextAnimation(actor, text, color)
