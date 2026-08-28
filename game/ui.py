@@ -64,7 +64,7 @@ class HealEffectAnimation(Animation):
             # max orbit radius this particle will reach
             orbit = random.uniform(HEAL_ORBIT_MAX * 0.5, HEAL_ORBIT_MAX)
             # character feet position
-            feet_y = self.sprite.y + 48 * self.sprite.scale  # TODO: use frame.get_height() in sprite to calculate feet position relative to y
+            feet_y = self.sprite.feet_y
             # create the particle with random colors
             self.particles.append(HealParticle(self.sprite.x, feet_y, phase, orbit, random.choice(HEAL_PARTICLE_COLORS)))
 
@@ -845,6 +845,22 @@ class CharacterSprite:
         self.animations = animations
         self.set_animation("idle")
         self.flip_x = flip_x  # Flip the sprite on the x-axis
+
+    @property
+    def frame_height(self):
+        """Pixel height of the current frame, scaled (used by anchoring helpers)."""
+        frame = self.current_animation[self.frame_idx]
+        return int(frame.get_height() * self.scale * self.scale_factor)
+
+    @property
+    def feet_y(self):
+        """Pixel y of the character's feet (bottom of the drawn frame)."""
+        return self.y + self.offset_y + self.frame_height // 2
+
+    @property
+    def head_y(self):
+        """Pixel y of the character's head (top of the drawn frame)."""
+        return self.y + self.offset_y - self.frame_height // 2
 
     def set_animation(self, name):
         """Set the current animation."""
