@@ -18,7 +18,7 @@ from game.config import (
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
     FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
     HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, HEAL_RISE_SPEED, HEAL_ORBIT_SPEED, HEAL_ORBIT_MAX,
-    GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
+    GUARD_EFFECT_DURATION, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
 )
 from game.assets import play_sound
 
@@ -598,6 +598,48 @@ class SpellAnimation(AttackAnimation):
         # draw impact burst particles
         for p in self.particles:
             p.draw(surface)
+
+
+class GuardAnimation(Animation):
+    """Draws a shield-shaped arc with text floating above the defender."""
+    def __init__(self, sprite, text, color, side=1):
+        super().__init__(GUARD_EFFECT_DURATION)
+        self.sprite = sprite
+        self.text = text
+        self.color = color
+        self.side = side   # +1 = arc bulges LEFT, -1 = arc bulges RIGHT
+        self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
+        self._surf = render_outlined_text(self.font, text, color)
+
+    def draw(self, surface):
+        """Draw the guard animation."""
+        # p = progress (0.0 to 1.0)
+        p = self.elapsed / self.duration
+        # envelope: alpha pulse + fade in/out
+        body_h = self.sprite.feet_y - self.sprite.head_y
+        radius = int(GUARD_SHIELD_RADIUS * self.sprite.scale)
+        # alpha oscillating + envelope
+        pulse = 90 + 60 * math.sin(self.elapsed * 8.0)
+        if p < 0.4:
+            env = p / 0.4
+        elif p < 0.7:
+            env = 1.0
+        else:
+            env = 1 - (p - 0.7) / 0.3
+        alpha = int(pulse * env)
+        # ellipse rectangle: bulge towards the enemy side
+        if self.side > 0:      # bulge to the left
+            rect = pygame.Rect(self.sprite.x - radius, self.sprite.head_y, 2*radius, body_h)
+            start, stop = math.pi/2, 3*math.pi/2
+        else:                  # bulge to the right
+            rect = pygame.Rect(self.sprite.x, self.sprite.head_y, 2*radius, body_h)
+            start, stop = -math.pi/2, math.pi/2
+        # create a surface for the arc
+        arc_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        # draw the arc
+        pygame.draw.arc(arc_surf, (*GUARD_SHIELD_COLOR, alpha), (0, 0, rect.width, rect.height), start, stop, 6)
+        # blit the arc to the surface at the rectangle's position
+        surface.blit(arc_surf, (rect.x, rect.y))
 
 
 class TextAnimation(Animation):
