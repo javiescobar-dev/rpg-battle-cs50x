@@ -17,7 +17,8 @@ from game.config import (
     TRAIL_LENGTH, TRAIL_MIN_RADIUS, TRAIL_MIN_ALPHA, PULSE_AMPLITUDE, PULSE_SPEED, IMPACT_RING_COUNT, IMPACT_RING_SPEED, IMPACT_RING_WIDTH,
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
     FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
-    HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
+    HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, HEAL_RISE_SPEED, HEAL_ORBIT_SPEED, HEAL_ORBIT_MAX,
+    GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
 )
 from game.assets import play_sound
 
@@ -54,25 +55,23 @@ class HealEffectAnimation(Animation):
     def update(self, dt):
         """Advance the particle animation by dt (seconds)."""
         super().update(dt)
+        # spawn particles over time (0.7 = 70% of duration)
         for _ in range(HEAL_PARTICLE_PER_FRAME):
-            if self.elapsed >= self.duration * 0.7:  # stop spawning particles after 70% of the duration
+            if self.elapsed >= self.duration * 0.7:
                 break
-            # spawn particles at the character's position
-            x = self.sprite.x + random.uniform(-25, 25)
-            y = self.sprite.y + random.uniform(-35, 35)
-            # get the angle for the particle (random, but with a slight upward bias)
-            lat = random.uniform(-1, 1)
-            # convert the angle to radians
-            ang = math.radians(-90) + lat * 0.6  # -90 is the angle for straight up, 0.6 is the random variation
-            # get the unit vector for the particle
-            ux = -math.cos(ang)
-            uy = -math.sin(ang)
+            # random phase around the ring
+            phase = random.uniform(0, 2 * math.pi)
+            # max orbit radius this particle will reach
+            orbit = random.uniform(HEAL_ORBIT_MAX * 0.5, HEAL_ORBIT_MAX)
+            # character feet position
+            feet_y = self.sprite.y + 48 * self.sprite.scale  # TODO: use frame.get_height() in sprite to calculate feet position relative to y
             # create the particle with random colors
-            self.particles.append(
-                SpellParticle(x, y, ux, uy, HEAL_PARTICLE_COLORS,
-                            speed_mult=random.uniform(1.5, 3.0),
-                            life=random.uniform(0.5, HEAL_PARTICLE_LIFE))
-            )
+            self.particles.append(HealParticle(self.sprite.x, feet_y, phase, orbit, random.choice(HEAL_PARTICLE_COLORS)))
+
+        # advance existing particles
+        for p in self.particles:
+            p.update(dt)
+
         # remove particles that are no longer alive
         self.particles = [p for p in self.particles if p.is_alive()]
 
@@ -88,6 +87,52 @@ class HealEffectAnimation(Animation):
         self._surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))
         ty = self.sprite.y - 30 * self.sprite.scale - FLOAT_SPEED * self.elapsed
         surface.blit(self._surf, (self.sprite.x - self._surf.get_width() // 2, ty))
+
+
+class HealParticle:
+    """Particles that rise in an expanding spiral/tornado pattern around the center of the character."""
+    def __init__(self, cx, cy, phase, orbit, color):
+        self.cx = cx                 # center x of the character
+        self.cy = cy                 # center y of the character
+        self.phase = phase           # initial spin angle offset (rad) -> distributes particles around the ring
+        self.orbit = orbit           # max orbit radius this particle will reach
+        self.t = 0.0                 # own lifetime clock
+        self.life = random.uniform(0.5, HEAL_PARTICLE_LIFE)
+        self.max_life = self.life
+        self.color = color
+
+    def update(self, dt):
+        """Advance the particle animation by dt (seconds)."""
+        self.t += dt
+        self.life -= dt
+
+    def is_alive(self):
+        """Return True when the particle is still alive."""
+        return self.life > 0
+
+    def draw(self, surface):
+        """Draw the particle."""
+        # spin angle grows with time -> the particle revolves around the center
+        ang = self.phase + self.t * HEAL_ORBIT_SPEED
+        # radius grows quickly at first, then stabilizes -> the tornado opens outward
+        grow = min(self.t * 3.0, 1.0)
+        r = self.orbit * grow
+        # position: revolve around center while rising
+        x = self.cx + math.cos(ang) * r
+        y = self.cy - self.t * HEAL_RISE_SPEED   # rises (y grows upward => subtract)
+        # fading and shrinking (same look as SpellParticle)
+        progress = self.life / self.max_life
+        alpha = int(200 * progress)
+        radius = 3 * progress
+        # kill if too small
+        if radius < 0.5 or alpha < 1:
+            return
+
+        # draw at the current position with alpha blending
+        size = int(radius * 2) + 2
+        overlay = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.circle(overlay, (*self.color, alpha), (size // 2, size // 2), int(radius))
+        surface.blit(overlay, (x - radius, y - radius))
 
 
 class AttackAnimation(Animation):

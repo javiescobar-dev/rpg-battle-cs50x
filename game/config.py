@@ -137,6 +137,10 @@ HEAL_PARTICLE_COLORS      = [
     (80, 200, 80),    # green
     (160, 255, 160)   # very bright green
 ]
+# Tornado particles movement
+HEAL_RISE_SPEED           = 260    # vertical speed of the tornado particles (px/s)
+HEAL_ORBIT_SPEED          = 6.0    # angular speed of the spin (rad/s)
+HEAL_ORBIT_MAX            = 100     # maximum orbit radius the particles reach (px)
 
 # Guard shield
 GUARD_SHIELD_RADIUS     = 40
