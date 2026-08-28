@@ -600,7 +600,7 @@ class SpellAnimation(AttackAnimation):
             p.draw(surface)
 
 
-class GuardAnimation(Animation):
+class GuardEffectAnimation(Animation):
     """Draws a shield-shaped arc with text floating above the defender."""
     def __init__(self, sprite, text, color, side=1):
         super().__init__(GUARD_EFFECT_DURATION)
@@ -773,6 +773,14 @@ class EventPlayer:
         # special visual effects for heal, guard, potion; else plain floating text
         if action == "heal":
             return HealEffectAnimation(actor, text, color)
+        if action == "guard":
+            # get the rival sprite
+            rival = next(s for s in self.sprites.values() if s is not actor)
+            # determine the side of the guard
+            side = -1 if rival.x > actor.x else 1
+            # return a GuardEffectAnimation for the guard event
+            return GuardEffectAnimation(actor, text, color, side)
+
         # create a TextAnimation for the event
         return TextAnimation(actor, text, color)
 
