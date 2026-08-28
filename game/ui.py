@@ -8,6 +8,7 @@ and LogPanel renders the formatted battle log. Step 5 adds the
 animation classes here.
 """
 
+from pygame import surface
 import math, random, pygame
 from collections import deque
 from game.config import (
@@ -18,7 +19,7 @@ from game.config import (
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
     FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
     HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, HEAL_RISE_SPEED, HEAL_ORBIT_SPEED, HEAL_ORBIT_MAX,
-    GUARD_EFFECT_DURATION, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, POTION_SPARKLE_COUNT, POTION_SPARKLE_COLORS
+    GUARD_EFFECT_DURATION, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, GUARD_SHIELD_THICKNESS, GUARD_SHIELD_LAYERS
 )
 from game.assets import play_sound
 
@@ -634,12 +635,28 @@ class GuardEffectAnimation(Animation):
         else:                  # bulge to the right
             rect = pygame.Rect(self.sprite.x, self.sprite.head_y, 2*radius, body_h)
             start, stop = -math.pi/2, math.pi/2
-        # create a surface for the arc
-        arc_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-        # draw the arc
-        pygame.draw.arc(arc_surf, (*GUARD_SHIELD_COLOR, alpha), (0, 0, rect.width, rect.height), start, stop, 6)
-        # blit the arc to the surface at the rectangle's position
-        surface.blit(arc_surf, (rect.x, rect.y))
+        # thickness step between concentric layers
+        step = GUARD_SHIELD_THICKNESS // (GUARD_SHIELD_LAYERS - 1)
+        # maximum radius (outermost layer) -> size the surface to fit all layers
+        max_radius = radius + step * (GUARD_SHIELD_LAYERS - 1)
+        # create a surface big enough for the outer arc
+        arc_surf = pygame.Surface((2 * max_radius, body_h), pygame.SRCALPHA)
+        # draw several concentric arc layers for depth/thickness
+        for layer in range(GUARD_SHIELD_LAYERS):
+            layer_radius = radius + step * layer
+            # local x offset so the arc is centered within arc_surf
+            x0 = max_radius - layer_radius
+            rect = pygame.Rect(x0, 0, 2 * layer_radius, body_h)
+            if self.side > 0:   # bulge to the left (enemy on the left)
+                start, stop = math.pi / 2, 3 * math.pi / 2
+            else:               # bulge to the right (enemy on the right)
+                start, stop = -math.pi / 2, math.pi / 2
+            layer_alpha = int(alpha * (1.0 - layer * 0.3))
+            pygame.draw.arc(arc_surf, (*GUARD_SHIELD_COLOR, layer_alpha),
+                            rect, start, stop, 6)
+        # blit at the correct position (bulge toward the enemy)
+        blit_x = self.sprite.x - max_radius if self.side > 0 else self.sprite.x
+        surface.blit(arc_surf, (blit_x, self.sprite.head_y))
 
 
 class TextAnimation(Animation):

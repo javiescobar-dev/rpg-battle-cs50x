@@ -140,10 +140,12 @@ HEAL_PARTICLE_COLORS      = [
 # Tornado particles movement
 HEAL_RISE_SPEED           = 260    # vertical speed of the tornado particles (px/s)
 HEAL_ORBIT_SPEED          = 6.0    # angular speed of the spin (rad/s)
-HEAL_ORBIT_MAX            = 100     # maximum orbit radius the particles reach (px)
+HEAL_ORBIT_MAX            = 100    # maximum orbit radius the particles reach (px)
 
 # Guard shield
-GUARD_SHIELD_RADIUS     = 40
+GUARD_SHIELD_RADIUS     = 70    # how far the shield bulges toward the enemy (was 40)
+GUARD_SHIELD_THICKNESS  = 12    # total visual thickness of the arc band (depth)
+GUARD_SHIELD_LAYERS     = 3     # number of concentric arc layers for depth
 GUARD_SHIELD_COLOR      = (120, 180, 255)   # light blue
 
 # Potion sparkles
