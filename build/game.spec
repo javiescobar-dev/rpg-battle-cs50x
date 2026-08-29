@@ -6,16 +6,16 @@ from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = collect_submodules("game")
 
 a = Analysis(
-    ["..\\game\\main.py"],
-    pathex=["..\\"],
+    [os.path.join("..", "game", "main.py")],
+    pathex=[os.path.join("..", "game")],
     binaries=[],
     datas=[
-        ("..\\game\\assets\\backgrounds", "game\\assets\\backgrounds"),
-        ("..\\game\\assets\\fonts",       "game\\assets\\fonts"),
-        ("..\\game\\assets\\sfx",         "game\\assets\\sfx"),
-        ("..\\game\\assets\\sprites\\hero",  "game\\assets\\sprites\\hero"),
-        ("..\\game\\assets\\sprites\\enemy", "game\\assets\\sprites\\enemy"),
-        ("..\\game\\assets\\sprites\\items", "game\\assets\\sprites\\items")
+        (os.path.join("..", "game", "assets", "backgrounds"), os.path.join("game", "assets", "backgrounds")),
+        (os.path.join("..", "game", "assets", "fonts"),       os.path.join("game", "assets", "fonts")),
+        (os.path.join("..", "game", "assets", "sfx"),         os.path.join("game", "assets", "sfx")),
+        (os.path.join("..", "game", "assets", "sprites", "hero"),  os.path.join("game", "assets", "sprites", "hero")),
+        (os.path.join("..", "game", "assets", "sprites", "enemy"), os.path.join("game", "assets", "sprites", "enemy")),
+        (os.path.join("..", "game", "assets", "sprites", "items"), os.path.join("game", "assets", "sprites", "items"))
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
