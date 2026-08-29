@@ -6,8 +6,8 @@ from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = collect_submodules("launcher")
 
 a = Analysis(
-    ["..\\launcher\\main.py"],          # entry point
-    pathex=["..\\launcher"],            # paths of bare imports (config, paths, ...)
+    [os.path.join("..", "launcher", "main.py")],          # entry point
+    pathex=[os.path.join("..", "launcher")],            # paths of bare imports (config, paths, ...)
     binaries=[],
     datas=[],                            # launcher does not package local assets
     hiddenimports=hiddenimports,
