@@ -170,7 +170,7 @@ A separate launcher app that downloads, updates, and launches the game.
 - Cross-platform paths via `platformdirs`: game data lives in the OS-specific
   user data directory, not hardcoded paths.
 
-### Build & distribution (Phase 5 — in progress)
+### Build & distribution (Phase 5)
 
 Two standalone desktop apps are packaged with PyInstaller and distributed as
 portable bundles (no installer required) across Windows, macOS, and Linux.
@@ -183,13 +183,22 @@ portable bundles (no installer required) across Windows, macOS, and Linux.
   when frozen (falling back to the repo root in development), so the built
   executable runs from any working directory — it does not depend on where it
   is launched from.
-- **GitHub Actions CI** (`build.yml`): matrix over Windows/macOS/Linux, triggered
-  on `v*` tags or manually. Produces `rpg-battle-{tag}-{platform}.zip` (game) and
-  `rpg-battle-launcher-{platform}.zip` (launcher), attached to a GitHub Release.
+- **GitHub Actions CI** (`.github/workflows/build.yml`): three jobs
+  (`build-game`, `build-launcher`, `release`) on a Windows/macOS/Linux matrix with
+  Python 3.14. Triggered on `v*` tags or manually. Both builds are zipped with the
+  native tool of each runner (`Compress-Archive` on Windows, `zip` on Unix) using
+  the tag in the filename — `rpg-battle-{tag}-{platform}.zip` (game) and
+  `rpg-battle-launcher-{tag}-{platform}.zip` (launcher). A manual run (no tag)
+  falls back to a `dev` suffix. The `release` job waits for both builds, downloads
+  all artifacts, and publishes them as a draft GitHub Release.
+  Builds are restricted to the `release` branch: each job aborts unless the pushed
+  tag is contained in `origin/release`, and the `release` branch is web-protected
+  (only the owner can push), so builds only run from tags created there.
 - **PyInstaller `.spec` files** in `build/` (`game.spec`, `launcher.spec`) produce
   `--onedir` bundles for both apps. The launcher spec resolves its bare imports via
   `pathex` and excludes pygame; the game spec bundles its assets and excludes Tk.
-  Both `.spec` files are versioned (kept out of `build/*`'s ignore rule).
+  Both `.spec` files use `os.path.join` so their relative paths resolve correctly on
+  every OS, and are versioned (kept out of `build/*`'s ignore rule).
 - **Persistent data**: the game score history (`scores.json`) and the launcher's
   news cache are written to the platform-specific user data directory via
   `platformdirs`, never into the read-only bundle folder.
