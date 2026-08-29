@@ -110,7 +110,8 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Custom status-effect animations run as their message floats:
   - Heal: a dense tornado of green/white particles that spins and rises from the
     character's feet, driven by a `HealParticle` class with per-particle phase,
-    orbit and rising speed.
+    orbit and rising speed, glows over a pulsing radial green aura (a pre-rendered
+    gradient whose alpha breathes with a sine wave, centered on the chest).
   - Guard: a thick concentric arc shield (radius 70, 3 layers) that is rotated
     toward the enemy on a diagonal to convey 3D depth, with an oscillating
     translucent blue alpha.
