@@ -3,6 +3,23 @@
 
 """Global constants and game balance configuration."""
 
+import sys
+from pathlib import Path
+
+
+def asset_base() -> str:
+    """Return the base directory for game assets.
+
+    In a frozen (PyInstaller) build, packaged data lives in sys._MEIPASS.
+    In development, it is the project root (so 'game/assets/...' resolves).
+    """
+    if getattr(sys, "_MEIPASS", None):
+        return sys._MEIPASS
+    return str(Path(__file__).resolve().parent.parent)
+
+
+ASSET_BASE = asset_base()
+
 ## Battle configuration
 # Stats base
 HERO_HP          = 100
@@ -163,7 +180,7 @@ POTION_HEAD_OFFSET  = 28      # px above the head where the potion starts
 
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
-FONT_NAME_TITLE    = "game/assets/fonts/finalf.ttf"
+FONT_NAME_TITLE    = f"{ASSET_BASE}/game/assets/fonts/finalf.ttf"
 FONT_TITLE_SIZE    = 64
 FONT_MENU_SIZE     = 28
 FONT_LOG_SIZE      = 20
@@ -238,41 +255,41 @@ FLOAT_FADE_START   = 0.5
 
 # Assets
 # Title screen background
-TITLE_BG_PATH = "game/assets/backgrounds/rpg_battle_background_title.png"
+TITLE_BG_PATH = f"{ASSET_BASE}/game/assets/backgrounds/rpg_battle_background_title.png"
 
 # Battle backgrounds
 BATTLE_BACKGROUNDS = [
-    "game/assets/backgrounds/rpg_battle_background_castle.png",
-    "game/assets/backgrounds/rpg_battle_background_cave.png",
-    "game/assets/backgrounds/rpg_battle_background_forest.png",
-    "game/assets/backgrounds/rpg_battle_background_port.png"
+    f"{ASSET_BASE}/game/assets/backgrounds/rpg_battle_background_castle.png",
+    f"{ASSET_BASE}/game/assets/backgrounds/rpg_battle_background_cave.png",
+    f"{ASSET_BASE}/game/assets/backgrounds/rpg_battle_background_forest.png",
+    f"{ASSET_BASE}/game/assets/backgrounds/rpg_battle_background_port.png"
 ]
 
 # Hero and enemy sprites and names
 HEROES = [
-    ("game/assets/sprites/hero/hero_01.png", "Bryan"),
-    ("game/assets/sprites/hero/hero_02.png", "Matt"),
-    ("game/assets/sprites/hero/hero_03.png", "Sarah"),
-    ("game/assets/sprites/hero/hero_04.png", "Lucy"),
-    ("game/assets/sprites/hero/hero_05.png", "Jane"),
-    ("game/assets/sprites/hero/hero_06.png", "Roberto"),
-    ("game/assets/sprites/hero/hero_07.png", "Jennifer"),
-    ("game/assets/sprites/hero/hero_08.png", "Felix")
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_01.png", "Bryan"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_02.png", "Matt"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_03.png", "Sarah"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_04.png", "Lucy"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_05.png", "Jane"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_06.png", "Roberto"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_07.png", "Jennifer"),
+    (f"{ASSET_BASE}/game/assets/sprites/hero/hero_08.png", "Felix")
 ]
 
 ENEMIES = [
-    ("game/assets/sprites/enemy/enemy_01.png", "Dark Wisp"),
-    ("game/assets/sprites/enemy/enemy_02.png", "Lord Malice"),
-    ("game/assets/sprites/enemy/enemy_03.png", "Dark Mage"),
-    ("game/assets/sprites/enemy/enemy_04.png", "Turtle Dragon"),
-    ("game/assets/sprites/enemy/enemy_05.png", "Satan")
+    (f"{ASSET_BASE}/game/assets/sprites/enemy/enemy_01.png", "Dark Wisp"),
+    (f"{ASSET_BASE}/game/assets/sprites/enemy/enemy_02.png", "Lord Malice"),
+    (f"{ASSET_BASE}/game/assets/sprites/enemy/enemy_03.png", "Dark Mage"),
+    (f"{ASSET_BASE}/game/assets/sprites/enemy/enemy_04.png", "Turtle Dragon"),
+    (f"{ASSET_BASE}/game/assets/sprites/enemy/enemy_05.png", "Satan")
 ]
 
 # Potion sprite path
-POTION_SPRITE_PATH = "game/assets/sprites/items/green_potion.png"
+POTION_SPRITE_PATH = f"{ASSET_BASE}/game/assets/sprites/items/green_potion.png"
 
 # Sound effects
-SFX_DIR = "game/assets/sfx"
+SFX_DIR = f"{ASSET_BASE}/game/assets/sfx"
 SFX = {
     "attack":       f"{SFX_DIR}/attack.wav",
     "lunge":        f"{SFX_DIR}/lunge.wav",
