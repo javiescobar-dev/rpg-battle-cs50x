@@ -66,12 +66,15 @@ the Phase 1 engine (unchanged battle logic).
   comes closer). SpellAnimation is a ranged variant: a glowing projectile flies
   from the caster to the target, then a flash and the damage number appear on
   impact (the caster stays still, no lunge or recoil). Projectile color is
-  orange for hero spells and purple for enemy spells. Heal, potion, guard, flee
-  and failure events show a short floating message. Numbers are colored by type: yellow for damage, red and larger
-  with a "!" for critical hits, green +N for heal/potion, light blue for guard and
-  whitish for failures. The combat log streams live, one line per event, as each
-  animation starts, and the game only returns to the battle menu or ends after the
-  last animation finishes.
+  orange for hero spells and purple for enemy spells. Heal plays a swirling
+  tornado of green particles rising from the feet to envelop the character, guard
+  draws a thick arc shield that tilts diagonally toward the enemy (3D depth), and
+  potion floats an animated potion sprite above the head; each also shows a short
+  floating message. Flee and failure events show only the message. Numbers are
+  colored by type: yellow for damage, red and larger with a "!" for critical hits,
+  green +N for heal/potion, light blue for guard and whitish for failures. The
+  combat log streams live, one line per event, as each animation starts, and the
+  game only returns to the battle menu or ends after the last animation finishes.
 - Polished combat feel: floating numbers and messages are pre-rendered with a
   black outline and stay fully opaque until halfway through their rise, then fade
   out. The hero's HP/MP card updates progressively rather than all at once: every
@@ -102,6 +105,20 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 - Sprite loading is integrated into the battle startup: `start_battle()` loads
   hero and enemy sprite sheets once and passes them to the sprite constructors;
   the main loop advances sprite frame timers during the animation state.
+  Anchoring helpers on `CharacterSprite` (`feet_y`, `head_y`, `frame_height`)
+  let effects attach to the real body bounds of any character.
+- Custom status-effect animations run as their message floats:
+  - Heal: a dense tornado of green/white particles that spins and rises from the
+    character's feet, driven by a `HealParticle` class with per-particle phase,
+    orbit and rising speed.
+  - Guard: a thick concentric arc shield (radius 70, 3 layers) that is rotated
+    toward the enemy on a diagonal to convey 3D depth, with an oscillating
+    translucent blue alpha.
+  - Potion: the character's sprite already raises its arms (`potion` pose), and a
+    16x16 potion sprite from `assets/sprites/items/green_potion.png` is scaled up,
+    cycled through 3 glow frames, and floats up and fades above the head.
+  The potion sprite is loaded in `start_battle()` (not at import time, since
+  `convert_alpha()` needs an initialized display) and passed to `EventPlayer`.
 - Battle backgrounds: four AI-generated pixel art scenes (castle, forest, cave,
   port) in Suikoden II style, loaded via `load_background()` and drawn before
   sprites.
