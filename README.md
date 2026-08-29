@@ -170,9 +170,27 @@ A separate launcher app that downloads, updates, and launches the game.
 - Cross-platform paths via `platformdirs`: game data lives in the OS-specific
   user data directory, not hardcoded paths.
 
+### Build & distribution (Phase 5 — in progress)
+
+Two standalone desktop apps are packaged with PyInstaller and distributed as
+portable bundles (no installer required) across Windows, macOS, and Linux.
+
+- **Two independent builds**: the game (pygame-ce) is built as a zip that the
+  launcher downloads; the launcher (customTkinter) is the app the user runs.
+- **`--onedir` mode for both**: reduces antivirus false positives (one-file
+  bundles trip heuristics more often) and starts faster than one-file bundles.
+- **GitHub Actions CI** (`build.yml`): matrix over Windows/macOS/Linux, triggered
+  on `v*` tags or manually. Produces `rpg-battle-{tag}-{platform}.zip` (game) and
+  `rpg-battle-launcher-{platform}.zip` (launcher), attached to a GitHub Release.
+- **Persistent data**: the game score history (`scores.json`) and the launcher's
+  news cache are written to the platform-specific user data directory via
+  `platformdirs`, never into the read-only bundle folder.
+
 ## Repository structure
 
 - `game/` — the Pygame battle game (`python -m game.main`).
 - `game/assets/` — sprites, backgrounds, sound effects, and fonts.
 - `launcher/` — the customTkinter launcher (config, paths, updater, news, UI).
+- `build/` — PyInstaller `.spec` files for the game and the launcher.
 - `news/` — the JSON news feed consumed by the launcher.
+- `.github/workflows/build.yml` — multi-OS CI build and release workflow.
