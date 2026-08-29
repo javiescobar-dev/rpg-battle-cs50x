@@ -8,7 +8,7 @@ following the game's standard format.
 """
 
 import pygame
-from game.config import SCREEN_WIDTH, SCREEN_HEIGHT
+from game.config import SCREEN_WIDTH, SCREEN_HEIGHT, POTION_FRAME_SIZE
 
 
 def load_character_sprites(path):
@@ -53,10 +53,30 @@ def load_character_sprites(path):
     return animations
 
 
+def load_potion_sprites(path):
+    """Load the potion sprite sheet and return its animation frames.
+
+    Sheet format: 48x48, 3x3 grid of 16x16 cells (8 usable potions,
+    the bottom-right cell is empty). Returns the 3 frames of the first
+    row as a list (the three visual variations of the same potion).
+    """
+    # load image from path
+    sheet = pygame.image.load(path).convert_alpha()
+    # cell size in pixels
+    CELL = POTION_FRAME_SIZE  # 16x16 pixels
+    # frames from the first row (y = 0..15), columns 0, 1, 2
+    frames = []
+    for pose_idx in range(3):
+        rect = pygame.Rect(pose_idx * CELL, 0, CELL, CELL)
+        frames.append(sheet.subsurface(rect).copy())
+    return frames
+
+
 def load_background(path):
     """Load a battle background and scale it to the screen size."""
     bg = pygame.image.load(path).convert()
     return pygame.transform.scale(bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
 
 # sound effects cache
 _sounds = {}

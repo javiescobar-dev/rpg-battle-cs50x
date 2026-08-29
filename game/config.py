@@ -148,13 +148,12 @@ GUARD_SHIELD_THICKNESS  = 12    # total visual thickness of the arc band (depth)
 GUARD_SHIELD_LAYERS     = 3     # number of concentric arc layers for depth
 GUARD_SHIELD_COLOR      = (120, 180, 255)   # light blue
 
-# Potion sparkles
-POTION_SPARKLE_COUNT    = 10
-POTION_SPARKLE_COLORS   = [
-    (120, 230, 120),  # bright green
-    (80, 200, 80),    # green
-    (160, 255, 160)   # very bright green
-]
+# Potion sprite
+POTION_FRAME_SIZE   = 16      # source frame size (px) in the 48x48 atlas
+POTION_DRAW_SIZE    = 32      # scaled draw size (px) - 48x48 / 1.5
+POTION_FRAME_TIME   = 0.12    # seconds per frame in the potion idle/glow loop
+POTION_RISE_SPEED   = 40      # vertical rise of the floating potion (px/s)
+POTION_HEAD_OFFSET  = 28      # px above the head where the potion starts
 
 # Fonts
 FONT_NAME          = "Arial"  # pygame will fall back if missing
@@ -263,6 +262,9 @@ ENEMIES = [
     ("game/assets/sprites/enemy/enemy_04.png", "Turtle Dragon"),
     ("game/assets/sprites/enemy/enemy_05.png", "Satan")
 ]
+
+# Potion sprite path
+POTION_SPRITE_PATH = "game/assets/sprites/items/green_potion.png"
 
 # Sound effects
 SFX_DIR = "game/assets/sfx"
