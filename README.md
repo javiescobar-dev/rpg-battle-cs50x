@@ -179,6 +179,10 @@ portable bundles (no installer required) across Windows, macOS, and Linux.
   launcher downloads; the launcher (customTkinter) is the app the user runs.
 - **`--onedir` mode for both**: reduces antivirus false positives (one-file
   bundles trip heuristics more often) and starts faster than one-file bundles.
+- **Portable asset paths**: the game resolves its assets through `sys._MEIPASS`
+  when frozen (falling back to the repo root in development), so the built
+  executable runs from any working directory — it does not depend on where it
+  is launched from.
 - **GitHub Actions CI** (`build.yml`): matrix over Windows/macOS/Linux, triggered
   on `v*` tags or manually. Produces `rpg-battle-{tag}-{platform}.zip` (game) and
   `rpg-battle-launcher-{platform}.zip` (launcher), attached to a GitHub Release.
