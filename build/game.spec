@@ -1,6 +1,7 @@
 # build/game.spec
 # PyInstaller spec for the RPG Battle game (onedir, windowed).
 
+import os
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = collect_submodules("game")

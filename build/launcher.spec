@@ -1,6 +1,7 @@
 # build/launcher.spec
 # PyInstaller spec for the RPG Battle launcher (onedir, windowed).
 
+import os
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = collect_submodules("launcher")
