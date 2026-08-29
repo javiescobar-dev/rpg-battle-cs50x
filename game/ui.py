@@ -8,7 +8,6 @@ and LogPanel renders the formatted battle log. Step 5 adds the
 animation classes here.
 """
 
-from pygame import surface
 import math, random, pygame
 from collections import deque
 from game.config import (

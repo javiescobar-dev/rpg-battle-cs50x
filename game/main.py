@@ -3,7 +3,6 @@
 
 """Pygame entry point: MENU / STATS / BATTLE / ANIM / END state machine."""
 
-from pygame import constants
 import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
@@ -407,8 +406,8 @@ def draw_hint(screen, font):
     screen.blit(text, text_rect)
 
 
-def draw_summary_and_hint(screen, menu_font, stats, y, x_label=None, x_value=None):
-    """Draw summary stats and hint. Table style if x_label/x_value given, centered otherwise."""
+def draw_summary_and_hint(screen, menu_font, stats, y, x_label, x_value):
+    """Draw summary stats and hint in table style (label left, value right)."""
     lines = [
         ("Total Battles", str(stats['total_battles'])),
         ("Victories", str(stats['victories'])),
@@ -419,17 +418,11 @@ def draw_summary_and_hint(screen, menu_font, stats, y, x_label=None, x_value=Non
         lines.append(("Most Common Enemy", stats['most_common_enemy']))
 
     for label, value in lines:
-        if x_label is not None:
-            # table style: label left, value right
-            label_surf = menu_font.render(label, True, COLOR_TEXT)
-            value_surf = menu_font.render(value, True, COLOR_ACCENT)
-            screen.blit(label_surf, (x_label, y))
-            screen.blit(value_surf, (x_value, y))
-        else:
-            # centered style (backward compatible)
-            text = menu_font.render(f"{label}: {value}", True, COLOR_TEXT)
-            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
-            screen.blit(text, text_rect)
+        # table style: label left, value right
+        label_surf = menu_font.render(label, True, COLOR_TEXT)
+        value_surf = menu_font.render(value, True, COLOR_ACCENT)
+        screen.blit(label_surf, (x_label, y))
+        screen.blit(value_surf, (x_value, y))
         y += menu_font.get_linesize()
 
     draw_hint(screen, menu_font)

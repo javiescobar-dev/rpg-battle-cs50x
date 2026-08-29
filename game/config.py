@@ -111,7 +111,6 @@ PULSE_SPEED         = 8      # oscillation speed (sin)
 # Impact explosion
 IMPACT_RING_COUNT         = 2      # expanding rings on impact
 IMPACT_RING_SPEED         = 120    # px/s expansion radius
-IMPACT_RING_MAX_RADIUS    = 35     # maximum ring radius
 IMPACT_RING_WIDTH         = 3      # ring border width
 
 # Particles
@@ -194,7 +193,6 @@ CARD_HEIGHT = 64
 HERO_CARD_RECT = (SCREEN_WIDTH - CARD_WIDTH - 20, 20, CARD_WIDTH, CARD_HEIGHT)
 
 # Bar dimensions
-BAR_WIDTH  = 80   # width of the HP/MP bars
 BAR_HEIGHT = 12   # height of the HP/MP bars
 
 # Battle menu and log
