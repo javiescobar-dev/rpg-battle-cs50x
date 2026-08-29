@@ -186,6 +186,10 @@ portable bundles (no installer required) across Windows, macOS, and Linux.
 - **GitHub Actions CI** (`build.yml`): matrix over Windows/macOS/Linux, triggered
   on `v*` tags or manually. Produces `rpg-battle-{tag}-{platform}.zip` (game) and
   `rpg-battle-launcher-{platform}.zip` (launcher), attached to a GitHub Release.
+- **PyInstaller `.spec` files** in `build/` (`game.spec`, `launcher.spec`) produce
+  `--onedir` bundles for both apps. The launcher spec resolves its bare imports via
+  `pathex` and excludes pygame; the game spec bundles its assets and excludes Tk.
+  Both `.spec` files are versioned (kept out of `build/*`'s ignore rule).
 - **Persistent data**: the game score history (`scores.json`) and the launcher's
   news cache are written to the platform-specific user data directory via
   `platformdirs`, never into the read-only bundle folder.
