@@ -8,12 +8,26 @@ battle outcome, and summary statistics. The module works with plain values,
 so it knows nothing about the Battle or Character classes.
 """
 
-import json
+import json, platformdirs, sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-SCORES_FILE = Path(__file__).resolve().parent / "scores.json"
+
+def _scores_dir() -> Path:
+    """Return a writable directory for scores (user data dir in frozen apps, local dir in dev)."""
+    # import names are capitalized for "is frozen/PyInstaller" checks
+    if getattr(sys, "frozen", False):
+        # PyInstaller onefile/onedir: __file__ lives inside read-only _MEIPASS
+        base = Path(platformdirs.user_data_dir("rpg-battle"))
+        base.mkdir(parents=True, exist_ok=True)
+        return base
+    # development: keep scores next to the source (game/ directory)
+    return Path(__file__).resolve().parent
+
+
+SCORES_FILE = _scores_dir() / "scores.json"
+
 
 def load_scores(path=None):
     """Load scores from the JSON file, returning a list of battle records or an empty list."""
