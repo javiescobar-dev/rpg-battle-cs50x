@@ -9,13 +9,13 @@ from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_NAME_TITLE, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
-    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, OVERLAY_END, FONT_END_SIZE,
+    RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, OVERLAY_END, FONT_END_SIZE, POTION_SPRITE_PATH,
     FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE, COLOR_TEXT_FOOTER, FONT_FOOTER_SIZE
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
 from game.score import add_result, summary
-from game.assets import load_character_sprites, load_background, play_sound, draw_dark_overlay
+from game.assets import load_character_sprites, load_background, play_sound, draw_dark_overlay, load_potion_sprites
 
 # states of the game
 MENU, STATS, BATTLE, ANIM, END = "MENU", "STATS", "BATTLE", "ANIM", "END"
@@ -257,6 +257,8 @@ def main():
         enemy_path, enemy_name = random.choice(ENEMIES)
         hero_animations = load_character_sprites(hero_path)
         enemy_animations = load_character_sprites(enemy_path)
+        # load potion sprites to use them in the animation of the potion effect (load once and reuse)
+        potion_frames = load_potion_sprites(POTION_SPRITE_PATH)
         # create battle
         battle = Battle(make_hero(hero_name), make_enemy(enemy_name))
         # create sprites for hero and enemy
@@ -264,8 +266,8 @@ def main():
         enemy_sprite = CharacterSprite(battle.enemy, ENEMY_X, ENEMY_Y, ENEMY_SCALE, enemy_animations, True)
         # create battle log
         battle_log = LogPanel(LOG_RECT)
-        # create event player
-        event_player = EventPlayer(hero_sprite, enemy_sprite, on_event=log_event)
+        # create event player with potion frames
+        event_player = EventPlayer(hero_sprite, enemy_sprite, on_event=log_event, potion_frames=potion_frames)
         # create battle menu
         battle_menu = Menu(MENU_RECT, BATTLE_OPTIONS, font_menu)
         # set menu level

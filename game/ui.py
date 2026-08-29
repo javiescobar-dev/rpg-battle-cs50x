@@ -19,9 +19,11 @@ from game.config import (
     PARTICLE_INITIAL_BURST, PARTICLES_PER_FRAME, PARTICLE_LIFE, PARTICLE_SPEED, PARTICLE_MIN_RADIUS, COLOR_FIREBALL_CORE, COLOR_SHADOW_BOLT_CORE,
     FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
     HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, HEAL_RISE_SPEED, HEAL_ORBIT_SPEED, HEAL_ORBIT_MAX,
-    GUARD_EFFECT_DURATION, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, GUARD_SHIELD_THICKNESS, GUARD_SHIELD_LAYERS
+    GUARD_EFFECT_DURATION, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, GUARD_SHIELD_THICKNESS, GUARD_SHIELD_LAYERS,
+    POTION_DRAW_SIZE, POTION_FRAME_TIME, POTION_RISE_SPEED, POTION_HEAD_OFFSET, POTION_EFFECT_DURATION
 )
 from game.assets import play_sound
+
 
 class Animation:
     """Base class for one-shot timed effects driven by dt (never sleep)."""
@@ -650,6 +652,48 @@ class GuardEffectAnimation(Animation):
         surface.blit(rotated, rotated.get_rect(center=center))
 
 
+class PotionEffectAnimation(Animation):
+    """Animation of a floating potion with idle/glow cycle and rising motion."""
+
+    def __init__(self, sprite, text, color, frames):
+        super().__init__(POTION_EFFECT_DURATION)
+        self.sprite = sprite
+        self.text = text
+        self.color = color
+        self.frames = frames                       # list of 3 potion surfaces (16x16)
+        # create scaled versions for drawing at POTION_DRAW_SIZE
+        self.scaled = [pygame.transform.smoothscale(f, (POTION_DRAW_SIZE, POTION_DRAW_SIZE)) for f in frames]
+        self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)  # font used for the potion float text
+        self._surf = render_outlined_text(self.font, text, color)    # floating "+N"
+
+    def draw(self, surface):
+        # idle/glow animation: cycle through the frames
+        frame_idx = int(self.elapsed / POTION_FRAME_TIME) % len(self.scaled)
+        img = self.scaled[frame_idx]
+
+        # fade in/out (envelope like heal/guard)
+        p = self.elapsed / self.duration
+        if p < 0.2:
+            alpha = int(255 * p / 0.2)
+        elif p < 0.7:
+            alpha = 255
+        else:
+            alpha = int(255 * (1 - p) / 0.3)
+        img.set_alpha(alpha)
+
+        # float above the head, rising over time
+        x = self.sprite.x - POTION_DRAW_SIZE // 2
+        y = (self.sprite.head_y - POTION_HEAD_OFFSET) - POTION_RISE_SPEED * self.elapsed
+        surface.blit(img, (x, y))
+
+        # floating "+N" text (same block as the others)
+        progress = self.elapsed / FLOAT_DURATION
+        fade = (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START)
+        self._surf.set_alpha(255 if progress < FLOAT_FADE_START else int(255 * (1 - fade)))
+        ty = (self.sprite.head_y - POTION_HEAD_OFFSET - POTION_DRAW_SIZE) - FLOAT_SPEED * self.elapsed
+        surface.blit(self._surf, (self.sprite.x - self._surf.get_width() // 2, ty))
+
+
 class TextAnimation(Animation):
     """Shows a floating message that rises and fades above a sprite."""
     def __init__(self, sprite, text, color):
@@ -677,7 +721,7 @@ class TextAnimation(Animation):
 
 class EventPlayer:
     """Plays battle events as animations, one at a time, driven by dt."""
-    def __init__(self, hero_sprite, enemy_sprite, on_event=None):
+    def __init__(self, hero_sprite, enemy_sprite, on_event=None, potion_frames=None):
         # map each Character to its sprite, so events (which carry Characters) resolve to sprites
         self.sprites = {
             hero_sprite.character: hero_sprite,
@@ -691,6 +735,7 @@ class EventPlayer:
         self.on_event = on_event   # optional callback(event) fired when an animation starts
         self.queue = deque()       # pending events
         self.current = None        # active Animation or None
+        self.potion_frames = potion_frames  # frames of the potion animation
 
     def push(self, event):
         """Queue an event to be animated."""
@@ -788,6 +833,8 @@ class EventPlayer:
             angle = math.atan2(rival.y - actor.y, rival.x - actor.x)
             # return a GuardEffectAnimation for the guard event
             return GuardEffectAnimation(actor, text, color, angle)
+        if action == "potion":
+            return PotionEffectAnimation(actor, text, color, self.potion_frames)
 
         # create a TextAnimation for the event
         return TextAnimation(actor, text, color)
