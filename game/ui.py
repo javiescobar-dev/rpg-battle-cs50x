@@ -20,6 +20,7 @@ from game.config import (
     FIREBALL_PARTICLE_COLORS, SHADOW_BOLT_PARTICLE_COLORS, IMPACT_PARTICLE_COUNT, IMPACT_PARTICLE_SPEED, IMPACT_PARTICLE_LIFE,
     HEAL_EFFECT_DURATION, HEAL_PARTICLE_PER_FRAME, HEAL_PARTICLE_COLORS, HEAL_PARTICLE_LIFE, HEAL_RISE_SPEED, HEAL_ORBIT_SPEED, HEAL_ORBIT_MAX,
     GUARD_EFFECT_DURATION, GUARD_SHIELD_RADIUS, GUARD_SHIELD_COLOR, GUARD_SHIELD_THICKNESS, GUARD_SHIELD_LAYERS,
+    HEAL_GLOW_RADIUS, HEAL_GLOW_PULSE_SPEED, HEAL_GLOW_ALPHA_BASE, HEAL_GLOW_ALPHA_AMP,
     POTION_DRAW_SIZE, POTION_FRAME_TIME, POTION_RISE_SPEED, POTION_HEAD_OFFSET, POTION_EFFECT_DURATION
 )
 from game.assets import play_sound
@@ -54,6 +55,19 @@ class HealEffectAnimation(Animation):
         self.font = pygame.font.SysFont(FONT_NAME, FONT_FLOAT_SIZE)
         self._surf = render_outlined_text(self.font, text, color)  # floating text surface
         self.particles = []  # particles that will be used to create the healing effect
+        self.glow = self._build_glow()  # build the healing glow
+
+    def _build_glow(self):
+        """Pre-render a radial green gradient used as the pulsing aura."""
+        radius = HEAL_GLOW_RADIUS
+        size = int(radius * 2) + 2
+        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        cx = cy = size // 2
+        color = HEAL_PARTICLE_COLORS[0]
+        for i in range(radius, 1, -1):            # from edge to center
+            alpha = int(100 * (1 - i / radius))   # transparent edge -> bright center
+            pygame.draw.circle(surf, (*color, alpha), (cx, cy), i)
+        return surf
 
     def update(self, dt):
         """Advance the particle animation by dt (seconds)."""
@@ -80,6 +94,17 @@ class HealEffectAnimation(Animation):
 
     def draw(self, surface):
         """Draw the healing effect."""
+
+        # Draw heal glow (pulsing aura)
+        env = min(self.elapsed / (self.duration * 0.2),          # fade-in  0->20%
+                (self.duration - self.elapsed) / (self.duration * 0.3))  # fade-out última 30%
+        alpha = (HEAL_GLOW_ALPHA_BASE + HEAL_GLOW_ALPHA_AMP * math.sin(self.elapsed * HEAL_GLOW_PULSE_SPEED)) * env
+        alpha = max(0, min(255, int(alpha)))
+        self.glow.set_alpha(alpha)
+        gx = int(self.sprite.x) - self.glow.get_width() // 2
+        gy = (self.sprite.head_y + self.sprite.feet_y) // 2 - self.glow.get_height() // 2
+        surface.blit(self.glow, (gx, gy))
+
         # Draw particles
         for p in self.particles:
             p.draw(surface)
