@@ -1,0 +1,92 @@
+name: Build and Release
+
+# Trigger on push tags (v*) and manual dispatch
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+
+  # Job build-game (build game with PyInstaller and upload artifacts)
+  build-game:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r game/requirements.txt
+          pip install pyinstaller
+      - name: Build game with PyInstaller
+        run: pyinstaller build/game.spec --clean --noconfirm
+      - name: Zip game artifact (native per OS)
+        shell: bash
+        run: |
+          TAG=${{ github.ref_name }}
+          [ "$TAG" = "main" ] && TAG="dev"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cd dist && powershell -Command "Compress-Archive -Path game -DestinationPath rpg-battle-windows-${TAG}.zip"
+          else
+            cd dist && zip -r "rpg-battle-${RUNNER_OS,,}-${TAG}.zip" game
+          fi
+      - name: Upload game artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-${{ matrix.os }}
+          path: dist/rpg-battle-*.zip
+
+  # Job build-launcher
+  build-launcher:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r launcher/requirements.txt
+          pip install pyinstaller
+      - name: Build launcher with PyInstaller
+        run: pyinstaller build/launcher.spec --clean --noconfirm
+      - name: Zip launcher artifact (native per OS)
+        shell: bash
+        run: |
+          TAG=${{ github.ref_name }}
+          [ "$TAG" = "main" ] && TAG="dev"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cd dist && powershell -Command "Compress-Archive -Path launcher -DestinationPath rpg-battle-launcher-windows-${TAG}.zip"
+          else
+            cd dist && zip -r "rpg-battle-launcher-${RUNNER_OS,,}-${TAG}.zip" launcher
+          fi
+      - name: Upload launcher artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-${{ matrix.os }}
+          path: dist/rpg-battle-launcher-*.zip
+
+  # Job Release (create draft release and upload artifacts)
+  release:
+    needs: [build-game, build-launcher]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: release-artifacts/**/*.zip
