@@ -20,6 +20,8 @@ class LauncherApp(ctk.CTk):
 
         # window settings
         ctk.set_appearance_mode(APPEARANCE_MODE)          # set appearance mode (Light/Dark)
+        ctk.set_window_scaling(1.0)                       # set window scaling
+        ctk.set_widget_scaling(1.0)                       # set widget scaling
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
@@ -30,6 +32,11 @@ class LauncherApp(ctk.CTk):
         self._latest_release = None                       # stores the latest release from server
 
         # build UI
+        # main container
+        self._main = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
+        # packs the main container in the window
+        self._main.pack(side="top", fill="both", expand=True)
+
         self._build_sidebar()                             # build the sidebar
         self._build_content()                             # build the content area
         self._build_footer()                              # build the footer
@@ -140,7 +147,7 @@ class LauncherApp(ctk.CTk):
         """Left sidebar with navigation buttons."""
         # Sidebar frame
         self._sidebar = ctk.CTkFrame(self, width=SIDEBAR_WIDTH, fg_color=SIDEBAR_BG, corner_radius=0)
-        self._sidebar.pack(side="left", fill="y")
+        self._sidebar.pack(in_=self._main, side="left", fill="y")
         self._sidebar.pack_propagate(False)  # prevents sidebar from resizing
 
         # Sidebar title (vertical)
@@ -180,7 +187,7 @@ class LauncherApp(ctk.CTk):
         """Central scrollable panel containing the tabs."""
         # Central panel
         self._content = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
-        self._content.pack(side="left", fill="both", expand=True)
+        self._content.pack(in_=self._main, side="left", fill="both", expand=True)
 
         # News frame (scrollable)
         self._news_frame = ctk.CTkScrollableFrame(
