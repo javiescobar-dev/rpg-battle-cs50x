@@ -77,30 +77,25 @@ def update(tag: str, progress_callback=None) -> bool:
 
         # set destination directory (game directory)
         dest = game_dir()
-        # download asset
-        zip_path = download_asset(asset, dest, progress_callback)
-        
-        # extract zip (overwrite existing game), flattening the outer "game/" folder
-        with tempfile.TemporaryDirectory() as tmp:
-            # extract zip to a temporary directory
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                zf.extractall(tmp)
+        # download the asset to a temporary directory (keeps the zip out of game_dir)
+        with tempfile.TemporaryDirectory() as tmp_dl:
+            zip_path = download_asset(asset, Path(tmp_dl), progress_callback)
 
-            # get the source directory (game directory)
-            src = Path(tmp) / "game"
-            src = src if src.is_dir() else Path(tmp)
-
-            # delete the entire destination for a clean re-extraction
-            if dest.exists():
-                shutil.rmtree(dest)
-            # create the destination directory
-            dest.mkdir(parents=True, exist_ok=True)
-
-            # copy the source directory to the destination directory
-            shutil.copytree(src, dest, dirs_exist_ok=True)
-        
-        # clean up downloaded zip
-        zip_path.unlink()
+            # extract zip (overwrite existing game), flattening the outer "game/" folder
+            with tempfile.TemporaryDirectory() as tmp:
+                # extract zip to a temporary directory
+                with zipfile.ZipFile(zip_path, "r") as zf:
+                    zf.extractall(tmp)
+                # get the source directory (game directory)
+                src = Path(tmp) / "game"
+                src = src if src.is_dir() else Path(tmp)
+                # delete the entire destination for a clean re-extraction
+                if dest.exists():
+                    shutil.rmtree(dest)
+                # create the destination directory
+                dest.mkdir(parents=True, exist_ok=True)
+                # copy the source directory to the destination directory
+                shutil.copytree(src, dest, dirs_exist_ok=True)
 
         # save new version
         save_version(tag)
