@@ -3,12 +3,14 @@
 
 import os
 
+launcher_dir = os.path.abspath(os.path.join(SPECPATH, "..", "launcher"))
+
 hiddenimports = []  # main.py imports its modules by bare name (from config import ...);
                     # they are resolved through pathex below, not collected as launcher.*
 
 a = Analysis(
-    [os.path.join("..", "launcher", "main.py")],          # entry point
-    pathex=[os.path.join("..", "launcher")],            # paths of bare imports (config, paths, ...)
+    [os.path.join(launcher_dir, "main.py")],            # entry point
+    pathex=[launcher_dir],                              # paths of bare imports (config, paths, ...)
     binaries=[],
     datas=[],                            # launcher does not package local assets
     hiddenimports=hiddenimports,

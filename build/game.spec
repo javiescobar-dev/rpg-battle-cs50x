@@ -4,19 +4,21 @@
 import os
 from PyInstaller.utils.hooks import collect_submodules
 
+game_dir = os.path.abspath(os.path.join(SPECPATH, "..", "game"))
+
 hiddenimports = collect_submodules("game")
 
 a = Analysis(
-    [os.path.join("..", "game", "main.py")],
-    pathex=[os.path.join("..", "game")],
+    [os.path.join(game_dir, "main.py")],
+    pathex=[game_dir],
     binaries=[],
     datas=[
-        (os.path.join("..", "game", "assets", "backgrounds"), os.path.join("game", "assets", "backgrounds")),
-        (os.path.join("..", "game", "assets", "fonts"),       os.path.join("game", "assets", "fonts")),
-        (os.path.join("..", "game", "assets", "sfx"),         os.path.join("game", "assets", "sfx")),
-        (os.path.join("..", "game", "assets", "sprites", "hero"),  os.path.join("game", "assets", "sprites", "hero")),
-        (os.path.join("..", "game", "assets", "sprites", "enemy"), os.path.join("game", "assets", "sprites", "enemy")),
-        (os.path.join("..", "game", "assets", "sprites", "items"), os.path.join("game", "assets", "sprites", "items"))
+        (os.path.join(game_dir, "assets", "backgrounds"), os.path.join("game", "assets", "backgrounds")),
+        (os.path.join(game_dir, "assets", "fonts"),       os.path.join("game", "assets", "fonts")),
+        (os.path.join(game_dir, "assets", "sfx"),         os.path.join("game", "assets", "sfx")),
+        (os.path.join(game_dir, "assets", "sprites", "hero"),  os.path.join("game", "assets", "sprites", "hero")),
+        (os.path.join(game_dir, "assets", "sprites", "enemy"), os.path.join("game", "assets", "sprites", "enemy")),
+        (os.path.join(game_dir, "assets", "sprites", "items"), os.path.join("game", "assets", "sprites", "items"))
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
