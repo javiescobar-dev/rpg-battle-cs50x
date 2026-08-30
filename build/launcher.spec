@@ -2,9 +2,9 @@
 # PyInstaller spec for the RPG Battle launcher (onedir, windowed).
 
 import os
-from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = collect_submodules("launcher")
+hiddenimports = []  # main.py imports its modules by bare name (from config import ...);
+                    # they are resolved through pathex below, not collected as launcher.*
 
 a = Analysis(
     [os.path.join("..", "launcher", "main.py")],          # entry point
