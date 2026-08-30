@@ -18,8 +18,16 @@ class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Align tk scaling with the fixed window size to avoid the startup resize flash
+        self.tk.call('tk', 'scaling', 1.0)
+
+        # Hide the window initially
+        self.withdraw()
+
         # window settings
         ctk.set_appearance_mode(APPEARANCE_MODE)          # set appearance mode (Light/Dark)
+        ctk.set_window_scaling(1.0)                       # set window scaling
+        ctk.set_widget_scaling(1.0)                       # set widget scaling
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
@@ -30,12 +38,29 @@ class LauncherApp(ctk.CTk):
         self._latest_release = None                       # stores the latest release from server
 
         # build UI
+        # main container
+        self._main = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
+        # packs the main container in the window
+        self._main.pack(side="top", fill="both", expand=True)
+
         self._build_sidebar()                             # build the sidebar
         self._build_content()                             # build the content area
         self._build_footer()                              # build the footer
 
         # initial load in background
         self.after(100, self._startup)                    # start loading data in background (call _startup after 100ms)
+
+        # show the window once the mainloop is running and the layout is stable
+        self.after(1200, self._show_window)
+
+    def _show_window(self):
+        """Show the window once the mainloop has stabilized the layout."""
+        # Apply the final geometry and show the window without flickering
+        self.update_idletasks()                   # process any pending geometry updates
+        self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")  # re-apply the exact window size
+        self.update_idletasks()                   # process again to ensure the final size is used
+        self.deiconify()                          # show the window
+        self.lift()                               # bring the window to the front
 
     def _startup(self):
         """Load initial data in background."""
@@ -109,7 +134,7 @@ class LauncherApp(ctk.CTk):
         ctk.CTkLabel(
             card, text=item.get("body", ""),
             font=FONT_BODY, text_color=TEXT_BODY,
-            wraplength=550, justify="left", anchor="w"
+            wraplength=700, justify="left", anchor="w"
         ).pack(fill="x", padx=CARD_PADDING, pady=(4, CARD_PADDING))
 
     def _load_image(self, url, label):
@@ -123,9 +148,9 @@ class LauncherApp(ctk.CTk):
             # Open the image from the data
             img = Image.open(io.BytesIO(data))
 
-            # Resize image to fit the content panel width (~580px)
+            # Resize image to fit the content panel width (~700px)
             width, height = img.size
-            new_width = 580  # Content panel width
+            new_width = 700  # Content panel width
             new_height = int(height * (new_width / width))  # Maintain aspect ratio
             img = img.resize((new_width, new_height), Image.LANCZOS)  # LANCZOS used for high-quality resizing
 
@@ -140,7 +165,7 @@ class LauncherApp(ctk.CTk):
         """Left sidebar with navigation buttons."""
         # Sidebar frame
         self._sidebar = ctk.CTkFrame(self, width=SIDEBAR_WIDTH, fg_color=SIDEBAR_BG, corner_radius=0)
-        self._sidebar.pack(side="left", fill="y")
+        self._sidebar.pack(in_=self._main, side="left", fill="y")
         self._sidebar.pack_propagate(False)  # prevents sidebar from resizing
 
         # Sidebar title (vertical)
@@ -180,7 +205,7 @@ class LauncherApp(ctk.CTk):
         """Central scrollable panel containing the tabs."""
         # Central panel
         self._content = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
-        self._content.pack(side="left", fill="both", expand=True)
+        self._content.pack(in_=self._main, side="left", fill="both", expand=True)
 
         # News frame (scrollable)
         self._news_frame = ctk.CTkScrollableFrame(
