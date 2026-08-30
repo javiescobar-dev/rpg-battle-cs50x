@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Abort unless tag is on release branch
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
         run: |
           git fetch --all --prune
           if ! git branch -r --contains "tags/${{ github.ref_name }}" 2>/dev/null | grep -q "origin/release"; then
@@ -61,6 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Abort unless tag is on release branch
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
         run: |
           git fetch --all --prune
           if ! git branch -r --contains "tags/${{ github.ref_name }}" 2>/dev/null | grep -q "origin/release"; then
