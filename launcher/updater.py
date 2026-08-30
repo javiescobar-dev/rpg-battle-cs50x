@@ -3,7 +3,7 @@
 
 """Manage game updates."""
 
-import json, platform, urllib.request, zipfile
+import json, platform, urllib.request, zipfile, shutil, tempfile
 from pathlib import Path
 from config import REPO_API_URL, GAME_ASSET_PATTERN
 from paths import game_dir, save_version
@@ -80,9 +80,24 @@ def update(tag: str, progress_callback=None) -> bool:
         # download asset
         zip_path = download_asset(asset, dest, progress_callback)
         
-        # extract zip (overwrite existing game)
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(dest)
+        # extract zip (overwrite existing game), flattening the outer "game/" folder
+        with tempfile.TemporaryDirectory() as tmp:
+            # extract zip to a temporary directory
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                zf.extractall(tmp)
+
+            # get the source directory (game directory)
+            src = Path(tmp) / "game"
+            src = src if src.is_dir() else Path(tmp)
+
+            # delete the entire destination for a clean re-extraction
+            if dest.exists():
+                shutil.rmtree(dest)
+            # create the destination directory
+            dest.mkdir(parents=True, exist_ok=True)
+
+            # copy the source directory to the destination directory
+            shutil.copytree(src, dest, dirs_exist_ok=True)
         
         # clean up downloaded zip
         zip_path.unlink()
