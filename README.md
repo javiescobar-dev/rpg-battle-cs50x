@@ -188,7 +188,9 @@ portable bundles (no installer required) across Windows, macOS, and Linux.
   Python 3.14. Triggered on `v*` tags or manually. Both builds are zipped with the
   native tool of each runner (`Compress-Archive` on Windows, `zip` on Unix) using
   the tag in the filename — `rpg-battle-{tag}-{platform}.zip` (game) and
-  `rpg-battle-launcher-{tag}-{platform}.zip` (launcher). A manual run (no tag)
+  `rpg-battle-launcher-{tag}-{platform}.zip` (launcher). The OS name is lowercased
+  with the portable `tr` command (not Bash 4+'s `${var,,}`, which macOS's Bash 3.2
+  does not support). A manual run (no tag)
   falls back to a `dev` suffix. The `release` job waits for both builds, downloads
   all artifacts, and publishes them as a draft GitHub Release.
   Builds are restricted to the `release` branch: each job aborts unless the pushed
