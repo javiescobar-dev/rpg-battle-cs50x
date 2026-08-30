@@ -13,8 +13,8 @@ REPO_API_URL = "https://api.github.com/repos/javiescobar-dev/rpg-battle-cs50x/re
 # News
 NEWS_URL = "https://raw.githubusercontent.com/javiescobar-dev/rpg-battle-cs50x/main/news/news.json"
 
-# Game asset pattern
-GAME_ASSET_PATTERN = "rpg-battle-{tag}-{platform}.zip"
+# Game asset pattern (must match the CI zip name: platform first, then tag)
+GAME_ASSET_PATTERN = "rpg-battle-{platform}-{tag}.zip"
 
 # Cache
 NEWS_CACHE_TTL = 3600  # 1 hour in seconds
