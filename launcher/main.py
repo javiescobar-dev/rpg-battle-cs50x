@@ -18,6 +18,9 @@ class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Align tk scaling with the fixed window size to avoid the startup resize flash
+        self.tk.call('tk', 'scaling', 1.0)
+
         # Hide the window initially
         self.withdraw()
 
@@ -47,9 +50,17 @@ class LauncherApp(ctk.CTk):
         # initial load in background
         self.after(100, self._startup)                    # start loading data in background (call _startup after 100ms)
 
-        # now that the UI is built, apply the final size and show the window
-        self.update()                                     # force tk to size everything with the fixed scaling
-        self.deiconify()                                  # show the window with its correct size
+        # show the window once the mainloop is running and the layout is stable
+        self.after(1200, self._show_window)
+
+    def _show_window(self):
+        """Show the window once the mainloop has stabilized the layout."""
+        # Apply the final geometry and show the window without flickering
+        self.update_idletasks()                   # process any pending geometry updates
+        self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")  # re-apply the exact window size
+        self.update_idletasks()                   # process again to ensure the final size is used
+        self.deiconify()                          # show the window
+        self.lift()                               # bring the window to the front
 
     def _startup(self):
         """Load initial data in background."""
