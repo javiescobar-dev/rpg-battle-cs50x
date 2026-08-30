@@ -41,10 +41,11 @@ jobs:
         run: |
           TAG=${{ github.ref_name }}
           [ "$TAG" = "main" ] && TAG="dev"
+          PLATFORM=$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')
           if [ "$RUNNER_OS" = "Windows" ]; then
             cd dist && powershell -Command "Compress-Archive -Path game -DestinationPath rpg-battle-windows-${TAG}.zip"
           else
-            cd dist && zip -r "rpg-battle-${RUNNER_OS,,}-${TAG}.zip" game
+            cd dist && zip -r "rpg-battle-${PLATFORM}-${TAG}.zip" game
           fi
       - name: Upload game artifact
         uses: actions/upload-artifact@v4
@@ -84,10 +85,11 @@ jobs:
         run: |
           TAG=${{ github.ref_name }}
           [ "$TAG" = "main" ] && TAG="dev"
+          PLATFORM=$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')
           if [ "$RUNNER_OS" = "Windows" ]; then
             cd dist && powershell -Command "Compress-Archive -Path launcher -DestinationPath rpg-battle-launcher-windows-${TAG}.zip"
           else
-            cd dist && zip -r "rpg-battle-launcher-${RUNNER_OS,,}-${TAG}.zip" launcher
+            cd dist && zip -r "rpg-battle-launcher-${PLATFORM}-${TAG}.zip" launcher
           fi
       - name: Upload launcher artifact
         uses: actions/upload-artifact@v4
