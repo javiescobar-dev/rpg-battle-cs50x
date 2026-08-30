@@ -18,6 +18,9 @@ class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Hide the window initially
+        self.withdraw()
+
         # window settings
         ctk.set_appearance_mode(APPEARANCE_MODE)          # set appearance mode (Light/Dark)
         ctk.set_window_scaling(1.0)                       # set window scaling
@@ -43,6 +46,10 @@ class LauncherApp(ctk.CTk):
 
         # initial load in background
         self.after(100, self._startup)                    # start loading data in background (call _startup after 100ms)
+
+        # now that the UI is built, apply the final size and show the window
+        self.update()                                     # force tk to size everything with the fixed scaling
+        self.deiconify()                                  # show the window with its correct size
 
     def _startup(self):
         """Load initial data in background."""
@@ -116,7 +123,7 @@ class LauncherApp(ctk.CTk):
         ctk.CTkLabel(
             card, text=item.get("body", ""),
             font=FONT_BODY, text_color=TEXT_BODY,
-            wraplength=550, justify="left", anchor="w"
+            wraplength=700, justify="left", anchor="w"
         ).pack(fill="x", padx=CARD_PADDING, pady=(4, CARD_PADDING))
 
     def _load_image(self, url, label):
@@ -130,9 +137,9 @@ class LauncherApp(ctk.CTk):
             # Open the image from the data
             img = Image.open(io.BytesIO(data))
 
-            # Resize image to fit the content panel width (~580px)
+            # Resize image to fit the content panel width (~700px)
             width, height = img.size
-            new_width = 580  # Content panel width
+            new_width = 700  # Content panel width
             new_height = int(height * (new_width / width))  # Maintain aspect ratio
             img = img.resize((new_width, new_height), Image.LANCZOS)  # LANCZOS used for high-quality resizing
 
