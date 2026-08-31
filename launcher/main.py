@@ -36,12 +36,7 @@ class LauncherApp(ctk.CTk):
         # internal state
         self._latest_release = None                       # stores the latest release from server
 
-        # build UI
-        # main container
-        self._main = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
-        # packs the main container in the window
-        self._main.pack(side="top", fill="both", expand=True)
-
+        # Build UI
         self._build_header()                              # build the top header
         self._build_content()                             # build the content area
         self._build_footer()                              # build the footer
