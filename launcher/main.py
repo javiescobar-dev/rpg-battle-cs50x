@@ -37,12 +37,16 @@ class LauncherApp(ctk.CTk):
         self._current_tab = "news"                        # default tab
         self._latest_release = None                       # stores the latest release from server
 
+        # default tab
+        self._current_tab = "news"
+
         # build UI
         # main container
         self._main = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
         # packs the main container in the window
         self._main.pack(side="top", fill="both", expand=True)
 
+        self._build_header()                              # build the top header
         self._build_content()                             # build the content area
         self._build_footer()                              # build the footer
 
@@ -159,6 +163,32 @@ class LauncherApp(ctk.CTk):
         except Exception:
             # Show error message if image fails to load
             self.after(0, lambda: label.configure(text="[Image not available]", text_color=TEXT_DATE ))
+
+    def _build_header(self):
+        """Top bar with title and placeholder buttons."""
+        # Top bar frame (full width, fixed height)
+        header = ctk.CTkFrame(self, fg_color=SIDEBAR_BG, corner_radius=0, height=50)
+        header.pack(side="top", fill="x")
+        header.pack_propagate(False)
+
+        # Theme button (placeholder for now - wired up in Phase B)
+        ctk.CTkButton(
+            header, text="Theme", width=70, height=28,
+            font=FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            command=lambda: None
+        ).pack(side="left", padx=12)
+
+        # Centered title
+        ctk.CTkLabel(header, text="RPG Battle Launcher", font=FONT_TITLE, text_color=TEXT_TITLE).pack(side="left", fill="x", expand=True)
+
+        # About button (placeholder for now - wired up in Phase D)
+        ctk.CTkButton(
+            header, text="About", width=70, height=28,
+            font=FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            command=lambda: None
+        ).pack(side="right", padx=12)
 
     def _build_content(self):
         """Central scrollable panel containing the tabs."""
