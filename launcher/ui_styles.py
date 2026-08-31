@@ -6,9 +6,6 @@
 # Active theme ('Light' or 'Dark'). Set at startup by main.py / settings.
 CURRENT_THEME = "Light"
 
-# Theme-independent appearance mode (derived from CURRENT_THEME)
-APPEARANCE_MODE = CURRENT_THEME
-
 # Light theme: blue game colors on a pale background
 LIGHT = {
     "bg": "#F4F8FB",

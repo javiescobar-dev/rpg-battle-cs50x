@@ -35,10 +35,11 @@ class LauncherApp(ctk.CTk):
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
-        self.configure(fg_color=BG_COLOR)                 # set window background color
+        self.configure(fg_color=styles.THEME()["bg"])     # set window background color
 
         # internal state
         self._latest_release = None                       # stores the latest release from server
+        self._news_items = []                             # stores the news items once loaded
 
         # Build UI
         self._build_header()                              # build the top header
@@ -77,6 +78,7 @@ class LauncherApp(ctk.CTk):
 
         # News
         items = get_news()
+        self._news_items = items  # store news items for later use (carousel)
         self.after(0, lambda: self._populate_news(items))
 
     def _populate_news(self, items):
@@ -86,101 +88,35 @@ class LauncherApp(ctk.CTk):
 
         # If no news available, show a message
         if not items:
-            ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.TEXT_DATE).pack(pady=40)
+            ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]).pack(pady=40)
             return
 
         # Temporary: show the first news title (carousel comes later)
-        ctk.CTkLabel(self._content_frame, text=items[0].get("title", "Untitled"), font=styles.FONT_TITLE, text_color=styles.TEXT_TITLE).pack(pady=40)
-
-    def _add_news_card(self, item):
-        """Adds a news card to the news frame."""
-        # Card frame
-        card = ctk.CTkFrame(
-            self._news_frame, fg_color=SIDEBAR_BG,
-            border_width=1, border_color=BORDER_COLOR,
-            corner_radius=8
-        )
-        card.pack(fill="x", pady=(0, CARD_PADDING))
-
-        # Image (loads in background)
-        image_url = item.get("image")
-        img_label = ctk.CTkLabel(card, text="", height=140)
-        img_label.pack(fill="x", padx=CARD_PADDING, pady=(CARD_PADDING, 0))
-
-        # Load image in background (using threading to avoid freezing the UI)
-        if image_url:
-            threading.Thread(target=self._load_image, args=(image_url, img_label), daemon=True).start()
-
-        # Title + Date
-        header = ctk.CTkFrame(card, fg_color="transparent")
-        header.pack(fill="x", padx=CARD_PADDING, pady=(6, 0))
-
-        # Title
-        ctk.CTkLabel(
-            header, text=item.get("title", "Untitled"),
-            font=styles.FONT_TITLE, text_color=styles.TEXT_TITLE, anchor="w"
-        ).pack(side="left", fill="x", expand=True)
-
-        # Date
-        ctk.CTkLabel(
-            header, text=item.get("date", ""),
-            font=styles.FONT_DATE, text_color=styles.TEXT_DATE
-        ).pack(side="right")
-
-        # Body
-        ctk.CTkLabel(
-            card, text=item.get("body", ""),
-            font=styles.FONT_BODY, text_color=styles.TEXT_BODY,
-            wraplength=700, justify="left", anchor="w"
-        ).pack(fill="x", padx=CARD_PADDING, pady=(4, CARD_PADDING))
-
-    def _load_image(self, url, label):
-        """Downloads an image and displays it in the label (in background)."""
-        try:
-            # Request the image from the URL
-            req = urllib.request.Request(url)
-            # Open the URL and read the data
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = resp.read()
-            # Open the image from the data
-            img = Image.open(io.BytesIO(data))
-
-            # Resize image to fit the content panel width (~700px)
-            width, height = img.size
-            new_width = 700  # Content panel width
-            new_height = int(height * (new_width / width))  # Maintain aspect ratio
-            img = img.resize((new_width, new_height), Image.LANCZOS)  # LANCZOS used for high-quality resizing
-
-            # Create CTkImage and configure the label in the UI thread
-            ctk_img = ctk.CTkImage(light_image=img, size=(new_width, new_height))
-            self.after(0, lambda: label.configure(image=ctk_img, text=""))
-        except Exception:
-            # Show error message if image fails to load
-            self.after(0, lambda: label.configure(text="[Image not available]", text_color=styles.TEXT_DATE ))
+        ctk.CTkLabel(self._content_frame, text=items[0].get("title", "Untitled"), font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(pady=40)
 
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
         # Top bar frame (full width, fixed height)
-        header = ctk.CTkFrame(self, fg_color=SIDEBAR_BG, corner_radius=0, height=50)
-        header.pack(side="top", fill="x")
-        header.pack_propagate(False)
+        self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=50)
+        self._header.pack(side="top", fill="x")
+        self._header.pack_propagate(False)
 
         # Theme button (placeholder for now - wired up in Phase B)
         ctk.CTkButton(
-            header, text="Theme", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
-            command=lambda: None
+            self._header, text="Theme", width=70, height=28,
+            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            command=self._on_theme_toggle
         ).pack(side="left", padx=12)
 
         # Centered title
-        ctk.CTkLabel(header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.TEXT_TITLE).pack(side="left", fill="x", expand=True)
+        ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
 
         # About button (placeholder for now - wired up in Phase D)
         ctk.CTkButton(
-            header, text="About", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
+            self._header, text="About", width=70, height=28,
+            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=lambda: None
         ).pack(side="right", padx=12)
 
@@ -193,35 +129,35 @@ class LauncherApp(ctk.CTk):
         # Placeholder: message while loading (carousel comes in Phase C)
         self._news_placeholder = ctk.CTkLabel(
             self._content_frame, text="Loading news...",
-            font=styles.styles.FONT_BODY, text_color=styles.styles.TEXT_DATE
+            font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]
         )
         self._news_placeholder.pack(pady=40)
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
         # Footer frame
-        footer = ctk.CTkFrame(self, fg_color=SIDEBAR_BG, corner_radius=0, height=60)
-        footer.pack(side="bottom", fill="x")
-        footer.pack_propagate(False)
+        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=60)
+        self._footer.pack(side="bottom", fill="x")
+        self._footer.pack_propagate(False)
 
         # Top row: labels + buttons
-        row = ctk.CTkFrame(footer, fg_color="transparent")
+        row = ctk.CTkFrame(self._footer, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(8, 2))
 
         # Installed version
         installed = installed_version()
-        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.TEXT_BODY)
+        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_installed.pack(side="left")
 
         # Remote version (filled later)
-        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.TEXT_BODY)
+        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_latest.pack(side="left", padx=(20, 0))
 
         # Check button
         self._btn_check = ctk.CTkButton(
             row, text="Check", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
         )
         self._btn_check.pack(side="right", padx=(8, 0))
@@ -229,8 +165,8 @@ class LauncherApp(ctk.CTk):
         # Play button
         self._btn_play = ctk.CTkButton(
             row, text="Play", width=90, height=28,
-            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
         )
         self._btn_play.pack(side="right", padx=(8, 0))
@@ -238,8 +174,8 @@ class LauncherApp(ctk.CTk):
         # Download / Update button
         self._btn_download = ctk.CTkButton(
             row, text="Download", width=90, height=28,
-            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_download_click
         )
         self._btn_download.pack(side="right")
@@ -249,7 +185,7 @@ class LauncherApp(ctk.CTk):
             self._btn_play.configure(state="disabled")
 
         # Bottom row: progress bar (hidden at the start)
-        self._progress = ctk.CTkProgressBar(footer, fg_color=BORDER_COLOR, progress_color=ACCENT_COLOR, height=6)
+        self._progress = ctk.CTkProgressBar(self._footer, fg_color=styles.THEME()["border"], progress_color=styles.THEME()["accent"], height=6)
         self._progress.set(0)
         # Not packed here - shown only during download
 
@@ -264,12 +200,16 @@ class LauncherApp(ctk.CTk):
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
         # switch theme
-        global CURRENT_THEME
-        CURRENT_THEME = "Dark" if CURRENT_THEME == "Light" else "Light"
+        styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
 
         # keep ctk native mode in sync
-        ctk.set_appearance_mode(styles.APPEARANCE_MODE)
-        self.configure(fg_color=THEME()["bg"])
+        ctk.set_appearance_mode(styles.CURRENT_THEME)
+
+        # persist the theme for next launch
+        save_theme(styles.CURRENT_THEME)
+
+        # set theme background color
+        self.configure(fg_color=styles.THEME()["bg"])
 
         # destroy the ui
         self._destroy_ui()
@@ -279,9 +219,18 @@ class LauncherApp(ctk.CTk):
         self._build_content()
         self._build_footer()
 
+        # refresh the state of the ui
+        self._refresh_state()
+
         # if news items exist, populate the news
         if self._news_items:
             self.after(0, lambda: self._populate_news(self._news_items))
+
+    def _refresh_state(self):
+        """Re-apply stored state to the (rebuilt) widgets."""
+        # set the latest release version
+        tag = self._latest_release.get("tag_name", "?") if self._latest_release else None
+        self._lbl_latest.configure(text=f"Latest: {tag}" if tag else "Latest: —")
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
