@@ -7,16 +7,21 @@ import threading, io, urllib.request
 import customtkinter as ctk
 from PIL import Image
 
-from ui_styles import *
+import ui_styles as styles
 from config import APP_NAME
 from paths import installed_version, is_game_installed, launch_game
 from updater import fetch_latest_release, find_asset, update
 from news import get_news
+from settings import load_theme, save_theme
 
 
 class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # Restore the last saved theme
+        styles.CURRENT_THEME = load_theme()
+        ctk.set_appearance_mode(styles.CURRENT_THEME)     # set appearance mode (Light/Dark)
 
         # Align tk scaling with the fixed window size to avoid the startup resize flash
         self.tk.call('tk', 'scaling', 1.0)
@@ -25,11 +30,10 @@ class LauncherApp(ctk.CTk):
         self.withdraw()
 
         # window settings
-        ctk.set_appearance_mode(APPEARANCE_MODE)          # set appearance mode (Light/Dark)
         ctk.set_window_scaling(1.0)                       # set window scaling
         ctk.set_widget_scaling(1.0)                       # set widget scaling
         self.title(APP_NAME)                              # set window title
-        self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")  # set window size
+        self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
         self.configure(fg_color=BG_COLOR)                 # set window background color
 
@@ -51,7 +55,7 @@ class LauncherApp(ctk.CTk):
         """Show the window once the mainloop has stabilized the layout."""
         # Apply the final geometry and show the window without flickering
         self.update_idletasks()                   # process any pending geometry updates
-        self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")  # re-apply the exact window size
+        self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # re-apply the exact window size
         self.update_idletasks()                   # process again to ensure the final size is used
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
@@ -82,11 +86,11 @@ class LauncherApp(ctk.CTk):
 
         # If no news available, show a message
         if not items:
-            ctk.CTkLabel(self._content, text="No news available.", font=FONT_BODY, text_color=TEXT_DATE).pack(pady=40)
+            ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.TEXT_DATE).pack(pady=40)
             return
 
         # Temporary: show the first news title (carousel comes later)
-        ctk.CTkLabel(self._content, text=items[0].get("title", "Untitled"), font=FONT_TITLE, text_color=TEXT_TITLE).pack(pady=40)
+        ctk.CTkLabel(self._content_frame, text=items[0].get("title", "Untitled"), font=styles.FONT_TITLE, text_color=styles.TEXT_TITLE).pack(pady=40)
 
     def _add_news_card(self, item):
         """Adds a news card to the news frame."""
@@ -114,19 +118,19 @@ class LauncherApp(ctk.CTk):
         # Title
         ctk.CTkLabel(
             header, text=item.get("title", "Untitled"),
-            font=FONT_TITLE, text_color=TEXT_TITLE, anchor="w"
+            font=styles.FONT_TITLE, text_color=styles.TEXT_TITLE, anchor="w"
         ).pack(side="left", fill="x", expand=True)
 
         # Date
         ctk.CTkLabel(
             header, text=item.get("date", ""),
-            font=FONT_DATE, text_color=TEXT_DATE
+            font=styles.FONT_DATE, text_color=styles.TEXT_DATE
         ).pack(side="right")
 
         # Body
         ctk.CTkLabel(
             card, text=item.get("body", ""),
-            font=FONT_BODY, text_color=TEXT_BODY,
+            font=styles.FONT_BODY, text_color=styles.TEXT_BODY,
             wraplength=700, justify="left", anchor="w"
         ).pack(fill="x", padx=CARD_PADDING, pady=(4, CARD_PADDING))
 
@@ -152,7 +156,7 @@ class LauncherApp(ctk.CTk):
             self.after(0, lambda: label.configure(image=ctk_img, text=""))
         except Exception:
             # Show error message if image fails to load
-            self.after(0, lambda: label.configure(text="[Image not available]", text_color=TEXT_DATE ))
+            self.after(0, lambda: label.configure(text="[Image not available]", text_color=styles.TEXT_DATE ))
 
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
@@ -164,32 +168,32 @@ class LauncherApp(ctk.CTk):
         # Theme button (placeholder for now - wired up in Phase B)
         ctk.CTkButton(
             header, text="Theme", width=70, height=28,
-            font=FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
             command=lambda: None
         ).pack(side="left", padx=12)
 
         # Centered title
-        ctk.CTkLabel(header, text="RPG Battle Launcher", font=FONT_TITLE, text_color=TEXT_TITLE).pack(side="left", fill="x", expand=True)
+        ctk.CTkLabel(header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.TEXT_TITLE).pack(side="left", fill="x", expand=True)
 
         # About button (placeholder for now - wired up in Phase D)
         ctk.CTkButton(
             header, text="About", width=70, height=28,
-            font=FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
             command=lambda: None
         ).pack(side="right", padx=12)
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
         # Central panel, fills the space between header and footer
-        self._content = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
-        self._content.pack(fill="both", expand=True)
+        self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
+        self._content_frame.pack(fill="both", expand=True)
 
         # Placeholder: message while loading (carousel comes in Phase C)
         self._news_placeholder = ctk.CTkLabel(
-            self._content, text="Loading news...",
-            font=FONT_BODY, text_color=TEXT_DATE
+            self._content_frame, text="Loading news...",
+            font=styles.styles.FONT_BODY, text_color=styles.styles.TEXT_DATE
         )
         self._news_placeholder.pack(pady=40)
 
@@ -206,18 +210,18 @@ class LauncherApp(ctk.CTk):
 
         # Installed version
         installed = installed_version()
-        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=FONT_DATE, text_color=TEXT_BODY)
+        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.TEXT_BODY)
         self._lbl_installed.pack(side="left")
 
         # Remote version (filled later)
-        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=FONT_DATE, text_color=TEXT_BODY)
+        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.TEXT_BODY)
         self._lbl_latest.pack(side="left", padx=(20, 0))
 
         # Check button
         self._btn_check = ctk.CTkButton(
             row, text="Check", width=70, height=28,
-            font=FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
             command=self._on_check_click
         )
         self._btn_check.pack(side="right", padx=(8, 0))
@@ -225,8 +229,8 @@ class LauncherApp(ctk.CTk):
         # Play button
         self._btn_play = ctk.CTkButton(
             row, text="Play", width=90, height=28,
-            font=FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
             command=self._on_play_click
         )
         self._btn_play.pack(side="right", padx=(8, 0))
@@ -234,8 +238,8 @@ class LauncherApp(ctk.CTk):
         # Download / Update button
         self._btn_download = ctk.CTkButton(
             row, text="Download", width=90, height=28,
-            font=FONT_DATE, fg_color=ACCENT_COLOR,
-            hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT,
+            font=styles.FONT_DATE, fg_color=ACCENT_COLOR,
+            hover_color=styles.BUTTON_HOVER, text_color=styles.BUTTON_TEXT,
             command=self._on_download_click
         )
         self._btn_download.pack(side="right")
@@ -264,7 +268,7 @@ class LauncherApp(ctk.CTk):
         CURRENT_THEME = "Dark" if CURRENT_THEME == "Light" else "Light"
 
         # keep ctk native mode in sync
-        ctk.set_appearance_mode(APPEARANCE_MODE)
+        ctk.set_appearance_mode(styles.APPEARANCE_MODE)
         self.configure(fg_color=THEME()["bg"])
 
         # destroy the ui
