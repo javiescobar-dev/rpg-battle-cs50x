@@ -154,16 +154,20 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 
 A separate launcher app that downloads, updates, and launches the game.
 
-- Final Fantasy-inspired aesthetic: warm cream backgrounds (`#F5F0EB`), gold
-  accents (`#C9A96E`), serif titles, and elegant panel borders.
-- Horizontal layout (~800x450 px) with a left sidebar for navigation (News,
-  Settings) and a scrollable content panel.
+- Blue palette coherent with the in-game title screen: accent cyan
+  `#50C8F0` on a pale blue background in light mode, and a dark navy background
+  with neon-like cyan accents in dark mode.
+- **Light/Dark themes**: a theme button in the header toggles between the two
+  palettes and rebuilds the UI with the new colors. The choice is persisted to
+  a local `settings.json`, so the launcher reopens on the last selected theme.
+- Vertical layout (960x600 px) with three horizontal bands: a header (theme
+  button, centered title, About button), a central content area, and a footer
+  (versions, Check/Play/Download buttons, progress bar).
 - Downloads the game from GitHub Releases: fetches the latest release via the
   GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
   downloads it with a progress bar, extracts it, and saves the installed version.
-- News feed: fetches `news.json` from the remote GitHub raw URL, displays
-  headlines with images and dates. Falls back to a local cache (1-hour TTL)
-  when offline.
+- News feed: fetches `news.json` from the remote GitHub raw URL and falls back
+  to a local cache (1-hour TTL) when offline. (A visual carousel is planned.)
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
