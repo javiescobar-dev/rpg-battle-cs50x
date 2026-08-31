@@ -3,10 +3,13 @@
 
 """CustomTkinter style constants and theme configuration."""
 
-# Appearance (kept for ctk; we manage theme colors manually)
-APPEARANCE_MODE = "Light"
+# Active theme ('Light' or 'Dark'). Set at startup by main.py / settings.
+CURRENT_THEME = "Light"
 
-# Theme palettes
+# Theme-independent appearance mode (derived from CURRENT_THEME)
+APPEARANCE_MODE = CURRENT_THEME
+
+# Light theme: blue game colors on a pale background
 LIGHT = {
     "bg": "#F4F8FB",
     "panel": "#E4EEF6",
@@ -19,6 +22,8 @@ LIGHT = {
     "text_date": "#7C8EA0",
     "scrollbar": "#C3D4E3",
 }
+
+# Dark theme: dark blue background, neon-like cyan accents
 DARK = {
     "bg": "#14141E",
     "panel": "#1E1E2E",
@@ -33,13 +38,14 @@ DARK = {
 }
 
 THEMES = {"Light": LIGHT, "Dark": DARK}
-CURRENT_THEME = "Light"
 
-def THEME():
-    """Return the active theme color dictionary."""
+
+def THEME() -> dict:
+    """Return the color dictionary of the active theme."""
     return THEMES[CURRENT_THEME]
 
-# Fonts
+
+# Fonts (theme-independent)
 FONT_TITLE = ("Georgia", 18, "bold")
 FONT_BODY  = ("Arial", 13)
 FONT_DATE  = ("Arial", 11)
