@@ -8,7 +8,7 @@ import customtkinter as ctk
 from PIL import Image
 
 from ui_styles import *
-from config import APP_NAME, APP_VERSION
+from config import APP_NAME
 from paths import installed_version, is_game_installed, launch_game
 from updater import fetch_latest_release, find_asset, update
 from news import get_news
@@ -248,6 +248,36 @@ class LauncherApp(ctk.CTk):
         self._progress = ctk.CTkProgressBar(footer, fg_color=BORDER_COLOR, progress_color=ACCENT_COLOR, height=6)
         self._progress.set(0)
         # Not packed here - shown only during download
+
+    def _destroy_ui(self):
+        """Destroy the three main bands so they can be rebuilt with the new theme."""
+        # iterate over the main ui widgets and destroy them if they exist
+        for name in ("_header", "_content_frame", "_footer"):
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.destroy()
+
+    def _on_theme_toggle(self):
+        """Switch Light/Dark theme and rebuild the UI."""
+        # switch theme
+        global CURRENT_THEME
+        CURRENT_THEME = "Dark" if CURRENT_THEME == "Light" else "Light"
+
+        # keep ctk native mode in sync
+        ctk.set_appearance_mode(APPEARANCE_MODE)
+        self.configure(fg_color=THEME()["bg"])
+
+        # destroy the ui
+        self._destroy_ui()
+
+        # rebuild the ui
+        self._build_header()
+        self._build_content()
+        self._build_footer()
+
+        # if news items exist, populate the news
+        if self._news_items:
+            self.after(0, lambda: self._populate_news(self._news_items))
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
