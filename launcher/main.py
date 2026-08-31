@@ -81,18 +81,17 @@ class LauncherApp(ctk.CTk):
         self.after(0, lambda: self._populate_news(items))
 
     def _populate_news(self, items):
-        """Populates the news frame with the received items."""
-        # Remove placeholder
+        """Show temporary a placeholder until the carousel lands."""
+        # Remove loading placeholder
         self._news_placeholder.destroy()
 
         # If no news available, show a message
         if not items:
-            ctk.CTkLabel(self._news_frame, text="No news available.", font=FONT_BODY, text_color=TEXT_DATE).pack(pady=40)
+            ctk.CTkLabel(self._content, text="No news available.", font=FONT_BODY, text_color=TEXT_DATE).pack(pady=40)
             return
 
-        # Add each news item card to the news frame
-        for item in items:
-            self._add_news_card(item)
+        # Temporary: show the first news title (carousel comes later)
+        ctk.CTkLabel(self._content, text=items[0].get("title", "Untitled"), font=FONT_TITLE, text_color=TEXT_TITLE).pack(pady=40)
 
     def _add_news_card(self, item):
         """Adds a news card to the news frame."""
