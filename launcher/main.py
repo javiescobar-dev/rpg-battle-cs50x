@@ -43,7 +43,6 @@ class LauncherApp(ctk.CTk):
         # packs the main container in the window
         self._main.pack(side="top", fill="both", expand=True)
 
-        self._build_sidebar()                             # build the sidebar
         self._build_content()                             # build the content area
         self._build_footer()                              # build the footer
 
@@ -161,46 +160,6 @@ class LauncherApp(ctk.CTk):
             # Show error message if image fails to load
             self.after(0, lambda: label.configure(text="[Image not available]", text_color=TEXT_DATE ))
 
-    def _build_sidebar(self):
-        """Left sidebar with navigation buttons."""
-        # Sidebar frame
-        self._sidebar = ctk.CTkFrame(self, width=SIDEBAR_WIDTH, fg_color=SIDEBAR_BG, corner_radius=0)
-        self._sidebar.pack(in_=self._main, side="left", fill="y")
-        self._sidebar.pack_propagate(False)  # prevents sidebar from resizing
-
-        # Sidebar title (vertical)
-        ctk.CTkLabel(self._sidebar, text="RPG\nB", font=("Georgia", 14, "bold"), text_color=ACCENT_COLOR).pack(pady=(20, 30))
-
-        # news button
-        self._btn_news = ctk.CTkButton(
-            self._sidebar, text="NEWS",
-            font=FONT_SIDEBAR, fg_color="transparent",
-            text_color=TEXT_TITLE, hover_color=BORDER_COLOR,
-            command=lambda: self._show_tab("news")
-        )
-        self._btn_news.pack(fill="x", padx=8, pady=4)
-
-        # settings button
-        self._btn_settings = ctk.CTkButton(
-            self._sidebar, text="SETTINGS",
-            font=FONT_SIDEBAR, fg_color="transparent",
-            text_color=TEXT_TITLE, hover_color=BORDER_COLOR,
-            command=lambda: self._show_tab("settings")
-        )
-        self._btn_settings.pack(fill="x", padx=8, pady=4)
-
-    def _show_tab(self, tab_name):
-        """Show the indicated tab and hide the others."""
-        self._current_tab = tab_name  # set the current tab
-
-        # show or hide the news tab
-        if tab_name == "news":
-            self._news_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 10))  # show news tab
-            self._settings_frame.pack_forget()  # hide settings tab
-        else:
-            self._settings_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 10))  # show settings tab
-            self._news_frame.pack_forget()  # hide news tab
-
     def _build_content(self):
         """Central scrollable panel containing the tabs."""
         # Central panel
@@ -236,9 +195,6 @@ class LauncherApp(ctk.CTk):
             text=f"{APP_NAME} v{APP_VERSION}\n\nGame data is stored in your\nplatform's user data directory.",
             font=FONT_BODY, text_color=TEXT_BODY, justify="center"
         ).pack(pady=10)
-
-        # Show news by default
-        self._show_tab("news")
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
