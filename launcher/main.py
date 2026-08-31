@@ -34,11 +34,7 @@ class LauncherApp(ctk.CTk):
         self.configure(fg_color=BG_COLOR)                 # set window background color
 
         # internal state
-        self._current_tab = "news"                        # default tab
         self._latest_release = None                       # stores the latest release from server
-
-        # default tab
-        self._current_tab = "news"
 
         # build UI
         # main container
@@ -191,40 +187,17 @@ class LauncherApp(ctk.CTk):
         ).pack(side="right", padx=12)
 
     def _build_content(self):
-        """Central scrollable panel containing the tabs."""
-        # Central panel
+        """Central area for the news carousel (or About view)."""
+        # Central panel, fills the space between header and footer
         self._content = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
-        self._content.pack(in_=self._main, side="left", fill="both", expand=True)
+        self._content.pack(fill="both", expand=True)
 
-        # News frame (scrollable)
-        self._news_frame = ctk.CTkScrollableFrame(
-            self._content, fg_color=BG_COLOR,
-            scrollbar_button_color=SCROLLBAR_COLOR,
-            scrollbar_button_hover_color=ACCENT_COLOR
-        )
-
-        # Placeholder: message while loading
+        # Placeholder: message while loading (carousel comes in Phase C)
         self._news_placeholder = ctk.CTkLabel(
-            self._news_frame, text="Loading news...",
+            self._content, text="Loading news...",
             font=FONT_BODY, text_color=TEXT_DATE
         )
         self._news_placeholder.pack(pady=40)
-
-        # Settings frame (placeholder)
-        self._settings_frame = ctk.CTkFrame(
-            self._content, fg_color=BG_COLOR
-        )
-        self._settings_frame.pack_forget()  # hidden at the start
-
-        # Settings header
-        ctk.CTkLabel(self._settings_frame, text="Settings", font=FONT_TITLE, text_color=TEXT_TITLE).pack(pady=(40, 10))
-
-        # Settings body
-        ctk.CTkLabel(
-            self._settings_frame,
-            text=f"{APP_NAME} v{APP_VERSION}\n\nGame data is stored in your\nplatform's user data directory.",
-            font=FONT_BODY, text_color=TEXT_BODY, justify="center"
-        ).pack(pady=10)
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
