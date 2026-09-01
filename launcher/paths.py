@@ -79,3 +79,14 @@ def launch_game() -> None:
         except Exception as e:
             # if game doesn't exist, raise exception
             raise RuntimeError(f"Failed to launch game: {e}")
+
+
+def launcher_background_path() -> Path:
+    """Return the path to the default carousel background."""
+    # in a frozen (PyInstaller) build, assets live in sys._MEIPASS
+    if getattr(sys, "_MEIPASS", None):  # if MEIPASS exist, the launcher is compiled
+        base = Path(sys._MEIPASS) / "assets"
+    else:  # development: project root
+        base = Path(__file__).resolve().parent.parent / "game" / "assets"
+    # return path to default carousel background
+    return base / "backgrounds" / "rpg_battle_background_title.png"
