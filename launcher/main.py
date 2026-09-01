@@ -5,7 +5,7 @@
 
 import threading, urllib.request
 import customtkinter as ctk
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import ui_styles as styles
 from config import APP_NAME
@@ -41,7 +41,6 @@ class LauncherApp(ctk.CTk):
         self._news_items = []                             # stores the news items once loaded
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
-        self._carousel_overlay = None                     # stores the carousel overlay
         self._carousel_title = None                       # stores the carousel title
         self._carousel_body = None                        # stores the carousel body
 
@@ -117,22 +116,22 @@ class LauncherApp(ctk.CTk):
         # get the news item to display
         item = self._news_items[index]
 
-        # create the carousel overlay if it doesn't exist
-        if self._carousel_overlay is None:
-            self._carousel_overlay = ctk.CTkFrame(self._carousel, fg_color="rgba(10,10,20,130)")
-            self._carousel_overlay.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
-
         # create the carousel title if it doesn't exist
         if self._carousel_title is None:
-            self._carousel_title = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_TITLE, text_color="#FFFFFF")
-            self._carousel_title.place(relx=0.5, rely=0.30, anchor="n")
+            self._carousel_title = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_TITLE, text_color="#FFFFFF", fg_color="transparent", bg_color="transparent")
+            self._carousel_title.place(relx=0.5, rely=0.73, anchor="n")
         self._carousel_title.configure(text=item.get("title", ""))
 
         # create the carousel body if it doesn't exist
         if self._carousel_body is None:
-            self._carousel_body = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_BODY, text_color="#E6E6E6", justify="center")
-            self._carousel_body.place(relx=0.5, rely=0.45, anchor="n")
+            self._carousel_body = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_BODY, text_color="#E6E6E6", justify="center",
+                                                fg_color="transparent", bg_color="transparent", wraplength=int(self._carousel.winfo_width() * 0.8))
+            self._carousel_body.place(relx=0.5, rely=0.82, anchor="n")
         self._carousel_body.configure(text=item.get("body", ""))
+
+        # keep text above the background image regardless of creation order
+        self._carousel_title.lift()
+        self._carousel_body.lift()
     
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
@@ -168,7 +167,7 @@ class LauncherApp(ctk.CTk):
 
         # carousel container (rounded, centered, with margins)
         self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=12)
-        self._carousel.pack(fill="both", expand=True, padx=24, pady=20)
+        self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
 
         # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
 
@@ -177,9 +176,24 @@ class LauncherApp(ctk.CTk):
         self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
         width = self._carousel.winfo_width()              # carousel width in pixels
         height = self._carousel.winfo_height()            # carousel height in pixels
-        img = Image.open(launcher_background_path())      # get the launcher background image
+
+        # get the launcher background image
+        img = Image.open(launcher_background_path())
+        # convert the launcher background image to RGBA and resize it to the carousel frame size
+        img = img.convert("RGBA").resize((max(width,10), max(height,10)))
+
+        # draw a semi-transparent bar (title region + body region)
+        bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(bar)
+        top   = int(height * 0.70)     # at ~70% of the carousel height
+        bottom = int(height * 0.96)    # up to ~96%
+        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))  # black with alpha ~90/255
+
+        # merge the launcher background image with the semi-transparent bar
+        img = Image.alpha_composite(img, bar).convert("RGB")
+
         # Resize the carousel background image to fill its frame
-        carousel_img = ctk.CTkImage(light_image=img, dark_image=img, size=(max(width, 10), max(height, 10)))
+        carousel_img = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
 
         # Create or configure the carousel background label
         if not hasattr(self, "_carousel_bg") or self._carousel_bg is None:
@@ -255,7 +269,6 @@ class LauncherApp(ctk.CTk):
         # set the carousel background to None to force it to be rebuilt
         self._carousel_bg = None
         # set carousel news widgets to None to force them to be rebuilt
-        self._carousel_overlay = None
         self._carousel_title = None
         self._carousel_body = None
 
