@@ -3,30 +3,50 @@
 
 """CustomTkinter style constants and theme configuration."""
 
-# Appearance
-APPEARANCE_MODE = "Light"
+# Active theme ('Light' or 'Dark'). Set at startup by main.py / settings.
+CURRENT_THEME = "Light"
 
-# Colors
-BG_COLOR          = "#F5F0EB"   # warm cream background
-SIDEBAR_BG        = "#E8E0D8"   # darker cream sidebar
-BORDER_COLOR      = "#C9B99A"   # muted gold (decorative borders)
-ACCENT_COLOR      = "#C9A96E"   # gold (highlights, buttons)
-TEXT_TITLE        = "#2C2C2C"   # almost black (titles)
-TEXT_BODY         = "#4A4A4A"   # dark gray (body)
-TEXT_DATE         = "#9A8A6A"   # muted gold (dates)
-BUTTON_BG         = "#C9A96E"   # gold (button background)
-BUTTON_HOVER      = "#B8944A"   # darker gold (hover)
-BUTTON_TEXT       = "#FFFFFF"   # white (button text)
-SCROLLBAR_COLOR   = "#C9B99A"   # thin scrollbar
+# Light theme: blue game colors on a pale background
+LIGHT = {
+    "bg": "#F4F8FB",
+    "panel": "#E4EEF6",
+    "border": "#C3D4E3",
+    "accent": "#50C8F0",
+    "hover": "#38A8D6",
+    "button_text": "#FFFFFF",
+    "text_title": "#14222E",
+    "text_body": "#3A4A5A",
+    "text_date": "#7C8EA0",
+    "scrollbar": "#C3D4E3",
+}
 
-# Fonts
-FONT_TITLE    = ("Georgia", 18, "bold")
-FONT_BODY     = ("Arial", 13)
-FONT_DATE     = ("Arial", 11)
-FONT_SIDEBAR  = ("Arial", 12, "bold")
+# Dark theme: dark blue background, neon-like cyan accents
+DARK = {
+    "bg": "#14141E",
+    "panel": "#1E1E2E",
+    "border": "#2A3A55",
+    "accent": "#50C8F0",
+    "hover": "#7CD6FF",
+    "button_text": "#10141C",
+    "text_title": "#E6E6E6",
+    "text_body": "#C0C8D0",
+    "text_date": "#7FB8D9",
+    "scrollbar": "#2A3A55",
+}
+
+THEMES = {"Light": LIGHT, "Dark": DARK}
+
+
+def THEME() -> dict:
+    """Return the color dictionary of the active theme."""
+    return THEMES[CURRENT_THEME]
+
+
+# Fonts (theme-independent)
+FONT_TITLE = ("Georgia", 18, "bold")
+FONT_BODY  = ("Arial", 13)
+FONT_DATE  = ("Arial", 11)
 
 # Dimensions
-WINDOW_WIDTH   = 900
-WINDOW_HEIGHT  = 560
-SIDEBAR_WIDTH  = 80
-CARD_PADDING   = 12
+WINDOW_WIDTH  = 960
+WINDOW_HEIGHT = 600
