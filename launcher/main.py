@@ -3,17 +3,16 @@
 
 """Main launcher window and UI logic."""
 
-import threading, io, urllib.request
+import threading, urllib.request
 import customtkinter as ctk
 from PIL import Image
 
 import ui_styles as styles
 from config import APP_NAME
-from paths import installed_version, is_game_installed, launch_game
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path
 from updater import fetch_latest_release, find_asset, update
 from news import get_news
 from settings import load_theme, save_theme
-
 
 class LauncherApp(ctk.CTk):
     def __init__(self):
@@ -40,6 +39,8 @@ class LauncherApp(ctk.CTk):
         # internal state
         self._latest_release = None                       # stores the latest release from server
         self._news_items = []                             # stores the news items once loaded
+        self._carousel_index = 0                          # which news slide is active
+        self._carousel_bg = None                          # stores the carousel background image
 
         # Build UI
         self._build_header()                              # build the top header
@@ -55,11 +56,13 @@ class LauncherApp(ctk.CTk):
     def _show_window(self):
         """Show the window once the mainloop has stabilized the layout."""
         # Apply the final geometry and show the window without flickering
-        self.update_idletasks()                   # process any pending geometry updates
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # re-apply the exact window size
-        self.update_idletasks()                   # process again to ensure the final size is used
+        self.update_idletasks()                   # process any pending geometry updates
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
+        self.update_idletasks()                   # process any pending geometry updates (now the layout is truly settled)
+        # resize after the window is fully shown; a short delay ensures the CTkImage.configure takes effect on the freshly created label
+        self.after(50, self._resize_carousel_bg)  # resize carousel background to fill its frame (after deiconify and final size)
 
     def _startup(self):
         """Load initial data in background."""
@@ -82,17 +85,15 @@ class LauncherApp(ctk.CTk):
         self.after(0, lambda: self._populate_news(items))
 
     def _populate_news(self, items):
-        """Show temporary a placeholder until the carousel lands."""
-        # Remove loading placeholder
-        self._news_placeholder.destroy()
+        """Store news items; the active slide is drawn later via _show_slide."""
+        self._news_items = items
 
-        # If no news available, show a message
+        # if no news available, show a message (in the carousel area)
         if not items:
             ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]).pack(pady=40)
             return
 
-        # Temporary: show the first news title (carousel comes later)
-        ctk.CTkLabel(self._content_frame, text=items[0].get("title", "Untitled"), font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(pady=40)
+        # TODO: _show_slide(self._carousel_index) will render the active news here (mini-paso 3c)
 
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
@@ -122,16 +123,35 @@ class LauncherApp(ctk.CTk):
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
-        # Central panel, fills the space between header and footer
+        # background frame of the content area
         self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
         self._content_frame.pack(fill="both", expand=True)
 
-        # Placeholder: message while loading (carousel comes in Phase C)
-        self._news_placeholder = ctk.CTkLabel(
-            self._content_frame, text="Loading news...",
-            font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]
+        # carousel container (rounded, centered, with margins)
+        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=12)
+        self._carousel.pack(fill="both", expand=True, padx=24, pady=20)
+
+        # background label with a provisional size (resized when the window is stable)
+        self._carousel_bg = ctk.CTkLabel(
+            self._carousel,
+            image=ctk.CTkImage(
+                light_image=Image.open(launcher_background_path()),
+                dark_image=Image.open(launcher_background_path()),
+                size=(10, 10),
+            ),
+            text="",
         )
-        self._news_placeholder.pack(pady=40)
+        self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+
+    def _resize_carousel_bg(self):
+        """Resize the carousel background to fill its frame (called when layout is stable)."""
+        self._carousel.update_idletasks()             # update the carousel frame to get its actual size
+        w = self._carousel.winfo_width()              # carousel width in pixels
+        h = self._carousel.winfo_height()             # carousel height in pixels
+        img = Image.open(launcher_background_path())  # get the launcher background image
+        self._carousel_bg.configure(
+            image=ctk.CTkImage(light_image=img, dark_image=img, size=(max(w, 10), max(h, 10)))
+        )
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
