@@ -131,27 +131,23 @@ class LauncherApp(ctk.CTk):
         self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=12)
         self._carousel.pack(fill="both", expand=True, padx=24, pady=20)
 
-        # background label with a provisional size (resized when the window is stable)
-        self._carousel_bg = ctk.CTkLabel(
-            self._carousel,
-            image=ctk.CTkImage(
-                light_image=Image.open(launcher_background_path()),
-                dark_image=Image.open(launcher_background_path()),
-                size=(10, 10),
-            ),
-            text="",
-        )
-        self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+        # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
 
     def _resize_carousel_bg(self):
         """Resize the carousel background to fill its frame (called when layout is stable)."""
-        self._carousel.update_idletasks()             # update the carousel frame to get its actual size
-        w = self._carousel.winfo_width()              # carousel width in pixels
-        h = self._carousel.winfo_height()             # carousel height in pixels
-        img = Image.open(launcher_background_path())  # get the launcher background image
-        self._carousel_bg.configure(
-            image=ctk.CTkImage(light_image=img, dark_image=img, size=(max(w, 10), max(h, 10)))
-        )
+        self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
+        width = self._carousel.winfo_width()              # carousel width in pixels
+        height = self._carousel.winfo_height()            # carousel height in pixels
+        img = Image.open(launcher_background_path())      # get the launcher background image
+        # Resize the carousel background image to fill its frame
+        carousel_img = ctk.CTkImage(light_image=img, dark_image=img, size=(max(width, 10), max(height, 10)))
+
+        # Create or configure the carousel background label
+        if not hasattr(self, "_carousel_bg") or self._carousel_bg is None:
+            self._carousel_bg = ctk.CTkLabel(self._carousel, image=carousel_img, text="")
+            self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+        else:
+            self._carousel_bg.configure(image=carousel_img)
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
@@ -217,6 +213,9 @@ class LauncherApp(ctk.CTk):
             if widget is not None:
                 widget.destroy()
 
+        # set the carousel background to None to force it to be rebuilt
+        self._carousel_bg = None
+
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
         # switch theme
@@ -238,6 +237,9 @@ class LauncherApp(ctk.CTk):
         self._build_header()
         self._build_content()
         self._build_footer()
+
+        # resize the carousel background
+        self.after(0, self._resize_carousel_bg)
 
         # refresh the state of the ui
         self._refresh_state()
