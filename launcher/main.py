@@ -41,6 +41,9 @@ class LauncherApp(ctk.CTk):
         self._news_items = []                             # stores the news items once loaded
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
+        self._carousel_overlay = None                     # stores the carousel overlay
+        self._carousel_title = None                       # stores the carousel title
+        self._carousel_body = None                        # stores the carousel body
 
         # Build UI
         self._build_header()                              # build the top header
@@ -93,8 +96,44 @@ class LauncherApp(ctk.CTk):
             ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]).pack(pady=40)
             return
 
-        # TODO: _show_slide(self._carousel_index) will render the active news here (mini-paso 3c)
+        # show the first slide
+        self._show_slide(self._carousel_index)
 
+    def _show_slide(self, index):
+        """Render the given news item in the carousel (creating the layers first time)."""
+        # check if the news items are loaded, if not, return
+        if not self._news_items:
+            return
+
+        # get the number of news items
+        n = len(self._news_items)
+        if n == 0:
+            return
+
+        # set the active slide index
+        index %= n                    # circular safety (reuse % even if called directly)
+        self._carousel_index = index  # remember active slide
+
+        # get the news item to display
+        item = self._news_items[index]
+
+        # create the carousel overlay if it doesn't exist
+        if self._carousel_overlay is None:
+            self._carousel_overlay = ctk.CTkFrame(self._carousel, fg_color="rgba(10,10,20,130)")
+            self._carousel_overlay.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+
+        # create the carousel title if it doesn't exist
+        if self._carousel_title is None:
+            self._carousel_title = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_TITLE, text_color="#FFFFFF")
+            self._carousel_title.place(relx=0.5, rely=0.30, anchor="n")
+        self._carousel_title.configure(text=item.get("title", ""))
+
+        # create the carousel body if it doesn't exist
+        if self._carousel_body is None:
+            self._carousel_body = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_BODY, text_color="#E6E6E6", justify="center")
+            self._carousel_body.place(relx=0.5, rely=0.45, anchor="n")
+        self._carousel_body.configure(text=item.get("body", ""))
+    
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
         # Top bar frame (full width, fixed height)
@@ -215,6 +254,10 @@ class LauncherApp(ctk.CTk):
 
         # set the carousel background to None to force it to be rebuilt
         self._carousel_bg = None
+        # set carousel news widgets to None to force them to be rebuilt
+        self._carousel_overlay = None
+        self._carousel_title = None
+        self._carousel_body = None
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
