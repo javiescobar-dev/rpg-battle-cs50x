@@ -5,7 +5,9 @@
 
 import threading, urllib.request
 import customtkinter as ctk
-from PIL import Image, ImageDraw
+import os
+from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
 
 import ui_styles as styles
 from config import APP_NAME
@@ -41,8 +43,6 @@ class LauncherApp(ctk.CTk):
         self._news_items = []                             # stores the news items once loaded
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
-        self._carousel_title = None                       # stores the carousel title
-        self._carousel_body = None                        # stores the carousel body
 
         # Build UI
         self._build_header()                              # build the top header
@@ -99,7 +99,7 @@ class LauncherApp(ctk.CTk):
         self._show_slide(self._carousel_index)
 
     def _show_slide(self, index):
-        """Render the given news item in the carousel (creating the layers first time)."""
+        """Mark the active slide and re-render the carousel image."""
         # check if the news items are loaded, if not, return
         if not self._news_items:
             return
@@ -110,29 +110,11 @@ class LauncherApp(ctk.CTk):
             return
 
         # set the active slide index
-        index %= n                    # circular safety (reuse % even if called directly)
-        self._carousel_index = index  # remember active slide
+        self._carousel_index = index % n          # circular safety
 
-        # get the news item to display
-        item = self._news_items[index]
+        # re-render background + stripe + text
+        self._resize_carousel_bg()
 
-        # create the carousel title if it doesn't exist
-        if self._carousel_title is None:
-            self._carousel_title = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_TITLE, text_color="#FFFFFF", fg_color="transparent", bg_color="transparent")
-            self._carousel_title.place(relx=0.5, rely=0.73, anchor="n")
-        self._carousel_title.configure(text=item.get("title", ""))
-
-        # create the carousel body if it doesn't exist
-        if self._carousel_body is None:
-            self._carousel_body = ctk.CTkLabel(self._carousel, text="", font=styles.FONT_BODY, text_color="#E6E6E6", justify="center",
-                                                fg_color="transparent", bg_color="transparent", wraplength=int(self._carousel.winfo_width() * 0.8))
-            self._carousel_body.place(relx=0.5, rely=0.82, anchor="n")
-        self._carousel_body.configure(text=item.get("body", ""))
-
-        # keep text above the background image regardless of creation order
-        self._carousel_title.lift()
-        self._carousel_body.lift()
-    
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
         # Top bar frame (full width, fixed height)
@@ -185,22 +167,71 @@ class LauncherApp(ctk.CTk):
         # draw a semi-transparent bar (title region + body region)
         bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(bar)
-        top   = int(height * 0.70)     # at ~70% of the carousel height
-        bottom = int(height * 0.96)    # up to ~96%
-        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))  # black with alpha ~90/255
+        top, bottom = int(height*0.70), int(height*0.96)
+        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))
 
-        # merge the launcher background image with the semi-transparent bar
-        img = Image.alpha_composite(img, bar).convert("RGB")
+        # overlay stripe onto background
+        img = Image.alpha_composite(img, bar)
+
+        # set the news text
+        if self._news_items and 0 <= self._carousel_index < len(self._news_items):
+            item = self._news_items[self._carousel_index]
+            self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
+
+        # convert the image to RGB
+        img = img.convert("RGB")
 
         # Resize the carousel background image to fill its frame
         carousel_img = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
 
-        # Create or configure the carousel background label
-        if not hasattr(self, "_carousel_bg") or self._carousel_bg is None:
-            self._carousel_bg = ctk.CTkLabel(self._carousel, image=carousel_img, text="")
-            self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
-        else:
-            self._carousel_bg.configure(image=carousel_img)
+        # Create the carousel background label, if exists destroy it first
+        if self._carousel_bg is not None:
+            self._carousel_bg.destroy()
+        self._carousel_bg = ctk.CTkLabel(self._carousel, image=carousel_img, text="")
+        self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+
+    def _draw_news_text(self, img, title, body, width, height):
+        """Draw the slide title and body onto the carousel image."""
+
+        # Get the fonts directory
+        fonts_dir = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+
+        # Create the fonts
+        title_font = ImageFont.truetype(str(fonts_dir / "arialbd.ttf"), 24)
+        body_font  = ImageFont.truetype(str(fonts_dir / "arial.ttf"), 15)
+
+        # Draw the title and body
+        draw = ImageDraw.Draw(img)
+        cx = width // 2
+        max_text_w = int(width * 0.8)
+
+        # Centered title
+        if title:
+            draw.text((cx, int(height*0.74)), title, font=title_font, fill=(255, 255, 255, 255), anchor="mm")
+
+        # body: wrap by words and center each line
+        if body:
+            # wrap text by words
+            lines = []
+            current = ""
+            for word in body.split():
+                trial = (current + " " + word).strip()
+                if draw.textbbox((0, 0), trial, font=body_font)[2] <= max_text_w:
+                    current = trial
+                else:
+                    lines.append(current)
+                    current = word
+            # Add the last word
+            if current:
+                lines.append(current)
+
+            # Centered body
+            y = int(height * 0.82)
+
+            # Draw the body
+            for line in lines:
+                draw.text((cx, y), line, font=body_font, fill=(230, 230, 230, 255), anchor="mm")
+                y += 18
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
@@ -268,9 +299,6 @@ class LauncherApp(ctk.CTk):
 
         # set the carousel background to None to force it to be rebuilt
         self._carousel_bg = None
-        # set carousel news widgets to None to force them to be rebuilt
-        self._carousel_title = None
-        self._carousel_body = None
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
@@ -285,6 +313,9 @@ class LauncherApp(ctk.CTk):
 
         # set theme background color
         self.configure(fg_color=styles.THEME()["bg"])
+
+        # set focus to the window
+        self.focus()
 
         # destroy the ui
         self._destroy_ui()
