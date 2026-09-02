@@ -171,7 +171,10 @@ A separate launcher app that downloads, updates, and launches the game.
   visual slide carousel. Each slide draws the default background, a semi-transparent
   overlay, the title/body, arrow buttons, and navigation dots into the image with
   Pillow, and responds to clicks on the image (left/right arrows or a specific dot)
-  to switch between slides across all 4 feed entries.
+  to switch between slides across all 4 feed entries. The default background is
+  bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
+  carousel falls back to a flat area filled with the theme background color instead
+  of failing.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
