@@ -12,7 +12,10 @@ a = Analysis(
     [os.path.join(launcher_dir, "main.py")],            # entry point
     pathex=[launcher_dir],                              # paths of bare imports (config, paths, ...)
     binaries=[],
-    datas=[],                            # launcher does not package local assets
+    datas=[
+        (os.path.join(launcher_dir, "..", "game", "assets", "backgrounds", "rpg_battle_background_title.png"),
+        os.path.join("assets", "backgrounds")),
+    ],
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
