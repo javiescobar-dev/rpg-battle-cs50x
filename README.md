@@ -166,8 +166,12 @@ A separate launcher app that downloads, updates, and launches the game.
 - Downloads the game from GitHub Releases: fetches the latest release via the
   GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
   downloads it with a progress bar, extracts it, and saves the installed version.
-- News feed: fetches `news.json` from the remote GitHub raw URL and falls back
-  to a local cache (1-hour TTL) when offline. (A visual carousel is planned.)
+- News carousel: fetches `news.json` from the remote GitHub raw URL (falling back
+  to a local cache with a 1-hour TTL when offline) and renders the feed as a
+  visual slide carousel. Each slide draws the default background, a semi-transparent
+  overlay, the title/body, arrow buttons, and navigation dots into the image with
+  Pillow, and responds to clicks on the image (left/right arrows or a specific dot)
+  to switch between slides across all 4 feed entries.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
