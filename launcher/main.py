@@ -165,28 +165,33 @@ class LauncherApp(ctk.CTk):
         width = self._carousel.winfo_width()              # carousel width in pixels
         height = self._carousel.winfo_height()            # carousel height in pixels
 
-        # get the launcher background image
-        img = Image.open(launcher_background_path())
-        # convert the launcher background image to RGBA and resize it to the carousel frame size
-        img = img.convert("RGBA").resize((max(width,10), max(height,10)))
+        # get the launcher background image; if missing (e.g. bundled asset), fall
+        # back to a flat image filled with the launcher background color on raise
+        try:
+            img = Image.open(launcher_background_path())
+            # convert the launcher background image to RGBA and resize it to the carousel frame size
+            img = img.convert("RGBA").resize((max(width,10), max(height,10)))
 
-        # draw a semi-transparent bar (title region + body region)
-        bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(bar)
-        top, bottom = int(height*0.70), int(height*0.96)
-        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))
+            # draw a semi-transparent bar (title region + body region)
+            bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(bar)
+            top, bottom = int(height*0.70), int(height*0.96)
+            draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))
 
-        # overlay stripe onto background
-        img = Image.alpha_composite(img, bar)
+            # overlay stripe onto background
+            img = Image.alpha_composite(img, bar)
 
-        # set the news text and draw navigation buttons and dots if exists news and index is valid
-        if self._news_items and 0 <= self._carousel_index < len(self._news_items):
-            # get the news item
-            item = self._news_items[self._carousel_index]
-            # draw the news text
-            self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
-            # draw navigation buttons and dots
-            self._draw_nav(img, width, height)
+            # set the news text and draw navigation buttons and dots if exists news and index is valid
+            if self._news_items and 0 <= self._carousel_index < len(self._news_items):
+                # get the news item
+                item = self._news_items[self._carousel_index]
+                # draw the news text
+                self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
+                # draw navigation buttons and dots
+                self._draw_nav(img, width, height)
+        except Exception:
+            # no background image: flat fallback filled with the theme background color
+            img = Image.new("RGBA", (max(width,10), max(height,10)), styles.THEME()["bg"] + "FF")
 
         # convert the image to RGB
         img = img.convert("RGB")
