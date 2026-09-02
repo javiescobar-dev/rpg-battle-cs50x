@@ -113,6 +113,14 @@ class LauncherApp(ctk.CTk):
         # re-render background + stripe + text
         self._resize_carousel_bg()
 
+    def _carousel_next(self):
+        """Go to next news slide."""
+        self._show_slide(self._carousel_index + 1)
+
+    def _carousel_prev(self):
+        """Go to previous news slide."""
+        self._show_slide(self._carousel_index - 1)
+
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
         # Top bar frame (full width, fixed height)
@@ -171,10 +179,14 @@ class LauncherApp(ctk.CTk):
         # overlay stripe onto background
         img = Image.alpha_composite(img, bar)
 
-        # set the news text
+        # set the news text and draw navigation buttons and dots if exists news and index is valid
         if self._news_items and 0 <= self._carousel_index < len(self._news_items):
+            # get the news item
             item = self._news_items[self._carousel_index]
+            # draw the news text
             self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
+            # draw navigation buttons and dots
+            self._draw_nav(img, width, height)
 
         # convert the image to RGB
         img = img.convert("RGB")
@@ -187,6 +199,9 @@ class LauncherApp(ctk.CTk):
             self._carousel_bg.destroy()
         self._carousel_bg = ctk.CTkLabel(self._carousel, image=carousel_img, text="")
         self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+
+        # bind the carousel click event to the on_carousel_click method
+        self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
 
     def _draw_news_text(self, img, title, body, width, height):
         """Draw the slide title and body onto the carousel image."""
@@ -231,6 +246,65 @@ class LauncherApp(ctk.CTk):
             for line in lines:
                 draw.text((cx, y), line, font=body_font, fill=(230, 230, 230, 255), anchor="mm")
                 y += 18
+
+    def _draw_nav(self, img, width, height):
+        """Draw arrow buttons and navigation dots onto the carousel image."""
+        n = len(self._news_items)
+        if n <= 1:          # nothing to navigate
+            return
+
+        # arrows
+        draw = ImageDraw.Draw(img)
+        accent = styles.THEME()["accent"]
+        inactive = styles.THEME()["text_date"]
+        cy = int(height * 0.5)
+
+        # left arrow ‹ (triangle pointing left), centered vertically
+        ax = int(width * 0.03)
+        draw.polygon([(ax - 8, cy), (ax + 8, cy - 16), (ax + 8, cy + 16)], fill=accent)
+        # right arrow › (triangle pointing right), centered vertically
+        bx = int(width * 0.97)
+        draw.polygon([(bx + 8, cy), (bx - 8, cy - 16), (bx - 8, cy + 16)], fill=accent)
+
+        # navigation dots (circle per slide), centered at the bottom
+        gap = 18
+        dy = int(height * 0.95)
+        self._dot_centers = []
+        # iterate over the number of news items
+        for i in range(n):
+            # calculate the x coordinate of the dot
+            dx = width // 2 + int((i - (n - 1) / 2) * gap)
+            # set the color of the dot
+            color = accent if i == self._carousel_index else inactive
+            # draw the dot
+            draw.ellipse([dx - 2, dy - 2, dx + 2, dy + 2], fill=color)
+            # append the dot center to the list
+            self._dot_centers.append((dx, dy))
+
+    def _on_carousel_click(self, event):
+        """Handle a click on the carousel image: prev/next arrows or a specific dot."""
+        n = len(self._news_items)
+        if n <= 1:
+            return                      # nothing to navigate
+
+        # get carousel size
+        width = self._carousel.winfo_width()
+        height = self._carousel.winfo_height()
+
+        # left arrow zone (0% to 6% of the carousel width)
+        if event.x < width * 0.06:
+            self._carousel_prev()
+            return
+
+        # right arrow zone (94% to 100% of the carousel width)
+        if event.x > width * 0.94:
+            self._carousel_next()
+            return
+
+        # dots zone (bottom bar): pick the closest dot to the click
+        if event.y > height * 0.90 and self._dot_centers:
+            best = min(range(n), key=lambda i: abs(event.x - self._dot_centers[i][0]))
+            self._show_slide(best)
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
