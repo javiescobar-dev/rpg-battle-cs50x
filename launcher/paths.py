@@ -4,7 +4,7 @@
 """Path configuration and helpers for the launcher."""
 
 from pathlib import Path
-import platformdirs, subprocess, sys
+import platformdirs, subprocess, sys, os
 
 def game_dir() -> Path:
     """Return the installation directory for the game."""
@@ -90,3 +90,22 @@ def launcher_background_path() -> Path:
         base = Path(__file__).resolve().parent.parent / "game" / "assets"
     # return path to default carousel background
     return base / "backgrounds" / "rpg_battle_background_title.png"
+
+
+def font_path(bold: bool) -> Path | None:
+    """Return an existing font path for a heading (bold) or body (regular), or None."""
+    # set a list of font paths to check for each OS
+    candidates = [
+        # Windows
+        Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / ("arialbd.ttf" if bold else "arial.ttf"),
+        # macOS
+        Path("/Library/Fonts") / ("Arial Bold.ttf" if bold else "Arial.ttf"),
+        Path("/System/Library/Fonts/Supplemental") / ("Arial Bold.ttf" if bold else "Arial.ttf"),
+        # Linux
+        Path("/usr/share/fonts/truetype/dejavu") / ("DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"),
+    ]
+    # return first valid font path, otherwise None
+    for path in candidates:
+        if path.exists():
+            return path
+    return None

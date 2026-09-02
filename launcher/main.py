@@ -3,16 +3,14 @@
 
 """Main launcher window and UI logic."""
 
-import threading, urllib.request
+import threading
 import customtkinter as ctk
-import os
-from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 import ui_styles as styles
 from config import APP_NAME
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path
-from updater import fetch_latest_release, find_asset, update
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path
+from updater import fetch_latest_release, update
 from news import get_news
 from settings import load_theme, save_theme
 
@@ -193,12 +191,13 @@ class LauncherApp(ctk.CTk):
     def _draw_news_text(self, img, title, body, width, height):
         """Draw the slide title and body onto the carousel image."""
 
-        # Get the fonts directory
-        fonts_dir = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+        # Resolve cross-platform font paths
+        title_path = font_path(True)  # Bold
+        body_path  = font_path(False) # Regular
 
         # Create the fonts
-        title_font = ImageFont.truetype(str(fonts_dir / "arialbd.ttf"), 24)
-        body_font  = ImageFont.truetype(str(fonts_dir / "arial.ttf"), 15)
+        title_font = (ImageFont.truetype(str(title_path), 24) if title_path else ImageFont.load_default(size=24))
+        body_font  = (ImageFont.truetype(str(body_path), 15) if body_path else ImageFont.load_default(size=15))
 
         # Draw the title and body
         draw = ImageDraw.Draw(img)
