@@ -3,7 +3,6 @@
 
 """Main launcher window and UI logic."""
 
-from pygame import sprite
 import random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont
 
