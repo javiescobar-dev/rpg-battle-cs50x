@@ -3,13 +3,12 @@
 
 """Main launcher window and UI logic."""
 
-import threading
-import customtkinter as ctk
+from pygame import sprite
+import random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont
 
-import ui_styles as styles
 from config import APP_NAME
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path
 from updater import fetch_latest_release, update
 from news import get_news
 from settings import load_theme, save_theme
@@ -41,6 +40,11 @@ class LauncherApp(ctk.CTk):
         self._news_items = []                             # stores the news items once loaded
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
+        self._view = "news"                               # which view is active: "news" or "about"
+        self._hero_sprite = None                          # stores the hero sprite for the download animation
+        self._hero_frames = []                            # stores the hero animation frames
+        self._hero_frame = 0                              # stores the current hero animation frame index
+        self._hero_timer = None                           # stores the hero animation timer ID
 
         # Build UI
         self._build_header()                              # build the top header
@@ -128,7 +132,7 @@ class LauncherApp(ctk.CTk):
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
-        # Theme button (placeholder for now - wired up in Phase B)
+        # Theme button
         ctk.CTkButton(
             self._header, text="Theme", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
@@ -139,12 +143,12 @@ class LauncherApp(ctk.CTk):
         # Centered title
         ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
 
-        # About button (placeholder for now - wired up in Phase D)
+        # About button
         ctk.CTkButton(
             self._header, text="About", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=lambda: None
+            command=self._show_about
         ).pack(side="right", padx=12)
 
     def _build_content(self):
@@ -154,10 +158,28 @@ class LauncherApp(ctk.CTk):
         self._content_frame.pack(fill="both", expand=True)
 
         # carousel container (rounded, centered, with margins)
-        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=12)
-        self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
+        self._build_carousel()
 
         # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
+
+    def _destroy_content(self):
+        """Destroy the widgets inside the content area."""
+        # destroy the widgets inside the content area (children widgets)
+        for child in self._content_frame.winfo_children():
+            child.destroy()
+
+        # reset the carousel background after destroying the carousel
+        self._carousel_bg = None
+
+        # reset the carousel also
+        self._carousel = None
+
+    def _build_carousel(self):
+        """Area to show news."""
+        # create the carousel frame
+        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=0)
+        # pack the carousel frame
+        self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
 
     def _resize_carousel_bg(self):
         """Resize the carousel background to fill its frame (called when layout is stable)."""
@@ -311,29 +333,68 @@ class LauncherApp(ctk.CTk):
             best = min(range(n), key=lambda i: abs(event.x - self._dot_centers[i][0]))
             self._show_slide(best)
 
+    def _show_about(self):
+        """Switch the content area to the About view."""
+        self._view = "about"
+        self._destroy_content()
+        self._build_about()
+
+    def _show_news(self):
+        """Switch the content area back to the news carousel."""
+        self._view = "news"
+        self._destroy_content()
+        self._build_carousel()
+        # restore the active slide (self._carousel_index keeps it) with a delay of 0 ms to avoid that the carousel is not fully built
+        if self._news_items:
+            self.after(0, lambda: self._populate_news(self._news_items))
+
+    def _build_about(self):
+        """Build the About view."""
+        # destroy the content frame
+        self._destroy_content()
+        # get content frame to build the About view inside
+        frame = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
+        frame.pack(fill="both", expand=True)  # fill the content frame and expand to fill the available space
+        # title
+        ctk.CTkLabel(frame, text=APP_NAME, font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(pady=(40, 8))
+        # body
+        ctk.CTkLabel(frame, text="RPG Battle is a turn-based battle game built with Pygame and a desktop launcher built with CustomTkinter. It is the final project of CS50x.",
+                                    font=styles.FONT_BODY, text_color=styles.THEME()["text_body"], wraplength=600, justify="center").pack(pady=8)
+        # subtitle: developed by
+        ctk.CTkLabel(frame, text="Developed by Javi Escobar Fernández", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
+        # subtitle: CS50x Final Project
+        ctk.CTkLabel(frame, text="CS50x Final Project", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
+        # back button
+        ctk.CTkButton(
+            frame, text="Back", width=70, height=28,
+            font=styles.FONT_BODY, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            command=self._show_news
+        ).pack(pady=16)
+
     def _build_footer(self):
-        """Bottom bar: versions, buttons and progress bar."""
+        """Build the footer, the bottom bar of the launcher."""
         # Footer frame
-        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=60)
+        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
         self._footer.pack(side="bottom", fill="x")
         self._footer.pack_propagate(False)
 
         # Top row: labels + buttons
-        row = ctk.CTkFrame(self._footer, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(8, 2))
+        self._row = ctk.CTkFrame(self._footer, fg_color="transparent")
+        self._row.pack(fill="x", padx=16, pady=(8, 2))
 
         # Installed version
         installed = installed_version()
-        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        self._lbl_installed = ctk.CTkLabel(self._row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_installed.pack(side="left")
 
         # Remote version (filled later)
-        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        self._lbl_latest = ctk.CTkLabel(self._row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_latest.pack(side="left", padx=(20, 0))
 
         # Check button
         self._btn_check = ctk.CTkButton(
-            row, text="Check", width=70, height=28,
+            self._row, text="Check", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
@@ -342,7 +403,7 @@ class LauncherApp(ctk.CTk):
 
         # Play button
         self._btn_play = ctk.CTkButton(
-            row, text="Play", width=90, height=28,
+            self._row, text="Play", width=90, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
@@ -351,7 +412,7 @@ class LauncherApp(ctk.CTk):
 
         # Download / Update button
         self._btn_download = ctk.CTkButton(
-            row, text="Download", width=90, height=28,
+            self._row, text="Download", width=90, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_download_click
@@ -403,15 +464,14 @@ class LauncherApp(ctk.CTk):
         self._build_content()
         self._build_footer()
 
-        # resize the carousel background
-        self.after(0, self._resize_carousel_bg)
+        # rebuild the active view (news carousel or about)
+        if self._view == "about":
+            self._build_about()
+        elif self._news_items:
+            self.after(0, lambda: self._populate_news(self._news_items))
 
         # refresh the state of the ui
         self._refresh_state()
-
-        # if news items exist, populate the news
-        if self._news_items:
-            self.after(0, lambda: self._populate_news(self._news_items))
 
     def _refresh_state(self):
         """Re-apply stored state to the (rebuilt) widgets."""
@@ -467,13 +527,51 @@ class LauncherApp(ctk.CTk):
         self._btn_play.configure(state="disabled")
         self._btn_check.configure(state="disabled")
         self._progress.set(0)
-        self._progress.pack(fill="x", padx=16, pady=(0, 8))
+        self._progress.pack(side="bottom", fill="x", padx=16, pady=(0, 12))
+
+        # select a random frame of the hero sprites
+        frame = random.randint(1, 8)
+        try:
+            # Load the hero image sprite sheet and convert it to RGBA (transparency)
+            sheet = Image.open(launcher_hero_path(frame)).convert("RGBA")
+
+            # Height chosen for the sprite
+            hero_h = 46
+
+            # Crop the hero sprite into frames
+            for frame in range(3):
+                col = 2 * 3 + frame        # pose_idx=2 (flee) * 3 + frame
+                x = col * 96
+                new_frame = sheet.crop((x, 0, x + 96, 96))
+                # Resize to a fixed height (e.g. 36 px) maintaining the proportion
+                hero_w = int(new_frame.width * hero_h / new_frame.height)  # proportional
+                new_frame = new_frame.resize((hero_w, hero_h))
+                # Convert to an object that Tkinter can draw
+                ctk_img = ctk.CTkImage(light_image=new_frame, dark_image=new_frame, size=(hero_w, hero_h))
+                self._hero_frames.append(ctk_img)
+
+            # Force the layout to have real size
+            self.update_idletasks()
+
+            # Calculate Y coordinate for the hero sprite (centered above the progress bar)
+            bar_y = self._progress.winfo_y()   # Y of the bar from the top of the footer
+            y = bar_y - hero_h // 2            # vertical center of the sprite just above the bar
+
+            # Create the label and place it with place (on the left)
+            self._hero_sprite = ctk.CTkLabel(self._footer, image=self._hero_frames[0], text="", fg_color="transparent", bg_color="transparent")
+            self._hero_sprite.place(x=16, y=y, anchor="w")
+
+            # create timer to cycle hero sprite
+            self._hero_timer = self.after(100, self._cycle_hero)
+        except Exception:
+            self._hero_sprite = None  # if the asset fails, only the progress bar works
 
         # thread to download the game
         def _do_update():
             # progress callback
             def on_progress(fraction):
-                self.after(0, lambda: self._progress.set(fraction))
+                self.after(0, lambda: self._progress.set(fraction))   # move the progress bar
+                self.after(0, lambda: self._update_sprite(fraction))  # move the hero sprite
 
             # download the game
             success = update(tag, progress_callback=on_progress)
@@ -482,9 +580,21 @@ class LauncherApp(ctk.CTk):
             def _finish():
                 # hide progress bar
                 self._progress.pack_forget()
+
+                # hide hero sprite
+                if self._hero_sprite is not None:
+                    self._hero_sprite.place_forget()
+                    self._hero_sprite = None
+
+                # stop timer to cycle hero sprite
+                if self._hero_timer is not None:
+                    self.after_cancel(self._hero_timer)
+                    self._hero_timer = None
+
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
                 self._btn_check.configure(state="normal")
+
                 # update installed version if successful
                 if success:
                     self._lbl_installed.configure(text=f"Installed: {tag}")
@@ -497,6 +607,24 @@ class LauncherApp(ctk.CTk):
 
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()
+
+    def _update_sprite(self, fraction):
+        """Update the hero sprite position (runs in a background thread)."""
+        # move the progress bar (as it already is)
+        self._progress.set(fraction)
+        # no sprite, nothing to move
+        if self._hero_sprite is None:
+            return
+        # travel space: from left margin to right (leaving room for the hero)
+        travel = self._footer.winfo_width() - 32 - self._hero_sprite.winfo_width()
+        x = 16 + fraction * travel  # 0.0 -> left, 1.0 -> right
+        self._hero_sprite.place(x=x)  # move (and it was already fixed when created)
+
+
+    def _cycle_hero(self):
+        self._hero_frame = (self._hero_frame + 1) % 3
+        self._hero_sprite.configure(image=self._hero_frames[self._hero_frame])
+        self._hero_timer = self.after(100, self._cycle_hero)
 
 
 if __name__ == "__main__":

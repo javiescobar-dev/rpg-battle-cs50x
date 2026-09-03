@@ -25,12 +25,12 @@ DARK = {
     "bg": "#14141E",
     "panel": "#1E1E2E",
     "border": "#2A3A55",
-    "accent": "#50C8F0",
-    "hover": "#7CD6FF",
+    "accent": "#E6D150",
+    "hover": "#E6C038",
     "button_text": "#10141C",
     "text_title": "#E6E6E6",
     "text_body": "#C0C8D0",
-    "text_date": "#7FB8D9",
+    "text_date": "#F0A050",
     "scrollbar": "#2A3A55",
 }
 
@@ -50,3 +50,5 @@ FONT_DATE  = ("Arial", 11)
 # Dimensions
 WINDOW_WIDTH  = 960
 WINDOW_HEIGHT = 600
+
+FOOTER_HEIGHT = 100

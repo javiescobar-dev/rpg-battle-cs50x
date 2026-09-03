@@ -15,6 +15,8 @@ a = Analysis(
     datas=[
         (os.path.join(launcher_dir, "..", "game", "assets", "backgrounds", "rpg_battle_background_title.png"),
         os.path.join("assets", "backgrounds")),
+        (os.path.join(launcher_dir, "..", "game", "assets", "sprites", "hero", "*.png"),
+        os.path.join("assets", "sprites", "hero"))
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
