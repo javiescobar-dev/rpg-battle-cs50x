@@ -50,3 +50,5 @@ FONT_DATE  = ("Arial", 11)
 # Dimensions
 WINDOW_WIDTH  = 960
 WINDOW_HEIGHT = 600
+
+FOOTER_HEIGHT = 100

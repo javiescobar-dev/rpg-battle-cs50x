@@ -42,6 +42,9 @@ class LauncherApp(ctk.CTk):
         self._carousel_bg = None                          # stores the carousel background image
         self._view = "news"                               # which view is active: "news" or "about"
         self._hero_sprite = None                          # stores the hero sprite for the download animation
+        self._hero_frames = []                            # stores the hero animation frames
+        self._hero_frame = 0                              # stores the current hero animation frame index
+        self._hero_timer = None                           # stores the hero animation timer ID
 
         # Build UI
         self._build_header()                              # build the top header
@@ -372,26 +375,26 @@ class LauncherApp(ctk.CTk):
     def _build_footer(self):
         """Build the footer, the bottom bar of the launcher."""
         # Footer frame
-        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=60)
+        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
         self._footer.pack(side="bottom", fill="x")
         self._footer.pack_propagate(False)
 
         # Top row: labels + buttons
-        row = ctk.CTkFrame(self._footer, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(8, 2))
+        self._row = ctk.CTkFrame(self._footer, fg_color="transparent")
+        self._row.pack(fill="x", padx=16, pady=(8, 2))
 
         # Installed version
         installed = installed_version()
-        self._lbl_installed = ctk.CTkLabel(row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        self._lbl_installed = ctk.CTkLabel(self._row, text=f"Installed: {installed}" if installed else "Installed: —", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_installed.pack(side="left")
 
         # Remote version (filled later)
-        self._lbl_latest = ctk.CTkLabel(row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        self._lbl_latest = ctk.CTkLabel(self._row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_latest.pack(side="left", padx=(20, 0))
 
         # Check button
         self._btn_check = ctk.CTkButton(
-            row, text="Check", width=70, height=28,
+            self._row, text="Check", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
@@ -400,7 +403,7 @@ class LauncherApp(ctk.CTk):
 
         # Play button
         self._btn_play = ctk.CTkButton(
-            row, text="Play", width=90, height=28,
+            self._row, text="Play", width=90, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
@@ -409,7 +412,7 @@ class LauncherApp(ctk.CTk):
 
         # Download / Update button
         self._btn_download = ctk.CTkButton(
-            row, text="Download", width=90, height=28,
+            self._row, text="Download", width=90, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_download_click
@@ -524,30 +527,42 @@ class LauncherApp(ctk.CTk):
         self._btn_play.configure(state="disabled")
         self._btn_check.configure(state="disabled")
         self._progress.set(0)
-        self._progress.pack(fill="x", padx=16, pady=(0, 8))
+        self._progress.pack(side="bottom", fill="x", padx=16, pady=(0, 12))
 
         # select a random frame of the hero sprites
         frame = random.randint(1, 8)
         try:
-            # Load the hero image and convert it to RGBA (transparency)
-            img = Image.open(launcher_hero_path(frame)).convert("RGBA")
-            # Resize to a fixed height (e.g. 36 px) maintaining the proportion
-            hero_h = 36
-            hero_w = int(img.width * hero_h / img.height)  # proportional
-            img = img.resize((hero_w, hero_h))
-            # Convert to an object that Tkinter can draw
-            ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(hero_w, hero_h))
+            # Load the hero image sprite sheet and convert it to RGBA (transparency)
+            sheet = Image.open(launcher_hero_path(frame)).convert("RGBA")
+
+            # Height chosen for the sprite
+            hero_h = 46
+
+            # Crop the hero sprite into frames
+            for frame in range(3):
+                col = 2 * 3 + frame        # pose_idx=2 (flee) * 3 + frame
+                x = col * 96
+                new_frame = sheet.crop((x, 0, x + 96, 96))
+                # Resize to a fixed height (e.g. 36 px) maintaining the proportion
+                hero_w = int(new_frame.width * hero_h / new_frame.height)  # proportional
+                new_frame = new_frame.resize((hero_w, hero_h))
+                # Convert to an object that Tkinter can draw
+                ctk_img = ctk.CTkImage(light_image=new_frame, dark_image=new_frame, size=(hero_w, hero_h))
+                self._hero_frames.append(ctk_img)
+
             # Force the layout to have real size
             self.update_idletasks()
-            # Height of the footer in px
-            footer_h = self._footer.winfo_height()
-            # Height chosen for the sprite
-            hero_h = 36
-            # The progress bar is below the footer; the sprite goes just above the bar
-            y = footer_h - 8 - 8 - hero_h  # bottom margin + bar + a gap
+
+            # Calculate Y coordinate for the hero sprite (centered above the progress bar)
+            bar_y = self._progress.winfo_y()   # Y of the bar from the top of the footer
+            y = bar_y - hero_h // 2            # vertical center of the sprite just above the bar
+
             # Create the label and place it with place (on the left)
-            self._hero_sprite = ctk.CTkLabel(self._footer, image=ctk_img, text="")
+            self._hero_sprite = ctk.CTkLabel(self._footer, image=self._hero_frames[0], text="", fg_color="transparent", bg_color="transparent")
             self._hero_sprite.place(x=16, y=y, anchor="w")
+
+            # create timer to cycle hero sprite
+            self._hero_timer = self.after(100, self._cycle_hero)
         except Exception:
             self._hero_sprite = None  # if the asset fails, only the progress bar works
 
@@ -570,6 +585,11 @@ class LauncherApp(ctk.CTk):
                 if self._hero_sprite is not None:
                     self._hero_sprite.place_forget()
                     self._hero_sprite = None
+
+                # stop timer to cycle hero sprite
+                if self._hero_timer is not None:
+                    self.after_cancel(self._hero_timer)
+                    self._hero_timer = None
 
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
@@ -599,6 +619,12 @@ class LauncherApp(ctk.CTk):
         travel = self._footer.winfo_width() - 32 - self._hero_sprite.winfo_width()
         x = 16 + fraction * travel  # 0.0 -> left, 1.0 -> right
         self._hero_sprite.place(x=x)  # move (and it was already fixed when created)
+
+
+    def _cycle_hero(self):
+        self._hero_frame = (self._hero_frame + 1) % 3
+        self._hero_sprite.configure(image=self._hero_frames[self._hero_frame])
+        self._hero_timer = self.after(100, self._cycle_hero)
 
 
 if __name__ == "__main__":
