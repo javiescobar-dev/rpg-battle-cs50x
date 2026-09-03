@@ -154,10 +154,16 @@ class LauncherApp(ctk.CTk):
         self._content_frame.pack(fill="both", expand=True)
 
         # carousel container (rounded, centered, with margins)
-        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=12)
-        self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
+        self._build_carousel()
 
         # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
+
+    def _build_carousel(self):
+        """Area to show news."""
+        # create the carousel frame
+        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=0)
+        # pack the carousel frame
+        self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
 
     def _resize_carousel_bg(self):
         """Resize the carousel background to fill its frame (called when layout is stable)."""
