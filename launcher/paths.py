@@ -81,15 +81,19 @@ def launch_game() -> None:
             raise RuntimeError(f"Failed to launch game: {e}")
 
 
-def launcher_background_path() -> Path:
-    """Return the path to the default carousel background."""
+def _asset_base() -> Path:
+    """Base folder for bundled (in-memory) or development assets."""
     # in a frozen (PyInstaller) build, assets live in sys._MEIPASS
     if getattr(sys, "_MEIPASS", None):  # if MEIPASS exist, the launcher is compiled
-        base = Path(sys._MEIPASS) / "assets"
-    else:  # development: project root
-        base = Path(__file__).resolve().parent.parent / "game" / "assets"
+        return Path(sys._MEIPASS) / "assets"
+    # development: project root
+    return Path(__file__).resolve().parent.parent / "game" / "assets"
+
+
+def launcher_background_path() -> Path:
+    """Return the path to the default carousel background."""
     # return path to default carousel background
-    return base / "backgrounds" / "rpg_battle_background_title.png"
+    return _asset_base() / "backgrounds" / "rpg_battle_background_title.png"
 
 
 def font_path(bold: bool) -> Path | None:
@@ -109,3 +113,8 @@ def font_path(bold: bool) -> Path | None:
         if path.exists():
             return path
     return None
+
+
+def launcher_hero_path(index: int) -> Path:
+    """Return the path to a hero sprite frame (1-8) for the download animation."""
+    return _asset_base() / "sprites" / "hero" / f"hero_{index:02d}.png"
