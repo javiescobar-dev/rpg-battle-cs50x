@@ -179,9 +179,10 @@ A separate launcher app that downloads, updates, and launches the game.
   carousel. It shows the project name, a short description and credits, with a
   centered Back button that returns to the carousel and restores the active slide.
 - Download progress hero sprite: while a game download/update runs, a hero sprite
-  (randomly chosen frame from hero_01..08.png) moves from left to right over the
-  progress bar as the download advances, appearing when the download starts and
-  disappearing when it completes.
+  (randomly chosen character, hero_01..08.png) runs from left to right over the
+  progress bar as the download advances. The flee poses are cropped from the hero
+  sprite sheet and their 3 frames are cycled as an animation; the sprite appears when
+  the download starts and disappears when it completes.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
