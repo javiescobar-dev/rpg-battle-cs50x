@@ -41,6 +41,7 @@ class LauncherApp(ctk.CTk):
         self._news_items = []                             # stores the news items once loaded
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
+        self._view = "news"                               # which view is active: "news" or "about"
 
         # Build UI
         self._build_header()                              # build the top header
@@ -157,6 +158,15 @@ class LauncherApp(ctk.CTk):
         self._build_carousel()
 
         # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
+
+    def _destroy_content(self):
+        """Destroy the widgets inside the content area."""
+        # destroy the widgets inside the content area (children widgets)
+        for child in self._content_frame.winfo_children():
+            child.destroy()
+
+        # reset the carousel background after destroying the carousel
+        self._carousel_bg = None
 
     def _build_carousel(self):
         """Area to show news."""
@@ -316,6 +326,21 @@ class LauncherApp(ctk.CTk):
         if event.y > height * 0.90 and self._dot_centers:
             best = min(range(n), key=lambda i: abs(event.x - self._dot_centers[i][0]))
             self._show_slide(best)
+
+    def _show_about(self):
+        """Switch the content area to the About view."""
+        self._view = "about"
+        self._destroy_content()
+        # self._build_about()  # TODO: Implement method
+
+    def _show_news(self):
+        """Switch the content area back to the news carousel."""
+        self._view = "news"
+        self._destroy_content()
+        self._build_carousel()
+        # restore the active slide (self._carousel_index keeps it) with a delay of 0 ms to avoid that the carousel is not fully built
+        if self._news_items:
+            self.after(0, lambda: self._populate_news(self._news_items))
 
     def _build_footer(self):
         """Bottom bar: versions, buttons and progress bar."""
