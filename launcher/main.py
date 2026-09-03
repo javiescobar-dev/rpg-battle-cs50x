@@ -3,13 +3,12 @@
 
 """Main launcher window and UI logic."""
 
-import threading
-import customtkinter as ctk
+from pygame import sprite
+import random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont
 
-import ui_styles as styles
 from config import APP_NAME
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path
 from updater import fetch_latest_release, update
 from news import get_news
 from settings import load_theme, save_theme
@@ -42,6 +41,7 @@ class LauncherApp(ctk.CTk):
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
         self._view = "news"                               # which view is active: "news" or "about"
+        self._hero_sprite = None                          # stores the hero sprite for the download animation
 
         # Build UI
         self._build_header()                              # build the top header
@@ -526,11 +526,37 @@ class LauncherApp(ctk.CTk):
         self._progress.set(0)
         self._progress.pack(fill="x", padx=16, pady=(0, 8))
 
+        # select a random frame of the hero sprites
+        frame = random.randint(1, 8)
+        try:
+            # Load the hero image and convert it to RGBA (transparency)
+            img = Image.open(launcher_hero_path(frame)).convert("RGBA")
+            # Resize to a fixed height (e.g. 36 px) maintaining the proportion
+            hero_h = 36
+            hero_w = int(img.width * hero_h / img.height)  # proportional
+            img = img.resize((hero_w, hero_h))
+            # Convert to an object that Tkinter can draw
+            ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(hero_w, hero_h))
+            # Force the layout to have real size
+            self.update_idletasks()
+            # Height of the footer in px
+            footer_h = self._footer.winfo_height()
+            # Height chosen for the sprite
+            hero_h = 36
+            # The progress bar is below the footer; the sprite goes just above the bar
+            y = footer_h - 8 - 8 - hero_h  # bottom margin + bar + a gap
+            # Create the label and place it with place (on the left)
+            self._hero_sprite = ctk.CTkLabel(self._footer, image=ctk_img, text="")
+            self._hero_sprite.place(x=16, y=y, anchor="w")
+        except Exception:
+            self._hero_sprite = None  # if the asset fails, only the progress bar works
+
         # thread to download the game
         def _do_update():
             # progress callback
             def on_progress(fraction):
-                self.after(0, lambda: self._progress.set(fraction))
+                self.after(0, lambda: self._progress.set(fraction))   # move the progress bar
+                self.after(0, lambda: self._update_sprite(fraction))  # move the hero sprite
 
             # download the game
             success = update(tag, progress_callback=on_progress)
@@ -539,9 +565,16 @@ class LauncherApp(ctk.CTk):
             def _finish():
                 # hide progress bar
                 self._progress.pack_forget()
+
+                # hide hero sprite
+                if self._hero_sprite is not None:
+                    self._hero_sprite.place_forget()
+                    self._hero_sprite = None
+
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
                 self._btn_check.configure(state="normal")
+
                 # update installed version if successful
                 if success:
                     self._lbl_installed.configure(text=f"Installed: {tag}")
@@ -554,6 +587,18 @@ class LauncherApp(ctk.CTk):
 
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()
+
+    def _update_sprite(self, fraction):
+        """Update the hero sprite position (runs in a background thread)."""
+        # move the progress bar (as it already is)
+        self._progress.set(fraction)
+        # no sprite, nothing to move
+        if self._hero_sprite is None:
+            return
+        # travel space: from left margin to right (leaving room for the hero)
+        travel = self._footer.winfo_width() - 32 - self._hero_sprite.winfo_width()
+        x = 16 + fraction * travel  # 0.0 -> left, 1.0 -> right
+        self._hero_sprite.place(x=x)  # move (and it was already fixed when created)
 
 
 if __name__ == "__main__":
