@@ -178,6 +178,10 @@ A separate launcher app that downloads, updates, and launches the game.
 - About view: an About / Back view in the content area that swaps with the news
   carousel. It shows the project name, a short description and credits, with a
   centered Back button that returns to the carousel and restores the active slide.
+- Download progress hero sprite: while a game download/update runs, a hero sprite
+  (randomly chosen frame from hero_01..08.png) moves from left to right over the
+  progress bar as the download advances, appearing when the download starts and
+  disappearing when it completes.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
