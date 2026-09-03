@@ -175,6 +175,9 @@ A separate launcher app that downloads, updates, and launches the game.
   bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
   carousel falls back to a flat area filled with the theme background color instead
   of failing.
+- About view: an About / Back view in the content area that swaps with the news
+  carousel. It shows the project name, a short description and credits, with a
+  centered Back button that returns to the carousel and restores the active slide.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
