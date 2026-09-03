@@ -331,7 +331,7 @@ class LauncherApp(ctk.CTk):
         """Switch the content area to the About view."""
         self._view = "about"
         self._destroy_content()
-        # self._build_about()  # TODO: Implement method
+        self._build_about()
 
     def _show_news(self):
         """Switch the content area back to the news carousel."""
@@ -342,8 +342,30 @@ class LauncherApp(ctk.CTk):
         if self._news_items:
             self.after(0, lambda: self._populate_news(self._news_items))
 
+    def _build_about(self):
+        """Build the About view."""
+        # get content frame to build the About view inside
+        frame = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
+        frame.pack(fill="both", expand=True)  # fill the content frame and expand to fill the available space
+        # title
+        ctk.CTkLabel(frame, text=APP_NAME, font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(pady=(40, 8))
+        # body
+        ctk.CTkLabel(frame, text="RPG Battle is a turn-based battle game built with Pygame and a desktop launcher built with CustomTkinter. It is the final project of CS50x.",
+                                    font=styles.FONT_BODY, text_color=styles.THEME()["text_body"], wraplength=600, justify="center").pack(pady=8)
+        # subtitle: developed by
+        ctk.CTkLabel(frame, text="Developed by Javi Escobar Fernández", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
+        # subtitle: CS50x Final Project
+        ctk.CTkLabel(frame, text="CS50x Final Project", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
+        # back button
+        ctk.CTkButton(
+            frame, text="Back", width=70, height=28,
+            font=styles.FONT_BODY, fg_color=styles.THEME()["accent"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            command=self._show_news
+        ).pack(side="left", padx=12)
+
     def _build_footer(self):
-        """Bottom bar: versions, buttons and progress bar."""
+        """Build the footer, the bottom bar of the launcher."""
         # Footer frame
         self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=60)
         self._footer.pack(side="bottom", fill="x")
