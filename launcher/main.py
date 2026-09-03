@@ -129,7 +129,7 @@ class LauncherApp(ctk.CTk):
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
-        # Theme button (placeholder for now - wired up in Phase B)
+        # Theme button
         ctk.CTkButton(
             self._header, text="Theme", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
@@ -140,12 +140,12 @@ class LauncherApp(ctk.CTk):
         # Centered title
         ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
 
-        # About button (placeholder for now - wired up in Phase D)
+        # About button
         ctk.CTkButton(
             self._header, text="About", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=lambda: None
+            command=self._show_about
         ).pack(side="right", padx=12)
 
     def _build_content(self):
@@ -167,6 +167,9 @@ class LauncherApp(ctk.CTk):
 
         # reset the carousel background after destroying the carousel
         self._carousel_bg = None
+
+        # reset the carousel also
+        self._carousel = None
 
     def _build_carousel(self):
         """Area to show news."""
@@ -344,6 +347,8 @@ class LauncherApp(ctk.CTk):
 
     def _build_about(self):
         """Build the About view."""
+        # destroy the content frame
+        self._destroy_content()
         # get content frame to build the About view inside
         frame = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
         frame.pack(fill="both", expand=True)  # fill the content frame and expand to fill the available space
@@ -362,7 +367,7 @@ class LauncherApp(ctk.CTk):
             font=styles.FONT_BODY, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._show_news
-        ).pack(side="left", padx=12)
+        ).pack(pady=16)
 
     def _build_footer(self):
         """Build the footer, the bottom bar of the launcher."""
@@ -456,15 +461,14 @@ class LauncherApp(ctk.CTk):
         self._build_content()
         self._build_footer()
 
-        # resize the carousel background
-        self.after(0, self._resize_carousel_bg)
+        # rebuild the active view (news carousel or about)
+        if self._view == "about":
+            self._build_about()
+        elif self._news_items:
+            self.after(0, lambda: self._populate_news(self._news_items))
 
         # refresh the state of the ui
         self._refresh_state()
-
-        # if news items exist, populate the news
-        if self._news_items:
-            self.after(0, lambda: self._populate_news(self._news_items))
 
     def _refresh_state(self):
         """Re-apply stored state to the (rebuilt) widgets."""
