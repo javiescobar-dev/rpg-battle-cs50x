@@ -44,6 +44,7 @@ class LauncherApp(ctk.CTk):
         self._hero_frames = []                            # stores the hero animation frames
         self._hero_frame = 0                              # stores the current hero animation frame index
         self._hero_timer = None                           # stores the hero animation timer ID
+        self._theme_busy = False                          # stores whether the theme is changing
 
         # Build UI
         self._build_header()                              # build the top header
@@ -127,17 +128,18 @@ class LauncherApp(ctk.CTk):
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
         # Top bar frame (full width, fixed height)
-        self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=50)
+        self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
         # Theme button
-        ctk.CTkButton(
+        self._btn_theme = ctk.CTkButton(
             self._header, text="Theme", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_theme_toggle
-        ).pack(side="left", padx=12)
+        )
+        self._btn_theme.pack(side="left", padx=12)
 
         # Centered title
         ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
@@ -378,9 +380,22 @@ class LauncherApp(ctk.CTk):
         self._footer.pack(side="bottom", fill="x")
         self._footer.pack_propagate(False)
 
-        # Top row: labels + buttons
+        # Top zone: progress bar + sprite (dynamic, only during download)
+        self._top_zone = ctk.CTkFrame(self._footer, fg_color="transparent")
+        self._top_zone.pack(side="top", fill="x")
+        # not propagating the size of children
+        self._top_zone.pack_propagate(False)
+        # set height to 0, it will be increased when the download starts
+        self._top_zone.configure(height=0)
+
+        # progress bar (hidden at the start)
+        self._progress = ctk.CTkProgressBar(self._top_zone, fg_color=styles.THEME()["border"], progress_color=styles.THEME()["accent"], height=6)
+        self._progress.set(0)
+        # Not packed here - shown only during download
+
+        # Bottom zone: versions + buttons (always visible, anchored to bottom)
         self._row = ctk.CTkFrame(self._footer, fg_color="transparent")
-        self._row.pack(fill="x", padx=16, pady=(8, 2))
+        self._row.pack(side="bottom", fill="x", padx=16, pady=(0, 8))
 
         # Installed version
         installed = installed_version()
@@ -422,11 +437,6 @@ class LauncherApp(ctk.CTk):
         if not is_game_installed():
             self._btn_play.configure(state="disabled")
 
-        # Bottom row: progress bar (hidden at the start)
-        self._progress = ctk.CTkProgressBar(self._footer, fg_color=styles.THEME()["border"], progress_color=styles.THEME()["accent"], height=6)
-        self._progress.set(0)
-        # Not packed here - shown only during download
-
     def _destroy_ui(self):
         """Destroy the three main bands so they can be rebuilt with the new theme."""
         # iterate over the main ui widgets and destroy them if they exist
@@ -440,6 +450,14 @@ class LauncherApp(ctk.CTk):
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
+
+        # protect swicht theme if button theme is busy
+        if self._theme_busy:
+            return
+
+        # set flag to prevent concurrent theme switch
+        self._theme_busy = True
+
         # switch theme
         styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
 
@@ -471,6 +489,9 @@ class LauncherApp(ctk.CTk):
 
         # refresh the state of the ui
         self._refresh_state()
+
+        # set the flag to False so that the theme can be switched again
+        self._theme_busy = False
 
     def _refresh_state(self):
         """Re-apply stored state to the (rebuilt) widgets."""
@@ -525,8 +546,12 @@ class LauncherApp(ctk.CTk):
         self._btn_download.configure(state="disabled", text="Downloading...")
         self._btn_play.configure(state="disabled")
         self._btn_check.configure(state="disabled")
+        self._btn_theme.configure(state="disabled")
+
+        # show progress bar and set height of top zone
+        self._top_zone.configure(height=styles.FOOTER_TOP_HEIGHT)
         self._progress.set(0)
-        self._progress.pack(side="bottom", fill="x", padx=16, pady=(0, 12))
+        self._progress.pack(side="bottom", fill="x", padx=16, pady=(12, 4))
 
         # select a random frame of the hero sprites
         frame = random.randint(1, 8)
@@ -553,11 +578,12 @@ class LauncherApp(ctk.CTk):
             self.update_idletasks()
 
             # Calculate Y coordinate for the hero sprite (centered above the progress bar)
-            bar_y = self._progress.winfo_y()   # Y of the bar from the top of the footer
-            y = bar_y - hero_h // 2            # vertical center of the sprite just above the bar
+            TOP_H = self._top_zone.winfo_height()   # bar height
+            bar_y = TOP_H - 6 - 12                  # bar at bottom (bar_h=6, pady bottom=12)
+            y = bar_y - hero_h // 2 + 6             # vertical center of the sprite just above the bar
 
             # Create the label and place it with place (on the left)
-            self._hero_sprite = ctk.CTkLabel(self._footer, image=self._hero_frames[0], text="", fg_color="transparent", bg_color="transparent")
+            self._hero_sprite = ctk.CTkLabel(self._top_zone, image=self._hero_frames[0], text="", fg_color="transparent", bg_color="transparent")
             self._hero_sprite.place(x=16, y=y, anchor="w")
 
             # create timer to cycle hero sprite
@@ -579,6 +605,8 @@ class LauncherApp(ctk.CTk):
             def _finish():
                 # hide progress bar
                 self._progress.pack_forget()
+                # hide top zone
+                self._top_zone.configure(height=0)
 
                 # hide hero sprite
                 if self._hero_sprite is not None:
@@ -593,6 +621,7 @@ class LauncherApp(ctk.CTk):
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
                 self._btn_check.configure(state="normal")
+                self._btn_theme.configure(state="normal")
 
                 # update installed version if successful
                 if success:
