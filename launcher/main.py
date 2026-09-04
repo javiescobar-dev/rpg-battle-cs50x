@@ -44,6 +44,7 @@ class LauncherApp(ctk.CTk):
         self._hero_frames = []                            # stores the hero animation frames
         self._hero_frame = 0                              # stores the current hero animation frame index
         self._hero_timer = None                           # stores the hero animation timer ID
+        self._theme_busy = False                          # stores whether the theme is changing
 
         # Build UI
         self._build_header()                              # build the top header
@@ -132,12 +133,13 @@ class LauncherApp(ctk.CTk):
         self._header.pack_propagate(False)
 
         # Theme button
-        ctk.CTkButton(
+        self._btn_theme = ctk.CTkButton(
             self._header, text="Theme", width=70, height=28,
             font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_theme_toggle
-        ).pack(side="left", padx=12)
+        )
+        self._btn_theme.pack(side="left", padx=12)
 
         # Centered title
         ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
@@ -448,6 +450,14 @@ class LauncherApp(ctk.CTk):
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
+
+        # protect swicht theme if button theme is busy
+        if self._theme_busy:
+            return
+
+        # set flag to prevent concurrent theme switch
+        self._theme_busy = True
+
         # switch theme
         styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
 
@@ -479,6 +489,9 @@ class LauncherApp(ctk.CTk):
 
         # refresh the state of the ui
         self._refresh_state()
+
+        # set the flag to False so that the theme can be switched again
+        self._theme_busy = False
 
     def _refresh_state(self):
         """Re-apply stored state to the (rebuilt) widgets."""
@@ -533,6 +546,7 @@ class LauncherApp(ctk.CTk):
         self._btn_download.configure(state="disabled", text="Downloading...")
         self._btn_play.configure(state="disabled")
         self._btn_check.configure(state="disabled")
+        self._btn_theme.configure(state="disabled")
 
         # show progress bar and set height of top zone
         self._top_zone.configure(height=styles.FOOTER_TOP_HEIGHT)
@@ -607,6 +621,7 @@ class LauncherApp(ctk.CTk):
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
                 self._btn_check.configure(state="normal")
+                self._btn_theme.configure(state="normal")
 
                 # update installed version if successful
                 if success:
