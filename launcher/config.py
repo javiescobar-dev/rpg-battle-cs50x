@@ -11,6 +11,7 @@ REPO_API_URL = "https://api.github.com/repos/javiescobar-dev/rpg-battle-cs50x/re
 
 # News
 NEWS_URL = "https://raw.githubusercontent.com/javiescobar-dev/rpg-battle-cs50x/release/news/news.json"
+NEWS_BASE_URL = "https://raw.githubusercontent.com/javiescobar-dev/rpg-battle-cs50x/release/"
 
 # Game asset pattern (must match the CI zip name: platform first, then tag)
 GAME_ASSET_PATTERN = "rpg-battle-{platform}-{tag}.zip"
