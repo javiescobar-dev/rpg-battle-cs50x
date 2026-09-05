@@ -182,7 +182,11 @@ A separate launcher app that downloads, updates, and launches the game.
   (randomly chosen character, hero_01..08.png) runs from left to right over the
   progress bar as the download advances. The flee poses are cropped from the hero
   sprite sheet and their 3 frames are cycled as an animation; the sprite appears when
-  the download starts and disappears when it completes.
+  the download starts and disappears when it completes. The progress bar and sprite
+  live in a top footer zone that only appears during the download, so the footer
+  shrinks back to a single row of versions/buttons afterwards. The Theme button is
+  disabled during a download (to avoid rebuilding the UI and losing the progress
+  view).
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
