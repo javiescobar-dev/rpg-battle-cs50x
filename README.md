@@ -150,7 +150,7 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   during flight and a radial burst on impact. The projectile core glows
   in a brighter, differentiated color through a three-layer radial gradient.
 
-### customTkinter launcher (Phase 4 — in progress)
+### customTkinter launcher (Phase 4 & 6 — redesigned)
 
 A separate launcher app that downloads, updates, and launches the game.
 
@@ -160,6 +160,9 @@ A separate launcher app that downloads, updates, and launches the game.
 - **Light/Dark themes**: a theme button in the header toggles between the two
   palettes and rebuilds the UI with the new colors. The choice is persisted to
   a local `settings.json`, so the launcher reopens on the last selected theme.
+  In light mode the buttons use dark navy labels on the cyan accent for strong
+  contrast (8.4:1); in dark mode the accent is a neon cyan (`#4EE1FF`, matching
+  the game's title screen) instead of the previous gold, on a deep navy surface.
 - Vertical layout (960x600 px) with three horizontal bands: a header (theme
   button, centered title, About button), a central content area, and a footer
   (versions, Check/Play/Download buttons, progress bar).
@@ -168,14 +171,19 @@ A separate launcher app that downloads, updates, and launches the game.
   downloads it with a progress bar, extracts it, and saves the installed version.
 - News carousel: fetches `news.json` from the remote GitHub raw URL (falling back
   to a local cache with a 1-hour TTL when offline) and renders the feed as a
-  visual slide carousel. Each slide draws the default background, a semi-transparent
-  overlay, the title/body, arrow buttons, and navigation dots into the image with
-  Pillow, and responds to clicks on the image (left/right arrows or a specific dot)
-  to switch between slides across all 4 feed entries. Navigating now plays a
-  smooth horizontal slide transition (animated with a timer loop): the outgoing
-  slide slides away while the incoming one slides in from the direction of the
-  arrow/dot press, and the text/arrows/dots stay hidden while the slides are in
-  motion, reappearing when the transition ends. The default background is
+  visual slide carousel. Each slide uses the news item's own image when it has one
+  (downloaded at runtime and cached to disk with the same 1-hour TTL, keeping the
+  last known good copy when offline, and cropped with `ImageOps.fit` to fill the
+  slide without distortion) or falls back to the bundled default background. A
+  semi-transparent overlay, the title/body, arrow buttons, and navigation dots are
+  drawn into the image with Pillow, and the slide responds to clicks on the image
+  (left/right arrows or a specific dot) to switch between slides across all 4 feed
+  entries. Sliding a news image in is asynchronous: it never blocks the UI, and if
+  a photo arrives mid-transition it is applied before the motion ends. Navigating
+  plays a smooth horizontal slide transition (animated with a timer loop): the
+  outgoing slide slides away while the incoming one slides in from the direction
+  of the arrow/dot press, and the text/arrows/dots stay hidden while the slides
+  are in motion, reappearing when the transition ends. The default background is
   bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
   carousel falls back to a flat area filled with the theme background color instead
   of failing.
