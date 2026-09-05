@@ -182,8 +182,8 @@ class LauncherApp(ctk.CTk):
         # pack the carousel frame
         self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
 
-    def _resize_carousel_bg(self):
-        """Resize the carousel background to fill its frame (called when layout is stable)."""
+    def _render_slide(self, index: int) -> Image:
+        """Render the carousel slide with the given index."""
         self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
         width = self._carousel.winfo_width()              # carousel width in pixels
         height = self._carousel.winfo_height()            # carousel height in pixels
@@ -205,9 +205,9 @@ class LauncherApp(ctk.CTk):
             img = Image.alpha_composite(img, bar)
 
             # set the news text and draw navigation buttons and dots if exists news and index is valid
-            if self._news_items and 0 <= self._carousel_index < len(self._news_items):
+            if self._news_items and 0 <= index < len(self._news_items):
                 # get the news item
-                item = self._news_items[self._carousel_index]
+                item = self._news_items[index]
                 # draw the news text
                 self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
                 # draw navigation buttons and dots
@@ -217,8 +217,10 @@ class LauncherApp(ctk.CTk):
             img = Image.new("RGBA", (max(width,10), max(height,10)), styles.THEME()["bg"] + "FF")
 
         # convert the image to RGB
-        img = img.convert("RGB")
+        return img.convert("RGB")
 
+    def _display_render(self, img):
+        """Display the rendered slide in the carousel."""
         # Resize the carousel background image to fill its frame
         carousel_img = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
 
@@ -230,6 +232,11 @@ class LauncherApp(ctk.CTk):
 
         # bind the carousel click event to the on_carousel_click method
         self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
+
+    def _resize_carousel_bg(self):
+        """Resize the carousel background to fill its frame (called when layout is stable)."""
+        img = self._render_slide(self._carousel_index)
+        self._display_render(img)
 
     def _draw_news_text(self, img, title, body, width, height):
         """Draw the slide title and body onto the carousel image."""
