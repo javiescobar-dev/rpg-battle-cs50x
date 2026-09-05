@@ -142,8 +142,8 @@ class LauncherApp(ctk.CTk):
         if target_index % n == self._carousel_index:
             return
 
-        # If this is a dot click or if there's no previous image, snap directly
-        if direction == "dot" or not self._carousel_bg:
+        # If there's no previous image, snap directly
+        if not self._carousel_bg:
             self._carousel_index = target_index % n
             self._resize_carousel_bg()
             self._carousel_moving = False
@@ -450,7 +450,8 @@ class LauncherApp(ctk.CTk):
         # dots zone (bottom bar): pick the closest dot to the click
         if event.y > height * 0.90 and self._dot_centers:
             best = min(range(n), key=lambda i: abs(event.x - self._dot_centers[i][0]))
-            self._animate_to(best, "dot")
+            direction = "right" if best > self._carousel_index else "left"
+            self._animate_to(best, direction)
 
     def _show_about(self):
         """Switch the content area to the About view."""

@@ -171,7 +171,11 @@ A separate launcher app that downloads, updates, and launches the game.
   visual slide carousel. Each slide draws the default background, a semi-transparent
   overlay, the title/body, arrow buttons, and navigation dots into the image with
   Pillow, and responds to clicks on the image (left/right arrows or a specific dot)
-  to switch between slides across all 4 feed entries. The default background is
+  to switch between slides across all 4 feed entries. Navigating now plays a
+  smooth horizontal slide transition (animated with a timer loop): the outgoing
+  slide slides away while the incoming one slides in from the direction of the
+  arrow/dot press, and the text/arrows/dots stay hidden while the slides are in
+  motion, reappearing when the transition ends. The default background is
   bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
   carousel falls back to a flat area filled with the theme background color instead
   of failing.
