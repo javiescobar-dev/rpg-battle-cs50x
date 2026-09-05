@@ -4,12 +4,12 @@
 """Main launcher window and UI logic."""
 
 import random, threading, ui_styles as styles, customtkinter as ctk
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from config import APP_NAME
 from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path
 from updater import fetch_latest_release, update
-from news import get_news
+from news import get_news, get_image_path
 from settings import load_theme, save_theme
 
 class LauncherApp(ctk.CTk):
@@ -47,6 +47,8 @@ class LauncherApp(ctk.CTk):
         self._hero_frame = 0                              # stores the current hero animation frame index
         self._hero_timer = None                           # stores the hero animation timer ID
         self._theme_busy = False                          # stores whether the theme is changing
+        self._news_images = {}                            # stores the loaded news images by image field
+        self._images_loading = set()                      # stores the news image fields currently downloading
 
         # Build UI
         self._build_header()                              # build the top header
@@ -102,6 +104,10 @@ class LauncherApp(ctk.CTk):
         # show the first slide
         self._show_slide(self._carousel_index)
 
+        # preload the news images in the background
+        for i in range(len(items)):
+            self._ensure_image(i)
+
     def _show_slide(self, index):
         """Mark the active slide and re-render the carousel image."""
         # check if the news items are loaded, if not, return
@@ -148,14 +154,17 @@ class LauncherApp(ctk.CTk):
             self._resize_carousel_bg()
             self._carousel_moving = False
             return
-        
+
         # get old and new index
         old_index = self._carousel_index
         new_index = target_index % n
 
         # set the active slide index
         self._carousel_index = new_index
-        
+
+        # save the destination for _on_image_ready
+        self._anim_target = new_index
+
         # render old and new slide
         old_img = self._render_slide(old_index, False)
         new_img = self._render_slide(new_index, False)
@@ -294,34 +303,46 @@ class LauncherApp(ctk.CTk):
         self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
         width = self._carousel.winfo_width()              # carousel width in pixels
         height = self._carousel.winfo_height()            # carousel height in pixels
+        size = (max(width, 10), max(height, 10))          # make sure the size is at least 10x10
 
-        # get the launcher background image; if missing (e.g. bundled asset), fall
-        # back to a flat image filled with the launcher background color on raise
-        try:
-            img = Image.open(launcher_background_path())
-            # convert the launcher background image to RGBA and resize it to the carousel frame size
-            img = img.convert("RGBA").resize((max(width,10), max(height,10)))
+        # news photo if it is already loaded
+        item = self._news_items[index] if 0 <= index < len(self._news_items) else None
+        img_field = item.get("image") if item else None
+        news_img = self._news_images.get(img_field) if img_field else None
 
-            # draw a semi-transparent bar (title region + body region)
-            bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            draw = ImageDraw.Draw(bar)
-            top, bottom = int(height*0.70), int(height*0.96)
-            draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))
+        # if the news has an image but it is not loaded yet, schedule it
+        if img_field and img_field not in self._news_images:
+            self._ensure_image(index)
 
-            # overlay stripe onto background
-            img = Image.alpha_composite(img, bar)
+        # build the base background
+        if news_img is not None:
+            img = ImageOps.fit(news_img, size).convert("RGBA")     # photo: crop to fill
+        else:
+            try:
+                # default background image
+                img = Image.open(launcher_background_path()).convert("RGBA").resize(size)
+            except Exception:
+                # no background image: flat fallback filled with the theme background color
+                img = Image.new("RGBA", size, styles.THEME()["bg"] + "FF")  # flat, no baked UI
+                return img.convert("RGB")
 
-            # set the news text and draw navigation buttons and dots if exists news and index is valid (only if include_ui is true)
-            if include_ui and self._news_items and 0 <= index < len(self._news_items):
-                # get the news item
-                item = self._news_items[index]
-                # draw the news text
-                self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
-                # draw navigation buttons and dots
-                self._draw_nav(img, width, height, index)
-        except Exception:
-            # no background image: flat fallback filled with the theme background color
-            img = Image.new("RGBA", (max(width,10), max(height,10)), styles.THEME()["bg"] + "FF")
+        # draw a semi-transparent bar (title region + body region)
+        bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(bar)
+        top, bottom = int(height * 0.70), int(height * 0.96)
+        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))
+
+        # overlay stripe onto background
+        img = Image.alpha_composite(img, bar)
+
+        # set the news text and draw navigation buttons and dots if exists news and index is valid (only if include_ui is true)
+        if include_ui and self._news_items and 0 <= index < len(self._news_items):
+            # get the news item
+            item = self._news_items[index]
+            # draw the news text
+            self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
+            # draw navigation buttons and dots
+            self._draw_nav(img, width, height, index)
 
         # convert the image to RGB
         return img.convert("RGB")
@@ -344,6 +365,47 @@ class LauncherApp(ctk.CTk):
         """Resize the carousel background to fill its frame (called when layout is stable)."""
         img = self._render_slide(self._carousel_index)
         self._display_render(img)
+
+    def _ensure_image(self, index: int) -> None:
+        """Schedule loading the news image for the given slide (UI thread)."""
+        # get the news item
+        item = self._news_items[index] if 0 <= index < len(self._news_items) else None
+        # get the image field
+        img_field = item.get("image") if item else None
+        # if the image field is not found or the image is already loaded or is loading, return
+        if not img_field or img_field in self._news_images or img_field in self._images_loading:
+            return
+        # add the image field to the loading set
+        self._images_loading.add(img_field)
+        # start loading the image in a separate thread
+        threading.Thread(target=self._load_image, args=(index, img_field), daemon=True).start()
+
+    def _load_image(self, index: int, img_field: str) -> None:
+        """Load the image in a background thread (network + disk)."""
+        # get the image path
+        path = get_image_path(img_field)
+        img = None
+        if path:
+            # try to open the image
+            try:
+                img = Image.open(path).convert("RGB")
+            except Exception:
+                img = None
+        # call the on_image_ready method in the UI thread
+        self.after(0, lambda: self._on_image_ready(index, img_field, img))
+
+    def _on_image_ready(self, index: int, img_field: str, img) -> None:
+        """Store the loaded image and refresh the slide if needed (UI thread)."""
+        # remove the image field from the loading set
+        self._images_loading.discard(img_field)
+        # store the loaded image
+        self._news_images[img_field] = img   # None means it failed; do not retry
+        # if an animation heads to this slide, update its final image
+        if self._carousel_moving and self._anim_target == index:
+            self._carousel_anim_final_img = self._render_slide(index, True)
+        # if it is the active slide, re-render it
+        if (not self._carousel_moving and self._view == "news" and self._carousel is not None and self._carousel_index == index):
+            self._resize_carousel_bg()
 
     def _draw_news_text(self, img, title, body, width, height):
         """Draw the slide title and body onto the carousel image."""
