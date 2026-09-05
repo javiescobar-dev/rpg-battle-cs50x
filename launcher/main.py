@@ -127,7 +127,7 @@ class LauncherApp(ctk.CTk):
         """Go to previous news slide."""
         self._animate_to(self._carousel_index - 1, "left")
 
-    def _animate_to(self, target, direction):
+    def _animate_to(self, target_index: int, direction: str):
         """Animate to the given index."""
         # check if the news items are loaded, if not, return
         if not self._news_items:
@@ -139,26 +139,28 @@ class LauncherApp(ctk.CTk):
             return
 
         # prevent re-animating to the same slide
-        if target % n == self._carousel_index:
+        if target_index % n == self._carousel_index:
             return
 
         # If this is a dot click or if there's no previous image, snap directly
         if direction == "dot" or not self._carousel_bg:
-            self._carousel_index = target % n
+            self._carousel_index = target_index % n
             self._resize_carousel_bg()
             self._carousel_moving = False
             return
         
         # get old and new index
         old_index = self._carousel_index
-        new_index = target % n
+        new_index = target_index % n
 
         # set the active slide index
         self._carousel_index = new_index
         
         # render old and new slide
-        old_img = self._render_slide(old_index)
-        new_img = self._render_slide(new_index)
+        old_img = self._render_slide(old_index, False)
+        new_img = self._render_slide(new_index, False)
+        self._carousel_anim_final_img = self._render_slide(new_index, True)
+
         old_img_render = ctk.CTkImage(light_image=old_img, dark_image=old_img, size=old_img.size)
         new_img_render = ctk.CTkImage(light_image=new_img, dark_image=new_img, size=new_img.size)
 
@@ -198,8 +200,14 @@ class LauncherApp(ctk.CTk):
         
         # check if animation is finished
         if self._anim_progress >= width:
-            self._anim_old.destroy()                          # remove old slide
-            self._carousel_bg = self._anim_new                # set new slide
+            # create final image render
+            final_img_render = ctk.CTkImage(light_image=self._carousel_anim_final_img, dark_image=self._carousel_anim_final_img, size=self._carousel_anim_final_img.size)
+            self._anim_new.configure(image=final_img_render)
+
+            # destroy old slide
+            self._anim_old.destroy()
+            # set new slide
+            self._carousel_bg = self._anim_new
             self._carousel_bg.place(relwidth=1, relheight=1, x=0, y=0, anchor="nw")
             self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
             self._carousel_moving = False                     # unlock clicks
@@ -281,7 +289,7 @@ class LauncherApp(ctk.CTk):
         # pack the carousel frame
         self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
 
-    def _render_slide(self, index: int) -> Image:
+    def _render_slide(self, index: int, include_ui: bool = True) -> Image:
         """Render the carousel slide with the given index."""
         self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
         width = self._carousel.winfo_width()              # carousel width in pixels
@@ -303,8 +311,8 @@ class LauncherApp(ctk.CTk):
             # overlay stripe onto background
             img = Image.alpha_composite(img, bar)
 
-            # set the news text and draw navigation buttons and dots if exists news and index is valid
-            if self._news_items and 0 <= index < len(self._news_items):
+            # set the news text and draw navigation buttons and dots if exists news and index is valid (only if include_ui is true)
+            if include_ui and self._news_items and 0 <= index < len(self._news_items):
                 # get the news item
                 item = self._news_items[index]
                 # draw the news text
