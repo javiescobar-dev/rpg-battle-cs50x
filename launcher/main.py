@@ -39,6 +39,8 @@ class LauncherApp(ctk.CTk):
         self._news_items = []                             # stores the news items once loaded
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
+        self._carousel_moving = False                     # stores whether the carousel is moving
+        self._carousel_anim_timer = None                  # stores the carousel animation timer ID
         self._view = "news"                               # which view is active: "news" or "about"
         self._hero_sprite = None                          # stores the hero sprite for the download animation
         self._hero_frames = []                            # stores the hero animation frames
@@ -119,11 +121,108 @@ class LauncherApp(ctk.CTk):
 
     def _carousel_next(self):
         """Go to next news slide."""
-        self._show_slide(self._carousel_index + 1)
+        self._animate_to(self._carousel_index + 1, "right")
 
     def _carousel_prev(self):
         """Go to previous news slide."""
-        self._show_slide(self._carousel_index - 1)
+        self._animate_to(self._carousel_index - 1, "left")
+
+    def _animate_to(self, target_index: int, direction: str):
+        """Animate to the given index."""
+        # check if the news items are loaded, if not, return
+        if not self._news_items:
+            return
+
+        # get the number of news items
+        n = len(self._news_items)
+        if n == 0:
+            return
+
+        # prevent re-animating to the same slide
+        if target_index % n == self._carousel_index:
+            return
+
+        # If there's no previous image, snap directly
+        if not self._carousel_bg:
+            self._carousel_index = target_index % n
+            self._resize_carousel_bg()
+            self._carousel_moving = False
+            return
+        
+        # get old and new index
+        old_index = self._carousel_index
+        new_index = target_index % n
+
+        # set the active slide index
+        self._carousel_index = new_index
+        
+        # render old and new slide
+        old_img = self._render_slide(old_index, False)
+        new_img = self._render_slide(new_index, False)
+        self._carousel_anim_final_img = self._render_slide(new_index, True)
+
+        old_img_render = ctk.CTkImage(light_image=old_img, dark_image=old_img, size=old_img.size)
+        new_img_render = ctk.CTkImage(light_image=new_img, dark_image=new_img, size=new_img.size)
+
+        # destroy old carousel background
+        self._carousel_bg.destroy()
+
+        # create labels
+        old_lbl = ctk.CTkLabel(self._carousel, image=old_img_render, text="")
+        new_lbl = ctk.CTkLabel(self._carousel, image=new_img_render, text="")
+
+        # place labels
+        old_lbl.place(relwidth=1, relheight=1, x=0, y=0, anchor="nw")  # old label starts at the left side
+        # set new label position based on direction
+        width = self._carousel.winfo_width()
+        if direction == "left":
+            new_lbl.place(relwidth=1, relheight=1, x=-width, y=0, anchor="nw")
+        elif direction == "right":
+            new_lbl.place(relwidth=1, relheight=1, x=width, y=0, anchor="nw")
+
+        # set animation variables
+        steps = 15
+        self._anim_old = old_lbl
+        self._anim_new = new_lbl
+        self._anim_sign = 1 if direction == "right" else -1
+        self._anim_delta = width / steps
+        self._anim_progress = 0.0
+        self._carousel_moving = True
+
+        # start slide animation timer
+        self._carousel_anim_timer = self.after(20, self._slide_step)
+
+    def _slide_step(self):
+        # increase the counter
+        self._anim_progress += self._anim_delta
+
+        width = self._carousel.winfo_width()
+        
+        # check if animation is finished
+        if self._anim_progress >= width:
+            # create final image render
+            final_img_render = ctk.CTkImage(light_image=self._carousel_anim_final_img, dark_image=self._carousel_anim_final_img, size=self._carousel_anim_final_img.size)
+            self._anim_new.configure(image=final_img_render)
+
+            # destroy old slide
+            self._anim_old.destroy()
+            # set new slide
+            self._carousel_bg = self._anim_new
+            self._carousel_bg.place(relwidth=1, relheight=1, x=0, y=0, anchor="nw")
+            self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
+            self._carousel_moving = False                     # unlock clicks
+            return                                            # stop animation
+
+        # If the animation is not finished, move a little bit and reprogram
+        sign = self._anim_sign
+        progress = self._anim_progress
+
+        # move old and new slide
+        self._anim_old.place(relwidth=1, relheight=1, x=-sign * progress, y=0, anchor="nw")           # leave
+        self._anim_new.place(relwidth=1, relheight=1, x=sign * (width - progress), y=0, anchor="nw")  # enter
+
+        # schedule next frame
+        self._carousel_anim_timer = self.after(20, self._slide_step)   
 
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
@@ -175,6 +274,14 @@ class LauncherApp(ctk.CTk):
         # reset the carousel also
         self._carousel = None
 
+        # reset the animation timer
+        if self._carousel_anim_timer:
+            self.after_cancel(self._carousel_anim_timer)
+            self._carousel_anim_timer = None
+
+        # reset the carousel moving state
+        self._carousel_moving = False
+
     def _build_carousel(self):
         """Area to show news."""
         # create the carousel frame
@@ -182,8 +289,8 @@ class LauncherApp(ctk.CTk):
         # pack the carousel frame
         self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
 
-    def _resize_carousel_bg(self):
-        """Resize the carousel background to fill its frame (called when layout is stable)."""
+    def _render_slide(self, index: int, include_ui: bool = True) -> Image:
+        """Render the carousel slide with the given index."""
         self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
         width = self._carousel.winfo_width()              # carousel width in pixels
         height = self._carousel.winfo_height()            # carousel height in pixels
@@ -204,21 +311,23 @@ class LauncherApp(ctk.CTk):
             # overlay stripe onto background
             img = Image.alpha_composite(img, bar)
 
-            # set the news text and draw navigation buttons and dots if exists news and index is valid
-            if self._news_items and 0 <= self._carousel_index < len(self._news_items):
+            # set the news text and draw navigation buttons and dots if exists news and index is valid (only if include_ui is true)
+            if include_ui and self._news_items and 0 <= index < len(self._news_items):
                 # get the news item
-                item = self._news_items[self._carousel_index]
+                item = self._news_items[index]
                 # draw the news text
                 self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
                 # draw navigation buttons and dots
-                self._draw_nav(img, width, height)
+                self._draw_nav(img, width, height, index)
         except Exception:
             # no background image: flat fallback filled with the theme background color
             img = Image.new("RGBA", (max(width,10), max(height,10)), styles.THEME()["bg"] + "FF")
 
         # convert the image to RGB
-        img = img.convert("RGB")
+        return img.convert("RGB")
 
+    def _display_render(self, img):
+        """Display the rendered slide in the carousel."""
         # Resize the carousel background image to fill its frame
         carousel_img = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
 
@@ -230,6 +339,11 @@ class LauncherApp(ctk.CTk):
 
         # bind the carousel click event to the on_carousel_click method
         self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
+
+    def _resize_carousel_bg(self):
+        """Resize the carousel background to fill its frame (called when layout is stable)."""
+        img = self._render_slide(self._carousel_index)
+        self._display_render(img)
 
     def _draw_news_text(self, img, title, body, width, height):
         """Draw the slide title and body onto the carousel image."""
@@ -275,7 +389,7 @@ class LauncherApp(ctk.CTk):
                 draw.text((cx, y), line, font=body_font, fill=(230, 230, 230, 255), anchor="mm")
                 y += 18
 
-    def _draw_nav(self, img, width, height):
+    def _draw_nav(self, img, width, height, index: int):
         """Draw arrow buttons and navigation dots onto the carousel image."""
         n = len(self._news_items)
         if n <= 1:          # nothing to navigate
@@ -303,7 +417,7 @@ class LauncherApp(ctk.CTk):
             # calculate the x coordinate of the dot
             dx = width // 2 + int((i - (n - 1) / 2) * gap)
             # set the color of the dot
-            color = accent if i == self._carousel_index else inactive
+            color = accent if i == index else inactive
             # draw the dot
             draw.ellipse([dx - 2, dy - 2, dx + 2, dy + 2], fill=color)
             # append the dot center to the list
@@ -314,6 +428,10 @@ class LauncherApp(ctk.CTk):
         n = len(self._news_items)
         if n <= 1:
             return                      # nothing to navigate
+
+        # if carousel is moving, return
+        if self._carousel_moving:
+            return
 
         # get carousel size
         width = self._carousel.winfo_width()
@@ -332,7 +450,8 @@ class LauncherApp(ctk.CTk):
         # dots zone (bottom bar): pick the closest dot to the click
         if event.y > height * 0.90 and self._dot_centers:
             best = min(range(n), key=lambda i: abs(event.x - self._dot_centers[i][0]))
-            self._show_slide(best)
+            direction = "right" if best > self._carousel_index else "left"
+            self._animate_to(best, direction)
 
     def _show_about(self):
         """Switch the content area to the About view."""
@@ -447,6 +566,14 @@ class LauncherApp(ctk.CTk):
 
         # set the carousel background to None to force it to be rebuilt
         self._carousel_bg = None
+
+        # cancel any pending carousel animations
+        if self._carousel_anim_timer:
+            self.after_cancel(self._carousel_anim_timer)
+            self._carousel_anim_timer = None
+
+        # stop carousel movement
+        self._carousel_moving = False
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme and rebuild the UI."""
