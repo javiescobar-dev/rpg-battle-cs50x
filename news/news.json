@@ -3,13 +3,13 @@
         {
             "title": "Welcome to RPG Battle!",
             "body": "A Suikoden II-inspired turn-based RPG battle game built with Pygame. Fight enemies, collect spoils, and enjoy the journey.",
-            "image": "",
+            "image": "news/images/news_01.png",
             "date": "2026-08-25"
         },
         {
             "title": "Launcher v1.0 released",
             "body": "The new launcher brings light and dark themes with persistent settings, plus a news carousel to keep you up to date.",
-            "image": "",
+            "image": "news/images/news_01.png",
             "date": "2026-08-31"
         },
         {
