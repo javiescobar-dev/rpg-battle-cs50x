@@ -155,17 +155,27 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
 A separate launcher app that downloads, updates, and launches the game.
 
 - Blue palette coherent with the in-game title screen: accent cyan
-  `#50C8F0` on a pale blue background in light mode, and a dark navy background
-  with neon-like cyan accents in dark mode.
-- **Light/Dark themes**: a theme button in the header toggles between the two
+  `#50C8F0` on a pale background in light mode, and a dark navy background with
+  gold accents in dark mode (a neon-cyan contrast pass is the pending part of the
+  visual polish).
+- **Light/Dark themes**: a slider icon in the header toggles between the two
   palettes and rebuilds the UI with the new colors. The choice is persisted to
   a local `settings.json`, so the launcher reopens on the last selected theme.
-  In light mode the buttons use dark navy labels on the cyan accent for strong
-  contrast (8.4:1); in dark mode the accent is a neon cyan (`#4EE1FF`, matching
-  the game's title screen) instead of the previous gold, on a deep navy surface.
-- Vertical layout (960x600 px) with three horizontal bands: a header (theme
-  button, centered title, About button), a central content area, and a footer
-  (versions, Check/Play/Download buttons, progress bar).
+  The slider button shows the variant of the current theme (`theme_dark_slider.png`
+  or `theme_light_slider.png`, bundled as assets) and is swapped automatically on
+  each rebuild.
+- Vertical layout (960x600 px) with three horizontal bands: a header, a central
+  content area, and a footer (versions, Check/Play/Download buttons, progress bar).
+- Header: **About** is a cyan text link (hand cursor) that opens the About view,
+  sitting next to the **theme slider** in the left corner. The title *RPG Battle
+  Launcher* is rendered with the game's own `finalf.ttf` in uppercase (as on the
+  game title screen) and keeps a short hairline underline bar in the title color,
+  wider than the text; it stays perfectly centered with `place` no matter what
+  sits on the left.
+- Frameless window: the OS title bar is removed and the window is draggable by
+  grabbing the header. Custom **minimize** and **close** buttons (drawn with
+  Pillow) sit flush in the top-right corner of the header, and the window corners
+  are slightly rounded on Windows.
 - Downloads the game from GitHub Releases: fetches the latest release via the
   GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
   downloads it with a progress bar, extracts it, and saves the installed version.
