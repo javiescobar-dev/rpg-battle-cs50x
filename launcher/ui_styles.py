@@ -51,6 +51,11 @@ FONT_DATE  = ("Arial", 11)
 WINDOW_WIDTH  = 960
 WINDOW_HEIGHT = 600
 
-HEADER_HEIGHT = 60
+HEADER_HEIGHT = 65
 FOOTER_HEIGHT = 100
 FOOTER_TOP_HEIGHT = 58
+
+TITLE_FONT_SIZE   = 45
+TITLE_BAR_H       = 1    # bar thickness
+TITLE_BAR_GAP     = 2    # gap between text and bar
+TITLE_BAR_EXTRA_W = 15   # extra bar width (20 on each side)

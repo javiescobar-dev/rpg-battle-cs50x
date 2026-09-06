@@ -6,8 +6,8 @@
 import random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from config import APP_NAME
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path
+from config import APP_NAME, APP_TITLE
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
 from updater import fetch_latest_release, update
 from news import get_news, get_image_path
 from settings import load_theme, save_theme
@@ -240,25 +240,21 @@ class LauncherApp(ctk.CTk):
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
-        # Theme button
-        self._btn_theme = ctk.CTkButton(
-            self._header, text="Theme", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=self._on_theme_toggle
-        )
-        self._btn_theme.pack(side="left", padx=12)
+        # About label
+        self._lbl_about = ctk.CTkLabel(self._header, text="About", font=styles.FONT_DATE, text_color=styles.THEME()["accent"], cursor="hand2")
+        self._lbl_about.pack(side="left", padx=(12, 4))
+        self._lbl_about.bind("<Button-1>", lambda e: self._show_about())
+
+        # Theme slider
+        icon_name = "theme_dark_slider" if styles.CURRENT_THEME == "Dark" else "theme_light_slider"
+        icon_img = Image.open(theme_icon_path(icon_name))
+        icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(96, 24))
+        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=96, height=24, fg_color="transparent", hover=False, command=self._on_theme_toggle)
+        self._btn_theme.pack(side="left", padx=4)
 
         # Centered title
-        ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
-
-        # About button
-        ctk.CTkButton(
-            self._header, text="About", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=self._show_about
-        ).pack(side="right", padx=12)
+        self._lbl_title = ctk.CTkLabel(self._header, text="", image=self._render_title_image())
+        self._lbl_title.place(relx=0.5, rely=0.5, anchor="center")
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
@@ -553,6 +549,52 @@ class LauncherApp(ctk.CTk):
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._show_news
         ).pack(pady=16)
+
+    def _render_title_image(self):
+        """Render the header title with the game font and return a CTkImage."""
+        font = None
+        # try to load the title font (finalf.ttf)
+        try:
+            font = ImageFont.truetype(str(title_font_path()), styles.TITLE_FONT_SIZE)
+        except Exception:
+            # if the title font is not found, try to load the system bold font
+            sys_font = font_path(True)
+            if sys_font:
+                font = ImageFont.truetype(str(sys_font), styles.TITLE_FONT_SIZE)
+        # if the system bold font is not found, use the default font
+        if font is None:
+            font = ImageFont.load_default(size=styles.TITLE_FONT_SIZE)
+
+        # define text to draw
+        text = APP_TITLE
+        # create a dummy image and draw the text on it
+        draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        bbox = draw.textbbox((0, 0), text, font=font)
+        # calculate the size of the text
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+        # bar: wider than the text, centered with it
+        margin = 8
+        # calculate the width of the bar
+        bar_w = w + styles.TITLE_BAR_EXTRA_W
+        # calculate the width of the canvas
+        canvas_w = bar_w + 2 * margin
+        # calculate the height of the canvas
+        canvas_h = margin + h + styles.TITLE_BAR_GAP + styles.TITLE_BAR_H + margin
+
+        # create the title image
+        img = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        # text centered over the bar (offset bbox by -bbox to place it exactly)
+        draw.text((margin + (bar_w - w) // 2 - bbox[0], margin - bbox[1]),
+                  text, font=font, fill=styles.THEME()["text_title"])
+        # underline bar below the text, same color as the title
+        bar_y = margin + h + styles.TITLE_BAR_GAP
+        draw.rounded_rectangle(
+            [margin, bar_y, margin + bar_w, bar_y + styles.TITLE_BAR_H],
+            radius=styles.TITLE_BAR_H / 2, fill=styles.THEME()["text_title"])
+        # return the image as a CTkImage
+        return ctk.CTkImage(light_image=img, dark_image=img, size=(canvas_w, canvas_h))
 
     def _build_footer(self):
         """Build the footer, the bottom bar of the launcher."""

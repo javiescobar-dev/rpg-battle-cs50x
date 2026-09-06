@@ -5,6 +5,7 @@
 
 # Game info
 APP_NAME = "RPG Battle"
+APP_TITLE = "RPG BATTLE LAUNCHER"
 
 # GitHub API
 REPO_API_URL = "https://api.github.com/repos/javiescobar-dev/rpg-battle-cs50x/releases/latest"
