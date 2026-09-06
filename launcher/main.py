@@ -241,7 +241,7 @@ class LauncherApp(ctk.CTk):
         self._header.pack_propagate(False)
 
         # About label
-        self._lbl_about = ctk.CTkLabel(self._header, text="About", font=styles.FONT_DATE, text_color=styles.THEME()["accent"], cursor="hand2")
+        self._lbl_about = ctk.CTkLabel(self._header, text="About", font=styles.FONT_BOLD, text_color=styles.THEME()["text_title"], cursor="hand2")
         self._lbl_about.pack(side="left", padx=(12, 4))
         self._lbl_about.bind("<Button-1>", lambda e: self._show_about())
 

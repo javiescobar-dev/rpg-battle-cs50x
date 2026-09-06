@@ -46,6 +46,7 @@ def THEME() -> dict:
 FONT_TITLE = ("Georgia", 18, "bold")
 FONT_BODY  = ("Arial", 13)
 FONT_DATE  = ("Arial", 11)
+FONT_BOLD  = ("Arial", 12, "bold")
 
 # Dimensions
 WINDOW_WIDTH  = 960
@@ -58,4 +59,4 @@ FOOTER_TOP_HEIGHT = 58
 TITLE_FONT_SIZE   = 45
 TITLE_BAR_H       = 1    # bar thickness
 TITLE_BAR_GAP     = 2    # gap between text and bar
-TITLE_BAR_EXTRA_W = 15   # extra bar width (20 on each side)
+TITLE_BAR_EXTRA_W = 15   # extra bar width (7.5 on each side)
