@@ -8,8 +8,8 @@ CURRENT_THEME = "Light"
 
 # Light theme: blue game colors on a pale background
 LIGHT = {
-    "bg": "#F4F8FB",
-    "panel": "#E4EEF6",
+    "bg": "#FFFFFF",
+    "panel": "#FFFFFF",
     "border": "#C3D4E3",
     "accent": "#50C8F0",
     "hover": "#38A8D6",
@@ -51,6 +51,6 @@ FONT_DATE  = ("Arial", 11)
 WINDOW_WIDTH  = 960
 WINDOW_HEIGHT = 600
 
-HEADER_HEIGHT = 50
+HEADER_HEIGHT = 60
 FOOTER_HEIGHT = 100
 FOOTER_TOP_HEIGHT = 58
