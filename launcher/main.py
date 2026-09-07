@@ -32,7 +32,6 @@ class LauncherApp(ctk.CTk):
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
-        self.overrideredirect(True)                       # remove the native title bar and borders
         self.configure(fg_color=styles.THEME()["bg"])     # set window background color
 
         # internal state
@@ -66,12 +65,20 @@ class LauncherApp(ctk.CTk):
 
     def _show_window(self):
         """Show the window once the mainloop has stabilized the layout."""
-        # Apply the final geometry and show the window without flickering
+        # Show the window frameless: strip the title bar while hidden,
+        # then size the window with the final (frameless) styles
+        self._make_frameless()                    # strip the native title bar while still hidden
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # re-apply the exact window size
         self.update_idletasks()                   # process any pending geometry updates
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
+        self.focus_force()                        # force the window to be focused
+        self.after(80, self.focus_force)
+        self.attributes("-topmost", True)
+        self.after(150, lambda: self.attributes("-topmost", False))
         self.update_idletasks()                   # process any pending geometry updates (now the layout is truly settled)
+        self._ensure_client_size()                # make the drawable area exactly the designed size
+        self.update_idletasks()                   # process the corrected size
         self._apply_rounded_corners()             # round the corners once the window is visible
         # resize after the window is fully shown; a short delay ensures the CTkImage.configure takes effect on the freshly created label
         self.after(50, self._resize_carousel_bg)  # resize carousel background to fill its frame (after deiconify and final size)
@@ -273,13 +280,8 @@ class LauncherApp(ctk.CTk):
         self._header.bind("<B1-Motion>", self._on_drag_move)
 
     def _on_minimize_click(self):
-        """Minimize the window (Windows needs the OS call because the window is frameless)."""
-        if sys.platform == "win32":
-            import ctypes
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())   # OS handle of the window
-            ctypes.windll.user32.ShowWindow(hwnd, 6)                 # 6 = SW_MINIMIZE
-        else:
-            self.iconify()
+        """Minimize the window (native works now that the window is managed)."""
+        self.iconify()
 
     def _on_close_click(self):
         """Close the application."""
@@ -292,25 +294,100 @@ class LauncherApp(ctk.CTk):
 
     def _on_drag_move(self, event):
         """Move the window keeping the grab offset fixed under the mouse."""
-        self.geometry(f"+{event.x_root - self._drag_x}+{event.y_root - self._drag_y}")
+        x = event.x_root - self._drag_x
+        y = event.y_root - self._drag_y
+        if sys.platform == "win32":
+            # position-only move: never touch the size and keep the window active
+            SWP_NOSIZE, SWP_NOZORDER, SWP_NOACTIVATE = 0x0001, 0x0004, 0x0010
+
+            # Get the OS handle of the window
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+            # Move the window
+            ctypes.windll.user32.SetWindowPos(hwnd, 0, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+        else:
+            self.geometry(f"+{x}+{y}")
+
+    def _ensure_client_size(self):
+        """Force the drawable (client) area to the exact designed size.
+        A managed window can keep a few invisible frame pixels that shrink
+        the client area, trimming the right edge of the UI."""
+        if sys.platform != "win32":
+            return
+        from ctypes import wintypes
+
+        # Get the OS handle of the window
+        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+        # measure the window rectangle and the drawn (client) rectangle
+        client, outer = wintypes.RECT(), wintypes.RECT()
+        ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(client))
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
+
+        # invisible frame leftover = total window rect minus the drawable rect
+        dx = (outer.right - outer.left) - (client.right - client.left)
+        dy = (outer.bottom - outer.top) - (client.bottom - client.top)
+
+        # resize so the client ends up exactly at the designed size
+        SWP_NOMOVE, SWP_NOZORDER, SWP_NOACTIVATE = 0x0002, 0x0004, 0x0010
+
+        # Resize the window
+        ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, styles.WINDOW_WIDTH + dx, styles.WINDOW_HEIGHT + dy, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE)
 
     def _apply_rounded_corners(self):
         """Round the frameless window corners via the Windows region API."""
         if sys.platform != "win32":
             return
-        # Get width, height, and radius from styles
-        width = styles.WINDOW_WIDTH
-        height = styles.WINDOW_HEIGHT
+        from ctypes import wintypes
+
         radius = styles.WINDOW_CORNER_RADIUS
 
         # Get the OS handle of the window
         hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+        # measure the real window rectangle (it can include an invisible frame)
+        outer = wintypes.RECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
+        width = outer.right - outer.left
+        height = outer.bottom - outer.top
 
         # Create a rounded region with the specified radius
         region = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2)
 
         # Set the window region to the rounded rectangle
         ctypes.windll.user32.SetWindowRgn(hwnd, region, True)
+
+    def _make_frameless(self):
+        """Strip the native title bar: the window stays a normal managed
+        window (taskbar button, Alt+Tab) but looks frameless."""
+        if sys.platform != "win32":
+            return
+
+        GWL_STYLE = -16                            # index of the "window styles" attribute
+        WS_CAPTION     = 0x00C00000                # title bar (border + dialog frame)
+        WS_SYSMENU     = 0x00080000                # the window icon/menu
+        WS_MINIMIZEBOX = 0x00020000
+        WS_MAXIMIZEBOX = 0x00010000
+        WS_THICKFRAME  = 0x00040000                # resizable border
+
+        # Get the OS handle of the window
+        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+        # read the current style mask
+        style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
+
+        # clear the title bar bits only (keep the rest of the mask untouched)
+        style &= ~(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME)
+
+        # write it back
+        ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, style)
+
+        # ask Windows to re-apply the changed window styles
+        SWP_NOSIZE       = 0x0001                  # don't change the size
+        SWP_NOMOVE       = 0x0002                  # don't move the window
+        SWP_NOZORDER     = 0x0004                  # don't change the z-order
+        SWP_FRAMECHANGED = 0x0020                  # re-read the just-applied window styles
+        ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
