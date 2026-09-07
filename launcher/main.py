@@ -246,10 +246,10 @@ class LauncherApp(ctk.CTk):
         self._lbl_about.bind("<Button-1>", lambda e: self._show_about())
 
         # Theme slider
-        icon_name = "theme_dark_slider" if styles.CURRENT_THEME == "Dark" else "theme_light_slider"
+        icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
         icon_img = Image.open(theme_icon_path(icon_name))
-        icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(96, 24))
-        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=96, height=24, fg_color="transparent", hover=False, command=self._on_theme_toggle)
+        icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
+        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover=False, command=self._on_theme_toggle)
         self._btn_theme.pack(side="left", padx=4)
 
         # Centered title

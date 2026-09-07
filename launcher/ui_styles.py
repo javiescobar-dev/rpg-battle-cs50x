@@ -42,6 +42,13 @@ def THEME() -> dict:
     return THEMES[CURRENT_THEME]
 
 
+ICONS = {
+    "theme_light": "theme_light_icon",
+    "theme_dark": "theme_dark_icon",
+    "minimize": "minimize_icon",
+    "close": "close_window_icon"
+}
+
 # Fonts (theme-independent)
 FONT_TITLE = ("Georgia", 18, "bold")
 FONT_BODY  = ("Arial", 13)
