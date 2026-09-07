@@ -272,12 +272,17 @@ class LauncherApp(ctk.CTk):
         self._header.bind("<B1-Motion>", self._on_drag_move)
 
     def _on_minimize_click(self):
-        """Minimize the window."""
-        pass
+        """Minimize the window (Windows needs the OS call because the window is frameless)."""
+        if sys.platform == "win32":
+            import ctypes
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())   # OS handle of the window
+            ctypes.windll.user32.ShowWindow(hwnd, 6)                 # 6 = SW_MINIMIZE
+        else:
+            self.iconify()
 
     def _on_close_click(self):
         """Close the application."""
-        pass
+        self.destroy()
 
     def _on_drag_start(self, event):
         """Record the grab offset between the mouse and the window origin."""
