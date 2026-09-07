@@ -3,7 +3,7 @@
 
 """Main launcher window and UI logic."""
 
-import sys, random, threading, ui_styles as styles, customtkinter as ctk
+import ctypes, sys, random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from config import APP_NAME, APP_TITLE
@@ -72,6 +72,7 @@ class LauncherApp(ctk.CTk):
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
         self.update_idletasks()                   # process any pending geometry updates (now the layout is truly settled)
+        self._apply_rounded_corners()             # round the corners once the window is visible
         # resize after the window is fully shown; a short delay ensures the CTkImage.configure takes effect on the freshly created label
         self.after(50, self._resize_carousel_bg)  # resize carousel background to fill its frame (after deiconify and final size)
 
@@ -292,6 +293,24 @@ class LauncherApp(ctk.CTk):
     def _on_drag_move(self, event):
         """Move the window keeping the grab offset fixed under the mouse."""
         self.geometry(f"+{event.x_root - self._drag_x}+{event.y_root - self._drag_y}")
+
+    def _apply_rounded_corners(self):
+        """Round the frameless window corners via the Windows region API."""
+        if sys.platform != "win32":
+            return
+        # Get width, height, and radius from styles
+        width = styles.WINDOW_WIDTH
+        height = styles.WINDOW_HEIGHT
+        radius = styles.WINDOW_CORNER_RADIUS
+
+        # Get the OS handle of the window
+        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+        # Create a rounded region with the specified radius
+        region = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2)
+
+        # Set the window region to the rounded rectangle
+        ctypes.windll.user32.SetWindowRgn(hwnd, region, True)
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
