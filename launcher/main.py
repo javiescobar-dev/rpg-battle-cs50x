@@ -267,6 +267,10 @@ class LauncherApp(ctk.CTk):
         self._lbl_title = ctk.CTkLabel(self._header, text="", image=self._render_title_image())
         self._lbl_title.place(relx=0.5, rely=0.5, anchor="center")
 
+        # Header drag (frameless window): grab on press, move while dragging
+        self._header.bind("<Button-1>", self._on_drag_start)
+        self._header.bind("<B1-Motion>", self._on_drag_move)
+
     def _on_minimize_click(self):
         """Minimize the window."""
         pass
@@ -274,6 +278,15 @@ class LauncherApp(ctk.CTk):
     def _on_close_click(self):
         """Close the application."""
         pass
+
+    def _on_drag_start(self, event):
+        """Record the grab offset between the mouse and the window origin."""
+        self._drag_x = event.x_root - self.winfo_x()
+        self._drag_y = event.y_root - self.winfo_y()
+
+    def _on_drag_move(self, event):
+        """Move the window keeping the grab offset fixed under the mouse."""
+        self.geometry(f"+{event.x_root - self._drag_x}+{event.y_root - self._drag_y}")
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
