@@ -255,9 +255,24 @@ class LauncherApp(ctk.CTk):
         self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover=False, command=self._on_theme_toggle)
         self._btn_theme.pack(side="left", padx=4)
 
+        # Window controls (frameless): close and minimize, flush in the top-right corner
+        for name, cmd in ((styles.ICONS["close"], self._on_close_click), (styles.ICONS["minimize"], self._on_minimize_click)):
+            icon_img = Image.open(theme_icon_path(name))
+            icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(28, 28))
+            btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover=False, command=cmd)
+            btn.pack(side="right")
+
         # Centered title
         self._lbl_title = ctk.CTkLabel(self._header, text="", image=self._render_title_image())
         self._lbl_title.place(relx=0.5, rely=0.5, anchor="center")
+
+    def _on_minimize_click(self):
+        """Minimize the window."""
+        pass
+
+    def _on_close_click(self):
+        """Close the application."""
+        pass
 
     def _build_content(self):
         """Central area for the news carousel (or About view)."""
