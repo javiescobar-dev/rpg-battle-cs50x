@@ -631,8 +631,8 @@ class LauncherApp(ctk.CTk):
 
         # Check button
         self._btn_check = ctk.CTkButton(
-            self._row, text="Check", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=0, corner_radius=6,
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
         )
@@ -640,21 +640,23 @@ class LauncherApp(ctk.CTk):
 
         # Play button
         self._btn_play = ctk.CTkButton(
-            self._row, text="Play", width=90, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            self._row, text="Play", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=0, corner_radius=6,
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"],
+            hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
         )
         self._btn_play.pack(side="right", padx=(8, 0))
 
         # Download / Update button
         self._btn_download = ctk.CTkButton(
-            self._row, text="Download", width=90, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            self._row, text="Download", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=6, border_color=styles.THEME()["accent"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["panel"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["accent"],
             command=self._on_download_click
         )
         self._btn_download.pack(side="right")
+        self._btn_download.bind("<Enter>", lambda event: self._btn_download.configure(text_color=styles.THEME()["button_text"],fg_color=styles.THEME()["accent"]))
+        self._btn_download.bind("<Leave>", lambda event: self._btn_download.configure(text_color=styles.THEME()["accent"],fg_color=styles.THEME()["panel"]))
 
         # Initial state of the Play button (disabled if the game is not installed)
         if not is_game_installed():
