@@ -256,11 +256,12 @@ class LauncherApp(ctk.CTk):
         self._btn_theme.pack(side="left", padx=4)
 
         # Window controls (frameless): close and minimize, flush in the top-right corner
-        for name, cmd in ((styles.ICONS["close"], self._on_close_click), (styles.ICONS["minimize"], self._on_minimize_click)):
+        gap = 8
+        for i, (name, cmd) in enumerate(((styles.ICONS["close"], self._on_close_click), (styles.ICONS["minimize"], self._on_minimize_click))):
             icon_img = Image.open(theme_icon_path(name))
-            icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(28, 28))
-            btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover=False, command=cmd)
-            btn.pack(side="right")
+            icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
+            btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["border"], command=cmd)
+            btn.place(relx=1.0, anchor="ne", x=-(6 + i * (28 + gap)), y=4)
 
         # Centered title
         self._lbl_title = ctk.CTkLabel(self._header, text="", image=self._render_title_image())
