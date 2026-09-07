@@ -3,7 +3,7 @@
 
 """Main launcher window and UI logic."""
 
-import random, threading, ui_styles as styles, customtkinter as ctk
+import sys, random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from config import APP_NAME, APP_TITLE
@@ -32,6 +32,7 @@ class LauncherApp(ctk.CTk):
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
+        self.overrideredirect(True)                       # remove the native title bar and borders
         self.configure(fg_color=styles.THEME()["bg"])     # set window background color
 
         # internal state
@@ -49,6 +50,8 @@ class LauncherApp(ctk.CTk):
         self._theme_busy = False                          # stores whether the theme is changing
         self._news_images = {}                            # stores the loaded news images by image field
         self._images_loading = set()                      # stores the news image fields currently downloading
+        self._drag_x = 0                                  # stores the grab offset of the header drag (x)
+        self._drag_y = 0                                  # stores the grab offset of the header drag (y)
 
         # Build UI
         self._build_header()                              # build the top header
