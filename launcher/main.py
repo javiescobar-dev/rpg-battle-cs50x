@@ -440,6 +440,8 @@ class LauncherApp(ctk.CTk):
             self._ensure_client_size()
             # rect already final: no bad clip
             self._apply_rounded_corners()
+            # guarantee the repinted before showing it
+            self.update_idletasks()
         finally:
             # end sizing
             self._sizing = False
@@ -927,25 +929,36 @@ class LauncherApp(ctk.CTk):
         # set focus to the window
         self.focus()
 
-        # destroy the ui
-        self._destroy_ui()
+        # make the window invisible while reconstructing
+        self.attributes("-alpha", 0.0)
+        try:
+            # refresh the theme
+            ctk.set_appearance_mode(styles.CURRENT_THEME)
+            save_theme(styles.CURRENT_THEME)
+            self.configure(fg_color=styles.THEME()["bg"])
+            self.configure(bg=styles.THEME()["bg"])
 
-        # rebuild the ui
-        self._build_header()
-        self._build_content()
-        self._build_footer()
-
-        # rebuild the active view (news carousel or about)
-        if self._view == "about":
-            self._build_about()
-        elif self._news_items:
-            self.after(0, lambda: self._populate_news(self._news_items))
-
-        # refresh the state of the ui
-        self._refresh_state()
-
-        # set the flag to False so that the theme can be switched again
-        self._theme_busy = False
+            # destroy the ui
+            self._destroy_ui()
+            # rebuild the ui
+            self._build_header()
+            self._build_content()
+            self._build_footer()
+            # rebuild the active view (news carousel or about)
+            if self._view == "about":
+                self._build_about()
+            # restore news synchronously
+            elif self._news_items:
+                self._populate_news(self._news_items)
+            # refresh the state of the ui
+            self._refresh_state()
+            # guarantee the repinted before showing it
+            self.update_idletasks()
+        finally:
+            # reappear the window
+            self.attributes("-alpha", 1.0)
+            # set the flag to False so that the theme can be switched again
+            self._theme_busy = False
 
     def _refresh_state(self):
         """Re-apply stored state to the (rebuilt) widgets."""
