@@ -6,11 +6,23 @@
 import ctypes, sys, random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from ctypes import wintypes
 from config import APP_NAME, APP_TITLE
 from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
 from updater import fetch_latest_release, update
 from news import get_news, get_image_path
 from settings import load_theme, save_theme
+
+class WINDOWPLACEMENT(ctypes.Structure):
+    """Windows WINDOWPLACEMENT struct (not shipped with ctypes.wintypes)."""
+    _fields_ = [
+        ("length", ctypes.c_uint),          # ::UINT
+        ("flags", ctypes.c_uint),           # ::UINT
+        ("showCmd", ctypes.c_uint),         # ::UINT
+        ("ptMinPosition", wintypes.POINT),  # ::POINT
+        ("ptMaxPosition", wintypes.POINT),  # ::POINT
+        ("rcNormalPosition", wintypes.RECT) # ::RECT
+    ]
 
 class LauncherApp(ctk.CTk):
     def __init__(self):
@@ -33,7 +45,7 @@ class LauncherApp(ctk.CTk):
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
         self.resizable(False, False)                      # set window to not be resizable
         self.configure(fg_color=styles.THEME()["bg"])     # set window background color
-
+        self.configure(bg=styles.THEME()["bg"])
         # internal state
         self._latest_release = None                       # stores the latest release from server
         self._news_items = []                             # stores the news items once loaded
@@ -51,6 +63,12 @@ class LauncherApp(ctk.CTk):
         self._images_loading = set()                      # stores the news image fields currently downloading
         self._drag_x = 0                                  # stores the grab offset of the header drag (x)
         self._drag_y = 0                                  # stores the grab offset of the header drag (y)
+        self._sizing = False                              # re-entrancy guard
+        self._expecting_restore = False                   # True between the minimize click and the restore event
+        self._last_state = "withdrawn"                    # last known state
+
+        # bind the Configure event to the _on_window_configure method (call _on_window_configure when the window is resized)
+        self.bind("<Configure>", self._on_window_configure)
 
         # Build UI
         self._build_header()                              # build the top header
@@ -280,12 +298,34 @@ class LauncherApp(ctk.CTk):
         self._header.bind("<B1-Motion>", self._on_drag_move)
 
     def _on_minimize_click(self):
-        """Minimize the window (native works now that the window is managed)."""
-        self.iconify()
+        """Minimize the window via the Win32 API: Tk's iconify() can fight the frameless styles."""
+        self._expecting_restore = True    # the next restore re-asserts size + corners
+        if sys.platform == "win32":
+            self._pin_restore_size()      # pin the exact restore size first (retained)
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            ctypes.windll.user32.ShowWindow(hwnd, 6)   # SW_MINIMIZE = 6
+        else:
+            self.iconify()
 
     def _on_close_click(self):
         """Close the application."""
         self.destroy()
+
+    def _pin_restore_size(self):
+        """Write the current window rect as the 'normal' size so the taskbar never restores a smaller, stale geometry."""
+        # get the OS handle of the window
+        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+        # get window placement
+        placement = WINDOWPLACEMENT()
+        placement.length = ctypes.sizeof(WINDOWPLACEMENT)
+        ctypes.windll.user32.GetWindowPlacement(hwnd, ctypes.byref(placement))
+        # get window rect
+        outer = wintypes.RECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
+
+        # restore exactly to the real current size
+        placement.rcNormalPosition = outer
+        ctypes.windll.user32.SetWindowPlacement(hwnd, ctypes.byref(placement))
 
     def _on_drag_start(self, event):
         """Record the grab offset between the mouse and the window origin."""
@@ -308,13 +348,11 @@ class LauncherApp(ctk.CTk):
         else:
             self.geometry(f"+{x}+{y}")
 
-    def _ensure_client_size(self):
+    def _ensure_client_size(self) -> bool:
         """Force the drawable (client) area to the exact designed size.
-        A managed window can keep a few invisible frame pixels that shrink
-        the client area, trimming the right edge of the UI."""
+        A managed window can keep a few invisible frame pixels that shrink the client area, trimming the right edge of the UI."""
         if sys.platform != "win32":
-            return
-        from ctypes import wintypes
+            return False
 
         # Get the OS handle of the window
         hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
@@ -324,15 +362,27 @@ class LauncherApp(ctk.CTk):
         ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(client))
         ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
 
+        # actual size of the frame
+        cur_w = outer.right - outer.left
+        cur_h = outer.bottom - outer.top
+
         # invisible frame leftover = total window rect minus the drawable rect
-        dx = (outer.right - outer.left) - (client.right - client.left)
-        dy = (outer.bottom - outer.top) - (client.bottom - client.top)
+        dx = cur_w - (client.right - client.left)
+        dy = cur_h - (client.bottom - client.top)
 
-        # resize so the client ends up exactly at the designed size
-        SWP_NOMOVE, SWP_NOZORDER, SWP_NOACTIVATE = 0x0002, 0x0004, 0x0010
+        # size that the frame should have to make the client exact
+        want_w = styles.WINDOW_WIDTH + dx
+        want_h = styles.WINDOW_HEIGHT + dy
 
-        # Resize the window
-        ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, styles.WINDOW_WIDTH + dx, styles.WINDOW_HEIGHT + dy, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE)
+        # if it is already correct, do nothing (ends the event loop)
+        if cur_w == want_w and cur_h == want_h:
+            return False
+
+        # move the fixed-size constraint to the corrected size so Windows never clamps the window back to the uncompensated size
+        self.minsize(want_w, want_h)
+        self.maxsize(want_w, want_h)
+        self.geometry(f"{want_w}x{want_h}")
+        return True
 
     def _apply_rounded_corners(self):
         """Round the frameless window corners via the Windows region API."""
@@ -356,6 +406,43 @@ class LauncherApp(ctk.CTk):
 
         # Set the window region to the rounded rectangle
         ctypes.windll.user32.SetWindowRgn(hwnd, region, True)
+
+    def _on_window_configure(self, event=None):
+        """Detect a restore, but DEFER the repair: we must not re-enter Tk's geometry manager from inside this callback (it corrupts the layout)."""
+        # skip our own programmatic resizes
+        if self._sizing or self.state() != "normal":
+            return
+
+        # e.g. Win+D minimize
+        came_from_iconic = self._last_state == "iconic"
+        self._last_state = self.state()
+
+        # if it was not restored or came from iconic, do nothing
+        if not (self._expecting_restore or came_from_iconic):
+            return
+
+        # reset the flag
+        self._expecting_restore = False
+        # run when events settle
+        self.after_idle(self._repair_after_restore)
+
+    def _repair_after_restore(self):
+        """Re-assert the exact client size and re-round the corners once the window has fully come back (outside the Configure callback)."""
+
+        # if window is not normal, do nothing
+        if self.state() != "normal":
+            return
+
+        # start sizing
+        self._sizing = True
+        try:
+            # False when size is already exact
+            self._ensure_client_size()
+            # rect already final: no bad clip
+            self._apply_rounded_corners()
+        finally:
+            # end sizing
+            self._sizing = False
 
     def _make_frameless(self):
         """Strip the native title bar: the window stays a normal managed
@@ -835,6 +922,7 @@ class LauncherApp(ctk.CTk):
 
         # set theme background color
         self.configure(fg_color=styles.THEME()["bg"])
+        self.configure(bg=styles.THEME()["bg"])
 
         # set focus to the window
         self.focus()
