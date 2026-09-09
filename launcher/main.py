@@ -65,6 +65,7 @@ class LauncherApp(ctk.CTk):
         self._drag_y = 0                                  # stores the grab offset of the header drag (y)
         self._sizing = False                              # re-entrancy guard
         self._expecting_restore = False                   # True between the minimize click and the restore event
+        self._stage = None                                # staging frame that currently holds the live UI (None at startup)
         self._last_state = "withdrawn"                    # last known state
 
         # bind the Configure event to the _on_window_configure method (call _on_window_configure when the window is resized)
@@ -262,10 +263,14 @@ class LauncherApp(ctk.CTk):
         # schedule next frame
         self._carousel_anim_timer = self.after(20, self._slide_step)   
 
-    def _build_header(self):
+    def _build_header(self, parent=None):
         """Top bar with title and placeholder buttons."""
+
+        # set parent check for switch theme method
+        parent = self if parent is None else parent
+
         # Top bar frame (full width, fixed height)
-        self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
+        self._header = ctk.CTkFrame(parent, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
@@ -478,10 +483,14 @@ class LauncherApp(ctk.CTk):
         SWP_FRAMECHANGED = 0x0020                  # re-read the just-applied window styles
         ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
 
-    def _build_content(self):
+    def _build_content(self, parent=None):
         """Central area for the news carousel (or About view)."""
+
+        # set parent check for switch theme method
+        parent = self if parent is None else parent
+
         # background frame of the content area
-        self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
+        self._content_frame = ctk.CTkFrame(parent, fg_color=styles.THEME()["bg"], corner_radius=0)
         self._content_frame.pack(fill="both", expand=True)
 
         # carousel container (rounded, centered, with margins)
@@ -818,10 +827,14 @@ class LauncherApp(ctk.CTk):
         # return the image as a CTkImage
         return ctk.CTkImage(light_image=img, dark_image=img, size=(canvas_w, canvas_h))
 
-    def _build_footer(self):
+    def _build_footer(self, parent=None):
         """Build the footer, the bottom bar of the launcher."""
+
+        # set parent check for switch theme method
+        parent = self if parent is None else parent
+
         # Footer frame
-        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
+        self._footer = ctk.CTkFrame(parent, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
         self._footer.pack(side="bottom", fill="x")
         self._footer.pack_propagate(False)
 
@@ -904,7 +917,7 @@ class LauncherApp(ctk.CTk):
         self._carousel_moving = False
 
     def _on_theme_toggle(self):
-        """Switch Light/Dark theme and rebuild the UI."""
+        """Switch theme by building the new UI hidden behind the current one, then swapping in a single repaint."""
 
         # protect swicht theme if button theme is busy
         if self._theme_busy:
@@ -913,50 +926,75 @@ class LauncherApp(ctk.CTk):
         # set flag to prevent concurrent theme switch
         self._theme_busy = True
 
-        # switch theme
-        styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
-
-        # keep ctk native mode in sync
-        ctk.set_appearance_mode(styles.CURRENT_THEME)
-
-        # persist the theme for next launch
-        save_theme(styles.CURRENT_THEME)
-
-        # set theme background color
-        self.configure(fg_color=styles.THEME()["bg"])
-        self.configure(bg=styles.THEME()["bg"])
-
-        # set focus to the window
-        self.focus()
-
-        # make the window invisible while reconstructing
-        self.attributes("-alpha", 0.0)
         try:
-            # refresh the theme
-            ctk.set_appearance_mode(styles.CURRENT_THEME)
-            save_theme(styles.CURRENT_THEME)
-            self.configure(fg_color=styles.THEME()["bg"])
-            self.configure(bg=styles.THEME()["bg"])
+            # switch theme
+            styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
 
-            # destroy the ui
-            self._destroy_ui()
-            # rebuild the ui
-            self._build_header()
-            self._build_content()
-            self._build_footer()
+            # keep ctk native mode in sync
+            ctk.set_appearance_mode(styles.CURRENT_THEME)
+
+            # persist the theme for next launch
+            save_theme(styles.CURRENT_THEME)
+
+            # keep the current UI visible: remember it to destroy it at the end
+            old = (self._header, self._content_frame, self._footer)
+
+            # save last stage
+            old_stage = self._stage
+
+            # staging layer: opaque frame covering the window, placed BELOW the current UI so building inside it is invisible to the user
+            stage = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
+            stage.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+            stage.lower()
+
+            # clear the old carousel bg reference so _display_render() won't destroy the one still visible on screen while we build the new tree
+            self._carousel_bg = None
+
+            # build the complete new UI inside the hidden stage
+            self._build_header(stage)
+            self._build_content(stage)
+            self._build_footer(stage)
+
             # rebuild the active view (news carousel or about)
             if self._view == "about":
                 self._build_about()
             # restore news synchronously
             elif self._news_items:
                 self._populate_news(self._news_items)
-            # refresh the state of the ui
-            self._refresh_state()
-            # guarantee the repinted before showing it
+
+            # paint the whole new UI while it is still covered (invisible)
             self.update_idletasks()
+
+            # stop any carousel animation still running on the old UI
+            if self._carousel_anim_timer:
+                self.after_cancel(self._carousel_anim_timer)
+                self._carousel_anim_timer = None
+
+            # stop carousel movement
+            self._carousel_moving = False
+
+            # new background before the swap: any region Windows repaints during the destroy shows the new bg (indistinguishable from the stage)
+            self.configure(fg_color=styles.THEME()["bg"])
+            self.configure(bg=styles.THEME()["bg"])
+
+            # swap: the already-painted new UI replaces the old one in one frame
+            for widget in old:
+                widget.destroy()
+
+            # remove the empty frame that would occlude the new UI (after the old UI is destroyed)
+            if old_stage is not None:
+                old_stage.destroy()
+
+            # set stage as live
+            self._stage = stage
+
+            # re-apply dynamic state the new footer does not know yet
+            self._refresh_state()
+            self.focus()
+
+            # flush the expose/paint now (no flicker frame)
+            self.update()
         finally:
-            # reappear the window
-            self.attributes("-alpha", 1.0)
             # set the flag to False so that the theme can be switched again
             self._theme_busy = False
 
