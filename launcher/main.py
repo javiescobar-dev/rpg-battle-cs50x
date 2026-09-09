@@ -65,8 +65,10 @@ class LauncherApp(ctk.CTk):
         self._drag_y = 0                                  # stores the grab offset of the header drag (y)
         self._sizing = False                              # re-entrancy guard
         self._expecting_restore = False                   # True between the minimize click and the restore event
-        self._stage = None                                # staging frame that currently holds the live UI (None at startup)
         self._last_state = "withdrawn"                    # last known state
+        self._win_btns = []                               # window control buttons (close/minimize)
+        self._about_widgets = None                        # widgets of the About view
+        self._lbl_no_news = None                          # "No news available." label
 
         # bind the Configure event to the _on_window_configure method (call _on_window_configure when the window is resized)
         self.bind("<Configure>", self._on_window_configure)
@@ -128,7 +130,8 @@ class LauncherApp(ctk.CTk):
 
         # if no news available, show a message (in the carousel area)
         if not items:
-            ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]).pack(pady=40)
+            self._lbl_no_news = ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"])
+            self._lbl_no_news.pack(pady=40)
             return
 
         # show the first slide
@@ -263,14 +266,11 @@ class LauncherApp(ctk.CTk):
         # schedule next frame
         self._carousel_anim_timer = self.after(20, self._slide_step)   
 
-    def _build_header(self, parent=None):
+    def _build_header(self):
         """Top bar with title and placeholder buttons."""
 
-        # set parent check for switch theme method
-        parent = self if parent is None else parent
-
         # Top bar frame (full width, fixed height)
-        self._header = ctk.CTkFrame(parent, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
+        self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
@@ -287,12 +287,14 @@ class LauncherApp(ctk.CTk):
         self._btn_theme.pack(side="left", padx=4)
 
         # Window controls (frameless): close and minimize, flush in the top-right corner
+        self._win_btns = []  # store window control buttons for theme swap (recoloring)
         gap = 8
         for i, (name, cmd) in enumerate(((styles.ICONS["close"], self._on_close_click), (styles.ICONS["minimize"], self._on_minimize_click))):
             icon_img = Image.open(theme_icon_path(name))
             icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
             btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["border"], command=cmd)
             btn.place(relx=1.0, anchor="ne", x=-(6 + i * (28 + gap)), y=4)
+            self._win_btns.append(btn)
 
         # Centered title
         self._lbl_title = ctk.CTkLabel(self._header, text="", image=self._render_title_image())
@@ -483,14 +485,11 @@ class LauncherApp(ctk.CTk):
         SWP_FRAMECHANGED = 0x0020                  # re-read the just-applied window styles
         ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
 
-    def _build_content(self, parent=None):
+    def _build_content(self):
         """Central area for the news carousel (or About view)."""
 
-        # set parent check for switch theme method
-        parent = self if parent is None else parent
-
         # background frame of the content area
-        self._content_frame = ctk.CTkFrame(parent, fg_color=styles.THEME()["bg"], corner_radius=0)
+        self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
         self._content_frame.pack(fill="both", expand=True)
 
         # carousel container (rounded, centered, with margins)
@@ -765,21 +764,29 @@ class LauncherApp(ctk.CTk):
         frame = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
         frame.pack(fill="both", expand=True)  # fill the content frame and expand to fill the available space
         # title
-        ctk.CTkLabel(frame, text=APP_NAME, font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(pady=(40, 8))
+        title = ctk.CTkLabel(frame, text=APP_NAME, font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"])
+        title.pack(pady=(40, 8))
         # body
-        ctk.CTkLabel(frame, text="RPG Battle is a turn-based battle game built with Pygame and a desktop launcher built with CustomTkinter. It is the final project of CS50x.",
-                                    font=styles.FONT_BODY, text_color=styles.THEME()["text_body"], wraplength=600, justify="center").pack(pady=8)
+        body = ctk.CTkLabel(frame, text="RPG Battle is a turn-based battle game built with Pygame and a desktop launcher built with CustomTkinter. It is the final project of CS50x.",
+                                    font=styles.FONT_BODY, text_color=styles.THEME()["text_body"], wraplength=600, justify="center")
+        body.pack(pady=8)
         # subtitle: developed by
-        ctk.CTkLabel(frame, text="Developed by Javi Escobar Fernández", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
+        author = ctk.CTkLabel(frame, text="Developed by Javi Escobar Fernández", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        author.pack(pady=8)
         # subtitle: CS50x Final Project
-        ctk.CTkLabel(frame, text="CS50x Final Project", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
+        project = ctk.CTkLabel(frame, text="CS50x Final Project", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        project.pack(pady=8)
         # back button
-        ctk.CTkButton(
+        back_btn = ctk.CTkButton(
             frame, text="Back", width=70, height=28,
             font=styles.FONT_BODY, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._show_news
-        ).pack(pady=16)
+        )
+        back_btn.pack(pady=16)
+
+        # store widgets for theme swap
+        self._about_widgets = (title, body, author, project, back_btn)
 
     def _render_title_image(self):
         """Render the header title with the game font and return a CTkImage."""
@@ -827,14 +834,11 @@ class LauncherApp(ctk.CTk):
         # return the image as a CTkImage
         return ctk.CTkImage(light_image=img, dark_image=img, size=(canvas_w, canvas_h))
 
-    def _build_footer(self, parent=None):
+    def _build_footer(self):
         """Build the footer, the bottom bar of the launcher."""
 
-        # set parent check for switch theme method
-        parent = self if parent is None else parent
-
         # Footer frame
-        self._footer = ctk.CTkFrame(parent, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
+        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
         self._footer.pack(side="bottom", fill="x")
         self._footer.pack_propagate(False)
 
@@ -897,35 +901,13 @@ class LauncherApp(ctk.CTk):
         if not is_game_installed():
             self._btn_play.configure(state="disabled")
 
-    def _destroy_ui(self):
-        """Destroy the three main bands so they can be rebuilt with the new theme."""
-        # iterate over the main ui widgets and destroy them if they exist
-        for name in ("_header", "_content_frame", "_footer"):
-            widget = getattr(self, name, None)
-            if widget is not None:
-                widget.destroy()
-
-        # set the carousel background to None to force it to be rebuilt
-        self._carousel_bg = None
-
-        # cancel any pending carousel animations
-        if self._carousel_anim_timer:
-            self.after_cancel(self._carousel_anim_timer)
-            self._carousel_anim_timer = None
-
-        # stop carousel movement
-        self._carousel_moving = False
-
     def _on_theme_toggle(self):
-        """Switch theme by building the new UI hidden behind the current one, then swapping in a single repaint."""
-
+        """Switch Light/Dark theme by recoloring the existing widgets in place."""
         # protect swicht theme if button theme is busy
         if self._theme_busy:
             return
-
         # set flag to prevent concurrent theme switch
         self._theme_busy = True
-
         try:
             # switch theme
             styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
@@ -936,73 +918,94 @@ class LauncherApp(ctk.CTk):
             # persist the theme for next launch
             save_theme(styles.CURRENT_THEME)
 
-            # keep the current UI visible: remember it to destroy it at the end
-            old = (self._header, self._content_frame, self._footer)
-
-            # save last stage
-            old_stage = self._stage
-
-            # staging layer: opaque frame covering the window, placed BELOW the current UI so building inside it is invisible to the user
-            stage = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
-            stage.place(x=0, y=0, relwidth=1.0, relheight=1.0)
-            stage.lower()
-
-            # clear the old carousel bg reference so _display_render() won't destroy the one still visible on screen while we build the new tree
-            self._carousel_bg = None
-
-            # build the complete new UI inside the hidden stage
-            self._build_header(stage)
-            self._build_content(stage)
-            self._build_footer(stage)
-
-            # rebuild the active view (news carousel or about)
-            if self._view == "about":
-                self._build_about()
-            # restore news synchronously
-            elif self._news_items:
-                self._populate_news(self._news_items)
-
-            # paint the whole new UI while it is still covered (invisible)
-            self.update_idletasks()
-
-            # stop any carousel animation still running on the old UI
-            if self._carousel_anim_timer:
-                self.after_cancel(self._carousel_anim_timer)
-                self._carousel_anim_timer = None
-
-            # stop carousel movement
-            self._carousel_moving = False
-
-            # new background before the swap: any region Windows repaints during the destroy shows the new bg (indistinguishable from the stage)
-            self.configure(fg_color=styles.THEME()["bg"])
-            self.configure(bg=styles.THEME()["bg"])
-
-            # swap: the already-painted new UI replaces the old one in one frame
-            for widget in old:
-                widget.destroy()
-
-            # remove the empty frame that would occlude the new UI (after the old UI is destroyed)
-            if old_stage is not None:
-                old_stage.destroy()
-
-            # set stage as live
-            self._stage = stage
-
-            # re-apply dynamic state the new footer does not know yet
-            self._refresh_state()
-            self.focus()
-
-            # flush the expose/paint now (no flicker frame)
-            self.update()
+            # apply the new theme
+            self._apply_theme()
         finally:
             # set the flag to False so that the theme can be switched again
             self._theme_busy = False
 
-    def _refresh_state(self):
-        """Re-apply stored state to the (rebuilt) widgets."""
-        # set the latest release version
-        tag = self._latest_release.get("tag_name", "?") if self._latest_release else None
-        self._lbl_latest.configure(text=f"Latest: {tag}" if tag else "Latest: —")
+    def _apply_theme(self):
+        """Re-color the whole UI in place with the new theme (no rebuild, no flicker)."""
+        theme = styles.THEME()
+        # apply theme to header
+        self._recolor_header()
+        # apply theme to content
+        self._recolor_content()
+        # apply theme to footer
+        self._recolor_footer()
+        # set the background color
+        self.configure(fg_color=theme["bg"])
+        self.configure(bg=theme["bg"])
+        # update the UI
+        self.update_idletasks()
+
+    def _recolor_header(self):
+        """Re-color the header in place with the new theme."""
+        theme = styles.THEME()
+        # set the header background color
+        self._header.configure(fg_color=theme["panel"])
+        # set the about label text color
+        self._lbl_about.configure(text_color=theme["text_title"])
+        # set the window buttons hover color
+        for btn in self._win_btns:
+            btn.configure(hover_color=theme["border"])
+        # theme button shows the icon of the OTHER theme
+        icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
+        icon = Image.open(theme_icon_path(icon_name))
+        icon = ctk.CTkImage(light_image=icon, dark_image=icon, size=(24, 24))
+        self._btn_theme.configure(image=icon)
+        # title re-rendered with the new text color
+        self._lbl_title.configure(image=self._render_title_image())
+
+    def _recolor_content(self):
+        """Re-color the content in place with the new theme."""
+        theme = styles.THEME()
+        # set the content frame background color
+        self._content_frame.configure(fg_color=theme["bg"])
+        # set the carousel background color
+        if self._carousel is not None:
+            self._carousel.configure(fg_color=theme["panel"])
+        # set the about label text color
+        if self._view == "about":
+            self._recolor_about()
+        # set the news items background color
+        elif self._news_items:
+            self._resize_carousel_bg()
+        # set the no news label text color
+        elif self._lbl_no_news is not None and self._lbl_no_news.winfo_exists():
+            self._lbl_no_news.configure(text_color=theme["text_date"])
+
+    def _recolor_about(self):
+        """Re-color the about widgets in place with the new theme."""
+        theme = styles.THEME()
+        widgets = self._about_widgets
+        # set the about frame background color
+        widgets["frame"].configure(fg_color=theme["bg"])
+        # set the about label text color
+        widgets["title"].configure(text_color=theme["text_title"])
+        # set the about body text color
+        for lbl in (widgets["body"], widgets["author"], widgets["project"]):
+            lbl.configure(text_color=theme["text_body"])
+        # set the about back button color
+        widgets["back"].configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"])
+
+    def _recolor_footer(self):
+        """Re-color the footer in place with the new theme."""
+        theme = styles.THEME()
+        # set the footer background color
+        self._footer.configure(fg_color=theme["panel"])
+        # set the progress bar background color
+        self._progress.configure(fg_color=theme["border"], progress_color=theme["accent"])
+        # set the installed label text color
+        self._lbl_installed.configure(text_color=theme["text_body"])
+        # set the latest release label text color
+        self._lbl_latest.configure(text_color=theme["text_body"])
+        # set the check button color
+        self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"])
+        # set the play button color
+        self._btn_play.configure(fg_color=theme["play_button"], hover_color=theme["play_button_hover"], text_color=theme["button_text"])
+        # set the download button color
+        self._btn_download.configure(border_color=theme["accent"], fg_color=theme["panel"], hover_color=theme["hover"], text_color=theme["accent"])
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
