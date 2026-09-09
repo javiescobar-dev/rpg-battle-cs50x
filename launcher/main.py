@@ -526,10 +526,15 @@ class LauncherApp(ctk.CTk):
 
     def _render_slide(self, index: int, include_ui: bool = True) -> Image:
         """Render the carousel slide with the given index."""
-        self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
-        width = self._carousel.winfo_width()              # carousel width in pixels
-        height = self._carousel.winfo_height()            # carousel height in pixels
-        size = (max(width, 10), max(height, 10))          # make sure the size is at least 10x10
+        # update the carousel frame to get its actual size (only if it is not already done)
+        if self._carousel.winfo_width() < 10 or self._carousel.winfo_height() < 10:
+            self._carousel.update_idletasks()
+        # carousel width in pixels
+        width = self._carousel.winfo_width()
+        # carousel height in pixels
+        height = self._carousel.winfo_height()
+        # make sure the size is at least 10x10
+        size = (max(width, 10), max(height, 10))
 
         # news photo if it is already loaded
         item = self._news_items[index] if 0 <= index < len(self._news_items) else None
@@ -911,9 +916,6 @@ class LauncherApp(ctk.CTk):
         try:
             # switch theme
             styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
-
-            # keep ctk native mode in sync
-            ctk.set_appearance_mode(styles.CURRENT_THEME)
 
             # persist the theme for next launch
             save_theme(styles.CURRENT_THEME)
