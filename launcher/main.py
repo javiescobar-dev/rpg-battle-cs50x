@@ -3,7 +3,7 @@
 
 """Main launcher window and UI logic."""
 
-import ctypes, sys, random, threading, ui_styles as styles, customtkinter as ctk
+import ctypes, time, sys, random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ctypes import wintypes
@@ -59,6 +59,7 @@ class LauncherApp(ctk.CTk):
         self._hero_frame = 0                              # stores the current hero animation frame index
         self._hero_timer = None                           # stores the hero animation timer ID
         self._theme_busy = False                          # stores whether the theme is changing
+        self._last_theme_toggle = 0.0                     # stores the time of the last theme toggle (used to prevent rapid toggling)
         self._news_images = {}                            # stores the loaded news images by image field
         self._images_loading = set()                      # stores the news image fields currently downloading
         self._drag_x = 0                                  # stores the grab offset of the header drag (x)
@@ -72,6 +73,9 @@ class LauncherApp(ctk.CTk):
 
         # bind the Configure event to the _on_window_configure method (call _on_window_configure when the window is resized)
         self.bind("<Configure>", self._on_window_configure)
+
+        # bind the Map event to the _on_window_map method (call _on_window_map when the window is mapped)
+        self.bind("<Map>", self._on_window_map)
 
         # Build UI
         self._build_header()                              # build the top header
@@ -433,6 +437,12 @@ class LauncherApp(ctk.CTk):
         # run when events settle
         self.after_idle(self._repair_after_restore)
 
+    def _on_window_map(self, event=None):
+        """Apply rounded corners immediately when the window is mapped."""
+        if sys.platform != "win32" or self.state() != "normal":
+            return
+        self._apply_rounded_corners()
+
     def _repair_after_restore(self):
         """Re-assert the exact client size and re-round the corners once the window has fully come back (outside the Configure callback)."""
 
@@ -791,7 +801,14 @@ class LauncherApp(ctk.CTk):
         back_btn.pack(pady=16)
 
         # store widgets for theme swap
-        self._about_widgets = (title, body, author, project, back_btn)
+        self._about_widgets = {
+            "frame": frame,
+            "title": title,
+            "body": body,
+            "author": author,
+            "project": project,
+            "back": back_btn,
+        }
 
     def _render_title_image(self):
         """Render the header title with the game font and return a CTkImage."""
@@ -911,6 +928,13 @@ class LauncherApp(ctk.CTk):
         # protect swicht theme if button theme is busy
         if self._theme_busy:
             return
+
+        # small delay to prevent spam
+        now = time.monotonic()
+        if now - self._last_theme_toggle < 0.8:
+            return
+        self._last_theme_toggle = now
+
         # set flag to prevent concurrent theme switch
         self._theme_busy = True
         try:
