@@ -43,7 +43,6 @@ class LauncherApp(ctk.CTk):
         ctk.set_widget_scaling(1.0)                       # set widget scaling
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
-        self.resizable(False, False)                      # set window to not be resizable
         self.configure(fg_color=styles.THEME()["bg"])     # set window background color
         self.configure(bg=styles.THEME()["bg"])
         # internal state
@@ -64,15 +63,10 @@ class LauncherApp(ctk.CTk):
         self._images_loading = set()                      # stores the news image fields currently downloading
         self._drag_x = 0                                  # stores the grab offset of the header drag (x)
         self._drag_y = 0                                  # stores the grab offset of the header drag (y)
-        self._sizing = False                              # re-entrancy guard
-        self._expecting_restore = False                   # True between the minimize click and the restore event
-        self._last_state = "withdrawn"                    # last known state
         self._win_btns = []                               # window control buttons (close/minimize)
         self._about_widgets = None                        # widgets of the About view
         self._lbl_no_news = None                          # "No news available." label
-
-        # bind the Configure event to the _on_window_configure method (call _on_window_configure when the window is resized)
-        self.bind("<Configure>", self._on_window_configure)
+        self._wndproc_cb = None                           # stores the subclass callback while the window is alive
 
         # bind the Map event to the _on_window_map method (call _on_window_map when the window is mapped)
         self.bind("<Map>", self._on_window_map)
@@ -92,8 +86,10 @@ class LauncherApp(ctk.CTk):
         """Show the window once the mainloop has stabilized the layout."""
         # Show the window frameless: strip the title bar while hidden,
         # then size the window with the final (frameless) styles
-        self._make_frameless()                    # strip the native title bar while still hidden
+        self._install_hidden_titlebar()           # strip the native title bar while still hidden
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # re-apply the exact window size
+        self.minsize(0, 0)                        # set min size to (0, 0) wide non-equal min/max: cancel CTk's fixed-size hints so Tk keeps WS_THICKFRAME (clamp comes later)
+        self.maxsize(10000, 10000)                # set max size to (10000, 10000) wide non-equal min/max: cancel CTk's fixed-size hints so Tk keeps WS_THICKFRAME (clamp comes later)
         self.update_idletasks()                   # process any pending geometry updates
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
@@ -309,34 +305,12 @@ class LauncherApp(ctk.CTk):
         self._header.bind("<B1-Motion>", self._on_drag_move)
 
     def _on_minimize_click(self):
-        """Minimize the window via the Win32 API: Tk's iconify() can fight the frameless styles."""
-        self._expecting_restore = True    # the next restore re-asserts size + corners
-        if sys.platform == "win32":
-            self._pin_restore_size()      # pin the exact restore size first (retained)
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            ctypes.windll.user32.ShowWindow(hwnd, 6)   # SW_MINIMIZE = 6
-        else:
-            self.iconify()
+        """Minimize natively (keeps the OS transition)."""
+        self.iconify()
 
     def _on_close_click(self):
         """Close the application."""
         self.destroy()
-
-    def _pin_restore_size(self):
-        """Write the current window rect as the 'normal' size so the taskbar never restores a smaller, stale geometry."""
-        # get the OS handle of the window
-        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-        # get window placement
-        placement = WINDOWPLACEMENT()
-        placement.length = ctypes.sizeof(WINDOWPLACEMENT)
-        ctypes.windll.user32.GetWindowPlacement(hwnd, ctypes.byref(placement))
-        # get window rect
-        outer = wintypes.RECT()
-        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
-
-        # restore exactly to the real current size
-        placement.rcNormalPosition = outer
-        ctypes.windll.user32.SetWindowPlacement(hwnd, ctypes.byref(placement))
 
     def _on_drag_start(self, event):
         """Record the grab offset between the mouse and the window origin."""
@@ -389,14 +363,13 @@ class LauncherApp(ctk.CTk):
         if cur_w == want_w and cur_h == want_h:
             return False
 
-        # move the fixed-size constraint to the corrected size so Windows never clamps the window back to the uncompensated size
-        self.minsize(want_w, want_h)
-        self.maxsize(want_w, want_h)
+        # resize the window to the correct size
         self.geometry(f"{want_w}x{want_h}")
         return True
 
     def _apply_rounded_corners(self):
         """Round the frameless window corners via the Windows region API."""
+        return
         if sys.platform != "win32":
             return
         from ctypes import wintypes
@@ -418,75 +391,53 @@ class LauncherApp(ctk.CTk):
         # Set the window region to the rounded rectangle
         ctypes.windll.user32.SetWindowRgn(hwnd, region, True)
 
-    def _on_window_configure(self, event=None):
-        """Detect a restore, but DEFER the repair: we must not re-enter Tk's geometry manager from inside this callback (it corrupts the layout)."""
-        # skip our own programmatic resizes
-        if self._sizing or self.state() != "normal":
-            return
-
-        # e.g. Win+D minimize
-        came_from_iconic = self._last_state == "iconic"
-        self._last_state = self.state()
-
-        # if it was not restored or came from iconic, do nothing
-        if not (self._expecting_restore or came_from_iconic):
-            return
-
-        # reset the flag
-        self._expecting_restore = False
-        # run when events settle
-        self.after_idle(self._repair_after_restore)
-
     def _on_window_map(self, event=None):
         """Apply rounded corners immediately when the window is mapped."""
         if sys.platform != "win32" or self.state() != "normal":
             return
         self._apply_rounded_corners()
 
-    def _repair_after_restore(self):
-        """Re-assert the exact client size and re-round the corners once the window has fully come back (outside the Configure callback)."""
-
-        # if window is not normal, do nothing
-        if self.state() != "normal":
-            return
-
-        # start sizing
-        self._sizing = True
-        try:
-            # False when size is already exact
-            self._ensure_client_size()
-            # rect already final: no bad clip
-            self._apply_rounded_corners()
-            # guarantee the repinted before showing it
-            self.update_idletasks()
-        finally:
-            # end sizing
-            self._sizing = False
-
-    def _make_frameless(self):
-        """Strip the native title bar: the window stays a normal managed
-        window (taskbar button, Alt+Tab) but looks frameless."""
+    def _install_hidden_titlebar(self):
+        """Installs a subclass to hide the native title bar while keeping the window fully managed by the OS."""
         if sys.platform != "win32":
             return
-
-        GWL_STYLE = -16                            # index of the "window styles" attribute
-        WS_CAPTION     = 0x00C00000                # title bar (border + dialog frame)
-        WS_SYSMENU     = 0x00080000                # the window icon/menu
-        WS_MINIMIZEBOX = 0x00020000
-        WS_MAXIMIZEBOX = 0x00010000
-        WS_THICKFRAME  = 0x00040000                # resizable border
 
         # Get the OS handle of the window
         hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
 
-        # read the current style mask
-        style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
+        # constants
+        WM_NCCALCSIZE = 0x0083                  # message: "measure the non-client area"
+        comctl = ctypes.WinDLL("comctl32")      # ComCtl32 provides the subclass functions
 
-        # clear the title bar bits only (keep the rest of the mask untouched)
-        style &= ~(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME)
+        # callback definition
+        SUBCLASSPROC = ctypes.WINFUNCTYPE(
+            ctypes.c_ssize_t,                   # LRESULT
+            wintypes.HWND,                      # hwnd
+            wintypes.UINT,                      # uMsg
+            wintypes.WPARAM,                    # wParam
+            wintypes.LPARAM,                    # lParam
+            ctypes.c_size_t,                    # uIdSubclass
+            ctypes.c_size_t                     # dwRefData
+        )
 
-        # write it back
-        ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, style)
+        # comctl32 function signatures
+        comctl.SetWindowSubclass.argtypes = [wintypes.HWND, SUBCLASSPROC, ctypes.c_size_t, ctypes.c_size_t]
+        comctl.SetWindowSubclass.restype  = ctypes.c_bool
+        comctl.DefSubclassProc.argtypes  = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM, ctypes.c_size_t, ctypes.c_size_t]
+        comctl.DefSubclassProc.restype   = ctypes.c_ssize_t
+
+        # callback to process messages
+        @SUBCLASSPROC
+        def _wnd_proc(hwnd, msg, wparam, lparam, u_id, ref_data):
+            # If the message is WM_NCCALCSIZE and the wParam is true, then the window is being resized
+            if msg == WM_NCCALCSIZE and wparam:
+                return 0
+            # Otherwise, call the default subclass procedure
+            return comctl.DefSubclassProc(hwnd, msg, wparam, lparam, u_id, ref_data)
+
+        # store callback and register it to the window
+        self._wndproc_cb = _wnd_proc
+        comctl.SetWindowSubclass(hwnd, self._wndproc_cb, 1, 0)
 
         # ask Windows to re-apply the changed window styles
         SWP_NOSIZE       = 0x0001                  # don't change the size
