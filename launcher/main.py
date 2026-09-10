@@ -1087,6 +1087,9 @@ class LauncherApp(ctk.CTk):
         self._progress.set(0)
         self._progress.pack(side="bottom", fill="x", padx=16, pady=(12, 4))
 
+        # clear hero frames if they exist
+        self._hero_frames = []
+
         # select a random frame of the hero sprites
         frame = random.randint(1, 8)
         try:

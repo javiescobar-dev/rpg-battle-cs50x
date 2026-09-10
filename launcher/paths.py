@@ -121,7 +121,7 @@ def title_font_path() -> Path:
 
 
 def theme_icon_path(name: str) -> Path:
-    """Return the path to a theme icon (theme_dark_slider / theme_light_slider)."""
+    """Return the path to a UI icon PNG (theme_dark_icon / theme_light_icon / minimize_icon / close_window_icon)."""
     return _asset_base() / "ui" / f"{name}.png"
 
 
