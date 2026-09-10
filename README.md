@@ -158,24 +158,34 @@ A separate launcher app that downloads, updates, and launches the game.
   `#50C8F0` on a pale background in light mode, and a dark navy background with
   gold accents in dark mode (a neon-cyan contrast pass is the pending part of the
   visual polish).
-- **Light/Dark themes**: a slider icon in the header toggles between the two
-  palettes and rebuilds the UI with the new colors. The choice is persisted to
-  a local `settings.json`, so the launcher reopens on the last selected theme.
-  The slider button shows the variant of the current theme (`theme_dark_slider.png`
-  or `theme_light_slider.png`, bundled as assets) and is swapped automatically on
-  each rebuild.
+- **Light/Dark themes**: a theme icon in the header toggles between the two
+  palettes by recoloring the existing widgets in place — no UI rebuild, no
+  flicker. Each zone gets its own re-color pass (`_recolor_header`,
+  `_recolor_content`, `_recolor_about`, `_recolor_footer`) and the carousel
+  slide is re-rendered so its baked-in arrows and dots pick up the new accent.
+  The choice is persisted to a local `settings.json`, so the launcher reopens on
+  the last selected theme. The button shows the icon of the *other* theme
+  (`theme_dark_icon.png` / `theme_light_icon.png`, bundled as assets) and is
+  swapped on each switch. A busy flag plus a short debounce discard rapid
+  repeated clicks, and `ctk.set_appearance_mode` is only called at startup:
+  switching is a full re-color pass, never an appearance-mode or widget rebuild.
 - Vertical layout (960x600 px) with three horizontal bands: a header, a central
   content area, and a footer (versions, Check/Play/Download buttons, progress bar).
 - Header: **About** is a cyan text link (hand cursor) that opens the About view,
-  sitting next to the **theme slider** in the left corner. The title *RPG Battle
+  sitting next to the **theme toggle icon** in the left corner. The title *RPG Battle
   Launcher* is rendered with the game's own `finalf.ttf` in uppercase (as on the
   game title screen) and keeps a short hairline underline bar in the title color,
   wider than the text; it stays perfectly centered with `place` no matter what
   sits on the left.
-- Frameless window: the OS title bar is removed and the window is draggable by
-  grabbing the header. Custom **minimize** and **close** buttons (drawn with
-  Pillow) sit flush in the top-right corner of the header, and the window corners
-  are slightly rounded on Windows.
+- Frameless window: the native title bar is hidden with a *hidden-titlebar*
+  technique (the window is subclassed and returns `0` for `WM_NCCALCSIZE`) so the
+  caption styles stay intact and the native minimize/restore animation and window
+  shadow keep working, flicker-free. The window remains a normal managed window
+  (taskbar button, Alt-Tab) but looks frameless: the header is draggable by
+  grabbing it and custom **minimize** and **close** buttons (PNG icons) sit flush
+  in the top-right corner of the header. The corners are the native square corners
+  of Windows (rounded-corner regions were discarded: they clip without
+  anti-aliasing and drop the native shadow).
 - Downloads the game from GitHub Releases: fetches the latest release via the
   GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
   downloads it with a progress bar, extracts it, and saves the installed version.
@@ -207,8 +217,7 @@ A separate launcher app that downloads, updates, and launches the game.
   the download starts and disappears when it completes. The progress bar and sprite
   live in a top footer zone that only appears during the download, so the footer
   shrinks back to a single row of versions/buttons afterwards. The Theme button is
-  disabled during a download (to avoid rebuilding the UI and losing the progress
-  view).
+  disabled during a download so a switch cannot interrupt the transfer.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
