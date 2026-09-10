@@ -13,17 +13,6 @@ from updater import fetch_latest_release, update
 from news import get_news, get_image_path
 from settings import load_theme, save_theme
 
-class WINDOWPLACEMENT(ctypes.Structure):
-    """Windows WINDOWPLACEMENT struct (not shipped with ctypes.wintypes)."""
-    _fields_ = [
-        ("length", ctypes.c_uint),          # ::UINT
-        ("flags", ctypes.c_uint),           # ::UINT
-        ("showCmd", ctypes.c_uint),         # ::UINT
-        ("ptMinPosition", wintypes.POINT),  # ::POINT
-        ("ptMaxPosition", wintypes.POINT),  # ::POINT
-        ("rcNormalPosition", wintypes.RECT) # ::RECT
-    ]
-
 class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -68,9 +57,6 @@ class LauncherApp(ctk.CTk):
         self._lbl_no_news = None                          # "No news available." label
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
 
-        # bind the Map event to the _on_window_map method (call _on_window_map when the window is mapped)
-        self.bind("<Map>", self._on_window_map)
-
         # Build UI
         self._build_header()                              # build the top header
         self._build_content()                             # build the content area
@@ -84,12 +70,11 @@ class LauncherApp(ctk.CTk):
 
     def _show_window(self):
         """Show the window once the mainloop has stabilized the layout."""
-        # Show the window frameless: strip the title bar while hidden,
-        # then size the window with the final (frameless) styles
-        self._install_hidden_titlebar()           # strip the native title bar while still hidden
+        # Hide the native title bar via the OS subclass (keeps WS_CAPTION so the native minimize/restore animation and shadow stay intact)
+        self._install_hidden_titlebar()           # hide the native title bar while still hidden
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # re-apply the exact window size
-        self.minsize(0, 0)                        # set min size to (0, 0) wide non-equal min/max: cancel CTk's fixed-size hints so Tk keeps WS_THICKFRAME (clamp comes later)
-        self.maxsize(10000, 10000)                # set max size to (10000, 10000) wide non-equal min/max: cancel CTk's fixed-size hints so Tk keeps WS_THICKFRAME (clamp comes later)
+        self.minsize(0, 0)                        # set min size to (0, 0) wide non-equal min/max: cancel CTk's fixed-size hints (min==max) so Tk keeps WS_THICKFRAME and never forces its own 600x500 size
+        self.maxsize(10000, 10000)                # set max size to (10000, 10000) wide non-equal min/max: same reason as minsize above
         self.update_idletasks()                   # process any pending geometry updates
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
@@ -100,7 +85,6 @@ class LauncherApp(ctk.CTk):
         self.update_idletasks()                   # process any pending geometry updates (now the layout is truly settled)
         self._ensure_client_size()                # make the drawable area exactly the designed size
         self.update_idletasks()                   # process the corrected size
-        self._apply_rounded_corners()             # round the corners once the window is visible
         # resize after the window is fully shown; a short delay ensures the CTkImage.configure takes effect on the freshly created label
         self.after(50, self._resize_carousel_bg)  # resize carousel background to fill its frame (after deiconify and final size)
 
@@ -366,36 +350,6 @@ class LauncherApp(ctk.CTk):
         # resize the window to the correct size
         self.geometry(f"{want_w}x{want_h}")
         return True
-
-    def _apply_rounded_corners(self):
-        """Round the frameless window corners via the Windows region API."""
-        return
-        if sys.platform != "win32":
-            return
-        from ctypes import wintypes
-
-        radius = styles.WINDOW_CORNER_RADIUS
-
-        # Get the OS handle of the window
-        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-
-        # measure the real window rectangle (it can include an invisible frame)
-        outer = wintypes.RECT()
-        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
-        width = outer.right - outer.left
-        height = outer.bottom - outer.top
-
-        # Create a rounded region with the specified radius
-        region = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2)
-
-        # Set the window region to the rounded rectangle
-        ctypes.windll.user32.SetWindowRgn(hwnd, region, True)
-
-    def _on_window_map(self, event=None):
-        """Apply rounded corners immediately when the window is mapped."""
-        if sys.platform != "win32" or self.state() != "normal":
-            return
-        self._apply_rounded_corners()
 
     def _install_hidden_titlebar(self):
         """Installs a subclass to hide the native title bar while keeping the window fully managed by the OS."""
