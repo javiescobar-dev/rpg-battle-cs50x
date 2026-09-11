@@ -161,7 +161,7 @@ A separate launcher app that downloads, updates, and launches the game.
 - **Light/Dark themes**: a theme icon in the header toggles between the two
   palettes by recoloring the existing widgets in place — no UI rebuild, no
   flicker. Each zone gets its own re-color pass (`_recolor_header`,
-  `_recolor_content`, `_recolor_about`, `_recolor_footer`) and the carousel
+  `_recolor_content`, `_recolor_footer`) and the carousel
   slide is re-rendered so its baked-in arrows and dots pick up the new accent.
   The choice is persisted to a local `settings.json`, so the launcher reopens on
   the last selected theme. The button shows the icon of the *other* theme
@@ -171,8 +171,7 @@ A separate launcher app that downloads, updates, and launches the game.
   switching is a full re-color pass, never an appearance-mode or widget rebuild.
 - Vertical layout (960x600 px) with three horizontal bands: a header, a central
   content area, and a footer (versions, Check/Play/Download buttons, progress bar).
-- Header: **About** is a cyan text link (hand cursor) that opens the About view,
-  sitting next to the **theme toggle icon** in the left corner. The title *RPG Battle
+- Header: a **theme toggle icon** sits in the left corner. The title *RPG Battle
   Launcher* is rendered with the game's own `finalf.ttf` in uppercase (as on the
   game title screen) and keeps a short hairline underline bar in the title color,
   wider than the text; it stays perfectly centered with `place` no matter what
@@ -207,9 +206,13 @@ A separate launcher app that downloads, updates, and launches the game.
   bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
   carousel falls back to a flat area filled with the theme background color instead
   of failing.
-- About view: an About / Back view in the content area that swaps with the news
-  carousel. It shows the project name, a short description and credits, with a
-  centered Back button that returns to the carousel and restores the active slide.
+- Footer copyright: the footer carries the game's own credit line
+  *© 2026 Javi Escobar Fernández · CS50x Final Project* (`COPYRIGHT_NOTICE`),
+  centered in the free space between the version labels and the action buttons —
+  the same line the game paints at the bottom of its title screen.
+- Project info: instead of a separate About view, the **first news slide**
+  presents the project (what it is, that it is the CS50x final project, and the
+  author) via the first entry of `news.json`.
 - Download progress hero sprite: while a game download/update runs, a hero sprite
   (randomly chosen character, hero_01..08.png) runs from left to right over the
   progress bar as the download advances. The flee poses are cropped from the hero
