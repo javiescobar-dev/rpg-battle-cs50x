@@ -461,7 +461,7 @@ class LauncherApp(ctk.CTk):
             # draw the news text
             self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
             # draw navigation buttons and dots
-            self._draw_nav(img, width, height, index)
+            img = self._draw_nav(img, width, height, index)
 
         # convert the image to RGB
         return img.convert("RGB")
@@ -574,20 +574,34 @@ class LauncherApp(ctk.CTk):
         """Draw arrow buttons and navigation dots onto the carousel image."""
         n = len(self._news_items)
         if n <= 1:          # nothing to navigate
-            return
+            return img
+
+        # base every drawing and the composite on the real image size,
+        # so they can never desync (winfo can report a stale size during startup)
+        width, height = img.size
 
         # arrows
-        draw = ImageDraw.Draw(img)
         accent = styles.THEME()["accent"]
         inactive = styles.THEME()["text_date"]
         cy = int(height * 0.5)
-
-        # left arrow ‹ (triangle pointing left), centered vertically
         ax = int(width * 0.03)
-        draw.polygon([(ax - 8, cy), (ax + 8, cy - 16), (ax + 8, cy + 16)], fill=accent)
-        # right arrow › (triangle pointing right), centered vertically
         bx = int(width * 0.97)
-        draw.polygon([(bx + 8, cy), (bx - 8, cy - 16), (bx - 8, cy + 16)], fill=accent)
+
+        # supersampled layer: draw everything at 4x, then downscale with LANCZOS so the diagonal chevron lines look smooth (no staircase)
+        S = 4
+        layer = Image.new("RGBA", (width * S, height * S), (0, 0, 0, 0))
+        dl = ImageDraw.Draw(layer)
+
+        # semi-transparent squares behind the arrows, drawn on their own layer so alpha_composite blends them with the photo (same look as the text strip)
+        hs = 18        # 36×36
+        bar_fill = (8, 8, 16, 90)
+        hsb = hs * S
+        dl.rectangle([ax * S - hsb, cy * S - hsb, ax * S + hsb, cy * S + hsb], fill=bar_fill)
+        dl.rectangle([bx * S - hsb, cy * S - hsb, bx * S + hsb, cy * S + hsb], fill=bar_fill)
+
+        # chevrons < > (scaled: offsets and stroke are multiplied by S)
+        dl.line([(ax * S + 8 * S, cy * S - 12 * S), (ax * S - 8 * S, cy * S), (ax * S + 8 * S, cy * S + 12 * S)], fill=accent, width=4 * S, joint="curve")
+        dl.line([(bx * S - 8 * S, cy * S - 12 * S), (bx * S + 8 * S, cy * S), (bx * S - 8 * S, cy * S + 12 * S)], fill=accent, width=4 * S, joint="curve")
 
         # navigation dots (circle per slide), centered at the bottom
         gap = 18
@@ -600,9 +614,16 @@ class LauncherApp(ctk.CTk):
             # set the color of the dot
             color = accent if i == index else inactive
             # draw the dot
-            draw.ellipse([dx - 2, dy - 2, dx + 2, dy + 2], fill=color)
+            dl.ellipse([dx * S - 2 * S, dy * S - 2 * S, dx * S + 2 * S, dy * S + 2 * S], fill=color)
             # append the dot center to the list
             self._dot_centers.append((dx, dy))
+
+        # downscale to the real size (averages pixels -> smooth edges) and composite
+        layer = layer.resize((width, height), Image.Resampling.LANCZOS)
+        # composite the squares over the background
+        img = Image.alpha_composite(img, layer)
+
+        return img
 
     def _on_carousel_click(self, event):
         """Handle a click on the carousel image: prev/next arrows or a specific dot."""
