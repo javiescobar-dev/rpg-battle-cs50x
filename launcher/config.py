@@ -6,6 +6,7 @@
 # Game info
 APP_NAME = "RPG Battle"
 APP_TITLE = "RPG BATTLE LAUNCHER"
+COPYRIGHT_NOTICE = "© 2026 Javi Escobar Fernández · CS50x Final Project"
 
 # GitHub API
 REPO_API_URL = "https://api.github.com/repos/javiescobar-dev/rpg-battle-cs50x/releases/latest"

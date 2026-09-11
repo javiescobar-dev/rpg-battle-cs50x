@@ -7,7 +7,7 @@ import ctypes, time, sys, random, threading, ui_styles as styles, customtkinter 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ctypes import wintypes
-from config import APP_NAME, APP_TITLE
+from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
 from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
 from updater import fetch_latest_release, update
 from news import get_news, get_image_path
@@ -734,6 +734,10 @@ class LauncherApp(ctk.CTk):
         self._lbl_latest = ctk.CTkLabel(self._row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_latest.pack(side="left", padx=(20, 0))
 
+        # copyright line, centered in the free space between labels and buttons
+        self._lbl_copyright = ctk.CTkLabel(self._row, text=COPYRIGHT_NOTICE, font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        self._lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
+
         # Check button
         self._btn_check = ctk.CTkButton(
             self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
@@ -851,6 +855,8 @@ class LauncherApp(ctk.CTk):
         self._lbl_installed.configure(text_color=theme["text_body"])
         # set the latest release label text color
         self._lbl_latest.configure(text_color=theme["text_body"])
+        # set the copyright label text color
+        self._lbl_copyright.configure(text_color=theme["text_body"])
         # set the check button color
         self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"], border_color=theme["button_border"])
         # set the play button color
