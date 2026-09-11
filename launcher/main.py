@@ -260,8 +260,8 @@ class LauncherApp(ctk.CTk):
         icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
         icon_img = Image.open(theme_icon_path(icon_name))
         icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
-        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=self._on_theme_toggle)
-        self._btn_theme.place(x=4, y=6, anchor="nw")   # top-left, icon centers aligned with the window control buttons
+        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=self._on_theme_toggle)
+        self._btn_theme.place(x=6, y=6, anchor="nw")   # top-left, icon centers aligned with the window control buttons
 
         # Window controls (frameless): close and minimize, flush in the top-right corner
         self._win_btns = []  # store window control buttons for theme swap (recoloring)
