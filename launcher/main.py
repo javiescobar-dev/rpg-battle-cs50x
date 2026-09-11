@@ -797,7 +797,7 @@ class LauncherApp(ctk.CTk):
 
         # Check button
         self._btn_check = ctk.CTkButton(
-            self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=0, corner_radius=6,
+            self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
             font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
@@ -806,7 +806,7 @@ class LauncherApp(ctk.CTk):
 
         # Play button
         self._btn_play = ctk.CTkButton(
-            self._row, text="Play", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=0, corner_radius=6,
+            self._row, text="Play", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["play_button_border"],
             font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"],
             hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
@@ -815,7 +815,7 @@ class LauncherApp(ctk.CTk):
 
         # Download / Update button
         self._btn_download = ctk.CTkButton(
-            self._row, text="Download", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=6, border_color=styles.THEME()["accent"],
+            self._row, text="Download", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
             font=styles.FONT_BUTTON, fg_color=styles.THEME()["panel"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["accent"],
             command=self._on_download_click
@@ -932,11 +932,11 @@ class LauncherApp(ctk.CTk):
         # set the latest release label text color
         self._lbl_latest.configure(text_color=theme["text_body"])
         # set the check button color
-        self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"])
+        self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"], border_color=theme["button_border"])
         # set the play button color
-        self._btn_play.configure(fg_color=theme["play_button"], hover_color=theme["play_button_hover"], text_color=theme["button_text"])
+        self._btn_play.configure(fg_color=theme["play_button"], hover_color=theme["play_button_hover"], text_color=theme["button_text"], border_color=theme["play_button_border"])
         # set the download button color
-        self._btn_download.configure(border_color=theme["accent"], fg_color=theme["panel"], hover_color=theme["hover"], text_color=theme["accent"])
+        self._btn_download.configure(border_color=theme["button_border"], fg_color=theme["panel"], hover_color=theme["hover"], text_color=theme["accent"])
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
