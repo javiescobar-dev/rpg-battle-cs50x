@@ -72,7 +72,7 @@ HEADER_HEIGHT     = 65
 FOOTER_HEIGHT     = 100
 FOOTER_TOP_HEIGHT = 58
 
-TITLE_FONT_SIZE   = 45
+TITLE_FONT_SIZE   = 38
 TITLE_BAR_H       = 1    # bar thickness
 TITLE_BAR_GAP     = 2    # gap between text and bar
 TITLE_BAR_EXTRA_W = 15   # extra bar width (7.5 on each side)
