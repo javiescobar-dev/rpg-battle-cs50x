@@ -588,7 +588,8 @@ class LauncherApp(ctk.CTk):
         bx = int(width * 0.97)
 
         # supersampled layer: draw everything at 4x, then downscale with LANCZOS so the diagonal chevron lines look smooth (no staircase)
-        S = 4
+        curl = 5        # curve
+        S = 4           # supersampling
         layer = Image.new("RGBA", (width * S, height * S), (0, 0, 0, 0))
         dl = ImageDraw.Draw(layer)
 
@@ -599,9 +600,19 @@ class LauncherApp(ctk.CTk):
         dl.rectangle([ax * S - hsb, cy * S - hsb, ax * S + hsb, cy * S + hsb], fill=bar_fill)
         dl.rectangle([bx * S - hsb, cy * S - hsb, bx * S + hsb, cy * S + hsb], fill=bar_fill)
 
-        # chevrons < > (scaled: offsets and stroke are multiplied by S)
-        dl.line([(ax * S + 8 * S, cy * S - 12 * S), (ax * S - 8 * S, cy * S), (ax * S + 8 * S, cy * S + 12 * S)], fill=accent, width=4 * S, joint="curve")
-        dl.line([(bx * S - 8 * S, cy * S - 12 * S), (bx * S + 8 * S, cy * S), (bx * S - 8 * S, cy * S + 12 * S)], fill=accent, width=4 * S, joint="curve")
+        # curved chevrons via font rasterizer (real anti-aliased curves)
+        nav_font = ImageFont.load_default(size=56 * S)
+
+        # optical correction: guillemets look slightly high and shifted toward the
+        # carousel center; nudge them down and outward (typography, not bounding box)
+        off_y = 2 * S          # px finales que bajamos
+        off_x = 2 * S          # px finales que sacamos hacia el borde
+
+        for gx, glyph in ((ax * S, "‹"), (bx * S, "›")):
+            left, top, right, bottom = nav_font.getbbox(glyph)
+            side = off_x if glyph == "›" else -off_x        # izquierda hacia fuera = -x, derecha = +x
+            dl.text((gx - (left + right) / 2 + side, cy * S - (top + bottom) / 2 + off_y),
+                    glyph, font=nav_font, fill=accent)
 
         # navigation dots (circle per slide), centered at the bottom
         gap = 18
