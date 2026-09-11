@@ -3,11 +3,12 @@
 
 """Main launcher window and UI logic."""
 
-import random, threading, ui_styles as styles, customtkinter as ctk
+import ctypes, time, sys, random, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from config import APP_NAME
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path
+from ctypes import wintypes
+from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
 from updater import fetch_latest_release, update
 from news import get_news, get_image_path
 from settings import load_theme, save_theme
@@ -31,9 +32,8 @@ class LauncherApp(ctk.CTk):
         ctk.set_widget_scaling(1.0)                       # set widget scaling
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
-        self.resizable(False, False)                      # set window to not be resizable
         self.configure(fg_color=styles.THEME()["bg"])     # set window background color
-
+        self.configure(bg=styles.THEME()["bg"])
         # internal state
         self._latest_release = None                       # stores the latest release from server
         self._news_items = []                             # stores the news items once loaded
@@ -41,14 +41,19 @@ class LauncherApp(ctk.CTk):
         self._carousel_bg = None                          # stores the carousel background image
         self._carousel_moving = False                     # stores whether the carousel is moving
         self._carousel_anim_timer = None                  # stores the carousel animation timer ID
-        self._view = "news"                               # which view is active: "news" or "about"
         self._hero_sprite = None                          # stores the hero sprite for the download animation
         self._hero_frames = []                            # stores the hero animation frames
         self._hero_frame = 0                              # stores the current hero animation frame index
         self._hero_timer = None                           # stores the hero animation timer ID
         self._theme_busy = False                          # stores whether the theme is changing
+        self._last_theme_toggle = 0.0                     # stores the time of the last theme toggle (used to prevent rapid toggling)
         self._news_images = {}                            # stores the loaded news images by image field
         self._images_loading = set()                      # stores the news image fields currently downloading
+        self._drag_x = 0                                  # stores the grab offset of the header drag (x)
+        self._drag_y = 0                                  # stores the grab offset of the header drag (y)
+        self._win_btns = []                               # window control buttons (close/minimize)
+        self._lbl_no_news = None                          # "No news available." label
+        self._wndproc_cb = None                           # stores the subclass callback while the window is alive
 
         # Build UI
         self._build_header()                              # build the top header
@@ -63,12 +68,21 @@ class LauncherApp(ctk.CTk):
 
     def _show_window(self):
         """Show the window once the mainloop has stabilized the layout."""
-        # Apply the final geometry and show the window without flickering
+        # Hide the native title bar via the OS subclass (keeps WS_CAPTION so the native minimize/restore animation and shadow stay intact)
+        self._install_hidden_titlebar()           # hide the native title bar while still hidden
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # re-apply the exact window size
+        self.minsize(0, 0)                        # set min size to (0, 0) wide non-equal min/max: cancel CTk's fixed-size hints (min==max) so Tk keeps WS_THICKFRAME and never forces its own 600x500 size
+        self.maxsize(10000, 10000)                # set max size to (10000, 10000) wide non-equal min/max: same reason as minsize above
         self.update_idletasks()                   # process any pending geometry updates
         self.deiconify()                          # show the window
         self.lift()                               # bring the window to the front
+        self.focus_force()                        # force the window to be focused
+        self.after(80, self.focus_force)
+        self.attributes("-topmost", True)
+        self.after(150, lambda: self.attributes("-topmost", False))
         self.update_idletasks()                   # process any pending geometry updates (now the layout is truly settled)
+        self._ensure_client_size()                # make the drawable area exactly the designed size
+        self.update_idletasks()                   # process the corrected size
         # resize after the window is fully shown; a short delay ensures the CTkImage.configure takes effect on the freshly created label
         self.after(50, self._resize_carousel_bg)  # resize carousel background to fill its frame (after deiconify and final size)
 
@@ -98,7 +112,8 @@ class LauncherApp(ctk.CTk):
 
         # if no news available, show a message (in the carousel area)
         if not items:
-            ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"]).pack(pady=40)
+            self._lbl_no_news = ctk.CTkLabel(self._content_frame, text="No news available.", font=styles.FONT_BODY, text_color=styles.THEME()["text_date"])
+            self._lbl_no_news.pack(pady=40)
             return
 
         # show the first slide
@@ -235,33 +250,152 @@ class LauncherApp(ctk.CTk):
 
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
+
         # Top bar frame (full width, fixed height)
         self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
-        # Theme button
-        self._btn_theme = ctk.CTkButton(
-            self._header, text="Theme", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=self._on_theme_toggle
-        )
-        self._btn_theme.pack(side="left", padx=12)
+        # Theme slider
+        icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
+        icon_img = Image.open(theme_icon_path(icon_name))
+        icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
+        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=self._on_theme_toggle)
+        self._btn_theme.place(x=4, y=6, anchor="nw")   # top-left, icon centers aligned with the window control buttons
+
+        # Window controls (frameless): close and minimize, flush in the top-right corner
+        self._win_btns = []  # store window control buttons for theme swap (recoloring)
+        gap = 8
+        for i, (name, cmd) in enumerate(((styles.ICONS["close"], self._on_close_click), (styles.ICONS["minimize"], self._on_minimize_click))):
+            icon_img = Image.open(theme_icon_path(name))
+            icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
+            btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=cmd)
+            btn.place(relx=1.0, anchor="ne", x=-(6 + i * (28 + gap)), y=4)
+            self._win_btns.append(btn)
 
         # Centered title
-        ctk.CTkLabel(self._header, text="RPG Battle Launcher", font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(side="left", fill="x", expand=True)
+        self._lbl_title = ctk.CTkLabel(self._header, text="", image=self._render_title_image())
+        self._lbl_title.place(relx=0.5, rely=0.5, anchor="center")
 
-        # About button
-        ctk.CTkButton(
-            self._header, text="About", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=self._show_about
-        ).pack(side="right", padx=12)
+        # Header drag (frameless window): grab on press, move while dragging
+        self._header.bind("<Button-1>", self._on_drag_start)
+        self._header.bind("<B1-Motion>", self._on_drag_move)
+
+    def _on_minimize_click(self):
+        """Minimize natively (keeps the OS transition)."""
+        self.iconify()
+
+    def _on_close_click(self):
+        """Close the application."""
+        self.destroy()
+
+    def _on_drag_start(self, event):
+        """Record the grab offset between the mouse and the window origin."""
+        self._drag_x = event.x_root - self.winfo_x()
+        self._drag_y = event.y_root - self.winfo_y()
+
+    def _on_drag_move(self, event):
+        """Move the window keeping the grab offset fixed under the mouse."""
+        x = event.x_root - self._drag_x
+        y = event.y_root - self._drag_y
+        if sys.platform == "win32":
+            # position-only move: never touch the size and keep the window active
+            SWP_NOSIZE, SWP_NOZORDER, SWP_NOACTIVATE = 0x0001, 0x0004, 0x0010
+
+            # Get the OS handle of the window
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+            # Move the window
+            ctypes.windll.user32.SetWindowPos(hwnd, 0, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+        else:
+            self.geometry(f"+{x}+{y}")
+
+    def _ensure_client_size(self) -> bool:
+        """Force the drawable (client) area to the exact designed size.
+        A managed window can keep a few invisible frame pixels that shrink the client area, trimming the right edge of the UI."""
+        if sys.platform != "win32":
+            return False
+
+        # Get the OS handle of the window
+        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+        # measure the window rectangle and the drawn (client) rectangle
+        client, outer = wintypes.RECT(), wintypes.RECT()
+        ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(client))
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(outer))
+
+        # actual size of the frame
+        cur_w = outer.right - outer.left
+        cur_h = outer.bottom - outer.top
+
+        # invisible frame leftover = total window rect minus the drawable rect
+        dx = cur_w - (client.right - client.left)
+        dy = cur_h - (client.bottom - client.top)
+
+        # size that the frame should have to make the client exact
+        want_w = styles.WINDOW_WIDTH + dx
+        want_h = styles.WINDOW_HEIGHT + dy
+
+        # if it is already correct, do nothing (ends the event loop)
+        if cur_w == want_w and cur_h == want_h:
+            return False
+
+        # resize the window to the correct size
+        self.geometry(f"{want_w}x{want_h}")
+        return True
+
+    def _install_hidden_titlebar(self):
+        """Installs a subclass to hide the native title bar while keeping the window fully managed by the OS."""
+        if sys.platform != "win32":
+            return
+
+        # Get the OS handle of the window
+        hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+        # constants
+        WM_NCCALCSIZE = 0x0083                  # message: "measure the non-client area"
+        comctl = ctypes.WinDLL("comctl32")      # ComCtl32 provides the subclass functions
+
+        # callback definition
+        SUBCLASSPROC = ctypes.WINFUNCTYPE(
+            ctypes.c_ssize_t,                   # LRESULT
+            wintypes.HWND,                      # hwnd
+            wintypes.UINT,                      # uMsg
+            wintypes.WPARAM,                    # wParam
+            wintypes.LPARAM,                    # lParam
+            ctypes.c_size_t,                    # uIdSubclass
+            ctypes.c_size_t                     # dwRefData
+        )
+
+        # comctl32 function signatures
+        comctl.SetWindowSubclass.argtypes = [wintypes.HWND, SUBCLASSPROC, ctypes.c_size_t, ctypes.c_size_t]
+        comctl.SetWindowSubclass.restype  = ctypes.c_bool
+        comctl.DefSubclassProc.argtypes  = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM, ctypes.c_size_t, ctypes.c_size_t]
+        comctl.DefSubclassProc.restype   = ctypes.c_ssize_t
+
+        # callback to process messages
+        @SUBCLASSPROC
+        def _wnd_proc(hwnd, msg, wparam, lparam, u_id, ref_data):
+            # If the message is WM_NCCALCSIZE and the wParam is true, then the window is being resized
+            if msg == WM_NCCALCSIZE and wparam:
+                return 0
+            # Otherwise, call the default subclass procedure
+            return comctl.DefSubclassProc(hwnd, msg, wparam, lparam, u_id, ref_data)
+
+        # store callback and register it to the window
+        self._wndproc_cb = _wnd_proc
+        comctl.SetWindowSubclass(hwnd, self._wndproc_cb, 1, 0)
+
+        # ask Windows to re-apply the changed window styles
+        SWP_NOSIZE       = 0x0001                  # don't change the size
+        SWP_NOMOVE       = 0x0002                  # don't move the window
+        SWP_NOZORDER     = 0x0004                  # don't change the z-order
+        SWP_FRAMECHANGED = 0x0020                  # re-read the just-applied window styles
+        ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
 
     def _build_content(self):
-        """Central area for the news carousel (or About view)."""
+        """Central area for the news carousel."""
+
         # background frame of the content area
         self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
         self._content_frame.pack(fill="both", expand=True)
@@ -270,26 +404,6 @@ class LauncherApp(ctk.CTk):
         self._build_carousel()
 
         # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
-
-    def _destroy_content(self):
-        """Destroy the widgets inside the content area."""
-        # destroy the widgets inside the content area (children widgets)
-        for child in self._content_frame.winfo_children():
-            child.destroy()
-
-        # reset the carousel background after destroying the carousel
-        self._carousel_bg = None
-
-        # reset the carousel also
-        self._carousel = None
-
-        # reset the animation timer
-        if self._carousel_anim_timer:
-            self.after_cancel(self._carousel_anim_timer)
-            self._carousel_anim_timer = None
-
-        # reset the carousel moving state
-        self._carousel_moving = False
 
     def _build_carousel(self):
         """Area to show news."""
@@ -300,10 +414,15 @@ class LauncherApp(ctk.CTk):
 
     def _render_slide(self, index: int, include_ui: bool = True) -> Image:
         """Render the carousel slide with the given index."""
-        self._carousel.update_idletasks()                 # update the carousel frame to get its actual size
-        width = self._carousel.winfo_width()              # carousel width in pixels
-        height = self._carousel.winfo_height()            # carousel height in pixels
-        size = (max(width, 10), max(height, 10))          # make sure the size is at least 10x10
+        # update the carousel frame to get its actual size (only if it is not already done)
+        if self._carousel.winfo_width() < 10 or self._carousel.winfo_height() < 10:
+            self._carousel.update_idletasks()
+        # carousel width in pixels
+        width = self._carousel.winfo_width()
+        # carousel height in pixels
+        height = self._carousel.winfo_height()
+        # make sure the size is at least 10x10
+        size = (max(width, 10), max(height, 10))
 
         # news photo if it is already loaded
         item = self._news_items[index] if 0 <= index < len(self._news_items) else None
@@ -342,7 +461,7 @@ class LauncherApp(ctk.CTk):
             # draw the news text
             self._draw_news_text(img, item.get("title", ""), item.get("body", ""), width, height)
             # draw navigation buttons and dots
-            self._draw_nav(img, width, height, index)
+            img = self._draw_nav(img, width, height, index)
 
         # convert the image to RGB
         return img.convert("RGB")
@@ -404,7 +523,7 @@ class LauncherApp(ctk.CTk):
         if self._carousel_moving and self._anim_target == index:
             self._carousel_anim_final_img = self._render_slide(index, True)
         # if it is the active slide, re-render it
-        if (not self._carousel_moving and self._view == "news" and self._carousel is not None and self._carousel_index == index):
+        if (not self._carousel_moving and self._carousel is not None and self._carousel_index == index):
             self._resize_carousel_bg()
 
     def _draw_news_text(self, img, title, body, width, height):
@@ -455,20 +574,45 @@ class LauncherApp(ctk.CTk):
         """Draw arrow buttons and navigation dots onto the carousel image."""
         n = len(self._news_items)
         if n <= 1:          # nothing to navigate
-            return
+            return img
+
+        # base every drawing and the composite on the real image size,
+        # so they can never desync (winfo can report a stale size during startup)
+        width, height = img.size
 
         # arrows
-        draw = ImageDraw.Draw(img)
         accent = styles.THEME()["accent"]
         inactive = styles.THEME()["text_date"]
         cy = int(height * 0.5)
-
-        # left arrow ‹ (triangle pointing left), centered vertically
         ax = int(width * 0.03)
-        draw.polygon([(ax - 8, cy), (ax + 8, cy - 16), (ax + 8, cy + 16)], fill=accent)
-        # right arrow › (triangle pointing right), centered vertically
         bx = int(width * 0.97)
-        draw.polygon([(bx + 8, cy), (bx - 8, cy - 16), (bx - 8, cy + 16)], fill=accent)
+
+        # supersampled layer: draw everything at 4x, then downscale with LANCZOS so the diagonal chevron lines look smooth (no staircase)
+        curl = 5        # curve
+        S = 4           # supersampling
+        layer = Image.new("RGBA", (width * S, height * S), (0, 0, 0, 0))
+        dl = ImageDraw.Draw(layer)
+
+        # semi-transparent squares behind the arrows, drawn on their own layer so alpha_composite blends them with the photo (same look as the text strip)
+        hs = 18        # 36×36
+        bar_fill = (8, 8, 16, 90)
+        hsb = hs * S
+        dl.rectangle([ax * S - hsb, cy * S - hsb, ax * S + hsb, cy * S + hsb], fill=bar_fill)
+        dl.rectangle([bx * S - hsb, cy * S - hsb, bx * S + hsb, cy * S + hsb], fill=bar_fill)
+
+        # curved chevrons via font rasterizer (real anti-aliased curves)
+        nav_font = ImageFont.load_default(size=56 * S)
+
+        # optical correction: guillemets look slightly high and shifted toward the
+        # carousel center; nudge them down and outward (typography, not bounding box)
+        off_y = 2 * S          # px finales que bajamos
+        off_x = 2 * S          # px finales que sacamos hacia el borde
+
+        for gx, glyph in ((ax * S, "‹"), (bx * S, "›")):
+            left, top, right, bottom = nav_font.getbbox(glyph)
+            side = off_x if glyph == "›" else -off_x        # izquierda hacia fuera = -x, derecha = +x
+            dl.text((gx - (left + right) / 2 + side, cy * S - (top + bottom) / 2 + off_y),
+                    glyph, font=nav_font, fill=accent)
 
         # navigation dots (circle per slide), centered at the bottom
         gap = 18
@@ -481,9 +625,16 @@ class LauncherApp(ctk.CTk):
             # set the color of the dot
             color = accent if i == index else inactive
             # draw the dot
-            draw.ellipse([dx - 2, dy - 2, dx + 2, dy + 2], fill=color)
+            dl.ellipse([dx * S - 2 * S, dy * S - 2 * S, dx * S + 2 * S, dy * S + 2 * S], fill=color)
             # append the dot center to the list
             self._dot_centers.append((dx, dy))
+
+        # downscale to the real size (averages pixels -> smooth edges) and composite
+        layer = layer.resize((width, height), Image.Resampling.LANCZOS)
+        # composite the squares over the background
+        img = Image.alpha_composite(img, layer)
+
+        return img
 
     def _on_carousel_click(self, event):
         """Handle a click on the carousel image: prev/next arrows or a specific dot."""
@@ -515,47 +666,55 @@ class LauncherApp(ctk.CTk):
             direction = "right" if best > self._carousel_index else "left"
             self._animate_to(best, direction)
 
-    def _show_about(self):
-        """Switch the content area to the About view."""
-        self._view = "about"
-        self._destroy_content()
-        self._build_about()
+    def _render_title_image(self):
+        """Render the header title with the game font and return a CTkImage."""
+        font = None
+        # try to load the title font (finalf.ttf)
+        try:
+            font = ImageFont.truetype(str(title_font_path()), styles.TITLE_FONT_SIZE)
+        except Exception:
+            # if the title font is not found, try to load the system bold font
+            sys_font = font_path(True)
+            if sys_font:
+                font = ImageFont.truetype(str(sys_font), styles.TITLE_FONT_SIZE)
+        # if the system bold font is not found, use the default font
+        if font is None:
+            font = ImageFont.load_default(size=styles.TITLE_FONT_SIZE)
 
-    def _show_news(self):
-        """Switch the content area back to the news carousel."""
-        self._view = "news"
-        self._destroy_content()
-        self._build_carousel()
-        # restore the active slide (self._carousel_index keeps it) with a delay of 0 ms to avoid that the carousel is not fully built
-        if self._news_items:
-            self.after(0, lambda: self._populate_news(self._news_items))
+        # define text to draw
+        text = APP_TITLE
+        # create a dummy image and draw the text on it
+        draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        bbox = draw.textbbox((0, 0), text, font=font)
+        # calculate the size of the text
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-    def _build_about(self):
-        """Build the About view."""
-        # destroy the content frame
-        self._destroy_content()
-        # get content frame to build the About view inside
-        frame = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
-        frame.pack(fill="both", expand=True)  # fill the content frame and expand to fill the available space
-        # title
-        ctk.CTkLabel(frame, text=APP_NAME, font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"]).pack(pady=(40, 8))
-        # body
-        ctk.CTkLabel(frame, text="RPG Battle is a turn-based battle game built with Pygame and a desktop launcher built with CustomTkinter. It is the final project of CS50x.",
-                                    font=styles.FONT_BODY, text_color=styles.THEME()["text_body"], wraplength=600, justify="center").pack(pady=8)
-        # subtitle: developed by
-        ctk.CTkLabel(frame, text="Developed by Javi Escobar Fernández", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
-        # subtitle: CS50x Final Project
-        ctk.CTkLabel(frame, text="CS50x Final Project", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"]).pack(pady=8)
-        # back button
-        ctk.CTkButton(
-            frame, text="Back", width=70, height=28,
-            font=styles.FONT_BODY, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=self._show_news
-        ).pack(pady=16)
+        # bar: wider than the text, centered with it
+        margin = 8
+        # calculate the width of the bar
+        bar_w = w + styles.TITLE_BAR_EXTRA_W
+        # calculate the width of the canvas
+        canvas_w = bar_w + 2 * margin
+        # calculate the height of the canvas
+        canvas_h = margin + h + styles.TITLE_BAR_GAP + styles.TITLE_BAR_H + margin
+
+        # create the title image
+        img = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        # text centered over the bar (offset bbox by -bbox to place it exactly)
+        draw.text((margin + (bar_w - w) // 2 - bbox[0], margin - bbox[1]),
+                  text, font=font, fill=styles.THEME()["text_title"])
+        # underline bar below the text, same color as the title
+        bar_y = margin + h + styles.TITLE_BAR_GAP
+        draw.rounded_rectangle(
+            [margin, bar_y, margin + bar_w, bar_y + styles.TITLE_BAR_H],
+            radius=styles.TITLE_BAR_H / 2, fill=styles.THEME()["text_title"])
+        # return the image as a CTkImage
+        return ctk.CTkImage(light_image=img, dark_image=img, size=(canvas_w, canvas_h))
 
     def _build_footer(self):
         """Build the footer, the bottom bar of the launcher."""
+
         # Footer frame
         self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
         self._footer.pack(side="bottom", fill="x")
@@ -587,10 +746,14 @@ class LauncherApp(ctk.CTk):
         self._lbl_latest = ctk.CTkLabel(self._row, text="Latest: ...", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_latest.pack(side="left", padx=(20, 0))
 
+        # copyright line, centered in the free space between labels and buttons
+        self._lbl_copyright = ctk.CTkLabel(self._row, text=COPYRIGHT_NOTICE, font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
+        self._lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
+
         # Check button
         self._btn_check = ctk.CTkButton(
-            self._row, text="Check", width=70, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
+            self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"],
             hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
         )
@@ -598,95 +761,120 @@ class LauncherApp(ctk.CTk):
 
         # Play button
         self._btn_play = ctk.CTkButton(
-            self._row, text="Play", width=90, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            self._row, text="Play", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["play_button_border"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"],
+            hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
         )
         self._btn_play.pack(side="right", padx=(8, 0))
 
         # Download / Update button
         self._btn_download = ctk.CTkButton(
-            self._row, text="Download", width=90, height=28,
-            font=styles.FONT_DATE, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            self._row, text="Download", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["panel"],
+            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["accent"],
             command=self._on_download_click
         )
         self._btn_download.pack(side="right")
+        self._btn_download.bind("<Enter>", lambda event: self._btn_download.configure(text_color=styles.THEME()["button_text"],fg_color=styles.THEME()["accent"]))
+        self._btn_download.bind("<Leave>", lambda event: self._btn_download.configure(text_color=styles.THEME()["accent"],fg_color=styles.THEME()["panel"]))
 
         # Initial state of the Play button (disabled if the game is not installed)
         if not is_game_installed():
             self._btn_play.configure(state="disabled")
 
-    def _destroy_ui(self):
-        """Destroy the three main bands so they can be rebuilt with the new theme."""
-        # iterate over the main ui widgets and destroy them if they exist
-        for name in ("_header", "_content_frame", "_footer"):
-            widget = getattr(self, name, None)
-            if widget is not None:
-                widget.destroy()
-
-        # set the carousel background to None to force it to be rebuilt
-        self._carousel_bg = None
-
-        # cancel any pending carousel animations
-        if self._carousel_anim_timer:
-            self.after_cancel(self._carousel_anim_timer)
-            self._carousel_anim_timer = None
-
-        # stop carousel movement
-        self._carousel_moving = False
-
     def _on_theme_toggle(self):
-        """Switch Light/Dark theme and rebuild the UI."""
-
+        """Switch Light/Dark theme by recoloring the existing widgets in place."""
         # protect swicht theme if button theme is busy
         if self._theme_busy:
             return
 
+        # small delay to prevent spam
+        now = time.monotonic()
+        if now - self._last_theme_toggle < 0.8:
+            return
+        self._last_theme_toggle = now
+
         # set flag to prevent concurrent theme switch
         self._theme_busy = True
+        try:
+            # switch theme
+            styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
 
-        # switch theme
-        styles.CURRENT_THEME = "Dark" if styles.CURRENT_THEME == "Light" else "Light"
+            # persist the theme for next launch
+            save_theme(styles.CURRENT_THEME)
 
-        # keep ctk native mode in sync
-        ctk.set_appearance_mode(styles.CURRENT_THEME)
+            # apply the new theme
+            self._apply_theme()
+        finally:
+            # set the flag to False so that the theme can be switched again
+            self._theme_busy = False
 
-        # persist the theme for next launch
-        save_theme(styles.CURRENT_THEME)
+    def _apply_theme(self):
+        """Re-color the whole UI in place with the new theme (no rebuild, no flicker)."""
+        theme = styles.THEME()
+        # apply theme to header
+        self._recolor_header()
+        # apply theme to content
+        self._recolor_content()
+        # apply theme to footer
+        self._recolor_footer()
+        # set the background color
+        self.configure(fg_color=theme["bg"])
+        self.configure(bg=theme["bg"])
+        # update the UI
+        self.update_idletasks()
 
-        # set theme background color
-        self.configure(fg_color=styles.THEME()["bg"])
+    def _recolor_header(self):
+        """Re-color the header in place with the new theme."""
+        theme = styles.THEME()
+        # set the header background color
+        self._header.configure(fg_color=theme["panel"])
+        # set the window buttons hover color
+        for btn in self._win_btns:
+            btn.configure(hover_color=theme["hover_header"])
+        # theme button shows the icon of the OTHER theme
+        icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
+        icon = Image.open(theme_icon_path(icon_name))
+        icon = ctk.CTkImage(light_image=icon, dark_image=icon, size=(24, 24))
+        self._btn_theme.configure(image=icon, hover_color=theme["hover_header"])
+        # title re-rendered with the new text color
+        self._lbl_title.configure(image=self._render_title_image())
 
-        # set focus to the window
-        self.focus()
+    def _recolor_content(self):
+        """Re-color the content in place with the new theme."""
+        theme = styles.THEME()
+        # set the content frame background color
+        self._content_frame.configure(fg_color=theme["bg"])
+        # set the carousel background color
+        if self._carousel is not None:
+            self._carousel.configure(fg_color=theme["panel"])
+        # re-render the current slide with the new theme
+        if self._news_items:
+            self._resize_carousel_bg()
+        # set the no news label text color
+        elif self._lbl_no_news is not None and self._lbl_no_news.winfo_exists():
+            self._lbl_no_news.configure(text_color=theme["text_date"])
 
-        # destroy the ui
-        self._destroy_ui()
-
-        # rebuild the ui
-        self._build_header()
-        self._build_content()
-        self._build_footer()
-
-        # rebuild the active view (news carousel or about)
-        if self._view == "about":
-            self._build_about()
-        elif self._news_items:
-            self.after(0, lambda: self._populate_news(self._news_items))
-
-        # refresh the state of the ui
-        self._refresh_state()
-
-        # set the flag to False so that the theme can be switched again
-        self._theme_busy = False
-
-    def _refresh_state(self):
-        """Re-apply stored state to the (rebuilt) widgets."""
-        # set the latest release version
-        tag = self._latest_release.get("tag_name", "?") if self._latest_release else None
-        self._lbl_latest.configure(text=f"Latest: {tag}" if tag else "Latest: —")
+    def _recolor_footer(self):
+        """Re-color the footer in place with the new theme."""
+        theme = styles.THEME()
+        # set the footer background color
+        self._footer.configure(fg_color=theme["panel"])
+        # set the progress bar background color
+        self._progress.configure(fg_color=theme["border"], progress_color=theme["accent"])
+        # set the installed label text color
+        self._lbl_installed.configure(text_color=theme["text_body"])
+        # set the latest release label text color
+        self._lbl_latest.configure(text_color=theme["text_body"])
+        # set the copyright label text color
+        self._lbl_copyright.configure(text_color=theme["text_body"])
+        # set the check button color
+        self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"], border_color=theme["button_border"])
+        # set the play button color
+        self._btn_play.configure(fg_color=theme["play_button"], hover_color=theme["play_button_hover"], text_color=theme["button_text"], border_color=theme["play_button_border"])
+        # set the download button color
+        self._btn_download.configure(border_color=theme["button_border"], fg_color=theme["panel"], hover_color=theme["hover"], text_color=theme["accent"])
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
@@ -741,6 +929,9 @@ class LauncherApp(ctk.CTk):
         self._top_zone.configure(height=styles.FOOTER_TOP_HEIGHT)
         self._progress.set(0)
         self._progress.pack(side="bottom", fill="x", padx=16, pady=(12, 4))
+
+        # clear hero frames if they exist
+        self._hero_frames = []
 
         # select a random frame of the hero sprites
         frame = random.randint(1, 8)

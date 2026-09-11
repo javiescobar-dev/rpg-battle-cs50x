@@ -8,12 +8,17 @@ CURRENT_THEME = "Light"
 
 # Light theme: blue game colors on a pale background
 LIGHT = {
-    "bg": "#F4F8FB",
-    "panel": "#E4EEF6",
+    "bg": "#FFFFFF",
+    "panel": "#FFFFFF",
     "border": "#C3D4E3",
     "accent": "#50C8F0",
     "hover": "#38A8D6",
+    "hover_header": "#EDF5FF",
+    "play_button": "#91D04B",
+    "play_button_hover": "#85BE46",
+    "play_button_border": "#478F04",
     "button_text": "#FFFFFF",
+    "button_border": "#0B77BA",
     "text_title": "#14222E",
     "text_body": "#3A4A5A",
     "text_date": "#7C8EA0",
@@ -22,12 +27,17 @@ LIGHT = {
 
 # Dark theme: dark blue background, neon-like cyan accents
 DARK = {
-    "bg": "#14141E",
-    "panel": "#1E1E2E",
+    "bg": "#222222",
+    "panel": "#222222",
     "border": "#2A3A55",
     "accent": "#E6D150",
     "hover": "#E6C038",
+    "hover_header": "#2A3A55",
+    "play_button": "#91D04B",
+    "play_button_hover": "#85BE46",
+    "play_button_border": "#000000",
     "button_text": "#10141C",
+    "button_border": "#000000",
     "text_title": "#E6E6E6",
     "text_body": "#C0C8D0",
     "text_date": "#F0A050",
@@ -42,15 +52,31 @@ def THEME() -> dict:
     return THEMES[CURRENT_THEME]
 
 
+ICONS = {
+    "theme_light": "theme_light_icon",
+    "theme_dark": "theme_dark_icon",
+    "minimize": "minimize_icon",
+    "close": "close_window_icon"
+}
+
 # Fonts (theme-independent)
-FONT_TITLE = ("Georgia", 18, "bold")
-FONT_BODY  = ("Arial", 13)
-FONT_DATE  = ("Arial", 11)
+FONT_TITLE  = ("Georgia", 18, "bold")
+FONT_BODY   = ("Arial", 13)
+FONT_DATE   = ("Arial", 11)
+FONT_BOLD   = ("Arial", 12, "bold")
+FONT_BUTTON = ("Arial", 14)
 
 # Dimensions
 WINDOW_WIDTH  = 960
 WINDOW_HEIGHT = 600
 
-HEADER_HEIGHT = 50
-FOOTER_HEIGHT = 100
+HEADER_HEIGHT     = 65
+FOOTER_HEIGHT     = 100
 FOOTER_TOP_HEIGHT = 58
+
+TITLE_FONT_SIZE   = 38
+TITLE_BAR_H       = 1    # bar thickness
+TITLE_BAR_GAP     = 2    # gap between text and bar
+TITLE_BAR_EXTRA_W = 15   # extra bar width (7.5 on each side)
+
+BUTTON_HEIGHT = 36

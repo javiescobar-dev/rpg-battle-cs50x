@@ -115,6 +115,16 @@ def font_path(bold: bool) -> Path | None:
     return None
 
 
+def title_font_path() -> Path:
+    """Return the path to the Final Fantasy-style title font (finalf.ttf)."""
+    return _asset_base() / "fonts" / "finalf.ttf"
+
+
+def theme_icon_path(name: str) -> Path:
+    """Return the path to a UI icon PNG (theme_dark_icon / theme_light_icon / minimize_icon / close_window_icon)."""
+    return _asset_base() / "ui" / f"{name}.png"
+
+
 def launcher_hero_path(index: int) -> Path:
     """Return the path to a hero sprite frame (1-8) for the download animation."""
     return _asset_base() / "sprites" / "hero" / f"hero_{index:02d}.png"

@@ -150,38 +150,69 @@ Sprites and asset pipeline replacing the Phase 2 placeholders.
   during flight and a radial burst on impact. The projectile core glows
   in a brighter, differentiated color through a three-layer radial gradient.
 
-### customTkinter launcher (Phase 4 — in progress)
+### customTkinter launcher (Phase 4 & 6 — redesigned)
 
 A separate launcher app that downloads, updates, and launches the game.
 
 - Blue palette coherent with the in-game title screen: accent cyan
-  `#50C8F0` on a pale blue background in light mode, and a dark navy background
-  with neon-like cyan accents in dark mode.
-- **Light/Dark themes**: a theme button in the header toggles between the two
-  palettes and rebuilds the UI with the new colors. The choice is persisted to
-  a local `settings.json`, so the launcher reopens on the last selected theme.
-- Vertical layout (960x600 px) with three horizontal bands: a header (theme
-  button, centered title, About button), a central content area, and a footer
-  (versions, Check/Play/Download buttons, progress bar).
+  `#50C8F0` on a pale background in light mode, and a dark navy background with
+  gold accents in dark mode (a neon-cyan contrast pass is the pending part of the
+  visual polish).
+- **Light/Dark themes**: a theme icon in the header toggles between the two
+  palettes by recoloring the existing widgets in place — no UI rebuild, no
+  flicker. Each zone gets its own re-color pass (`_recolor_header`,
+  `_recolor_content`, `_recolor_footer`) and the carousel
+  slide is re-rendered so its baked-in arrows and dots pick up the new accent.
+  The choice is persisted to a local `settings.json`, so the launcher reopens on
+  the last selected theme. The button shows the icon of the *other* theme
+  (`theme_dark_icon.png` / `theme_light_icon.png`, bundled as assets) and is
+  swapped on each switch. A busy flag plus a short debounce discard rapid
+  repeated clicks, and `ctk.set_appearance_mode` is only called at startup:
+  switching is a full re-color pass, never an appearance-mode or widget rebuild.
+- Vertical layout (960x600 px) with three horizontal bands: a header, a central
+  content area, and a footer (versions, Check/Play/Download buttons, progress bar).
+- Header: a **theme toggle icon** sits in the left corner. The title *RPG Battle
+  Launcher* is rendered with the game's own `finalf.ttf` in uppercase (as on the
+  game title screen) and keeps a short hairline underline bar in the title color,
+  wider than the text; it stays perfectly centered with `place` no matter what
+  sits on the left.
+- Frameless window: the native title bar is hidden with a *hidden-titlebar*
+  technique (the window is subclassed and returns `0` for `WM_NCCALCSIZE`) so the
+  caption styles stay intact and the native minimize/restore animation and window
+  shadow keep working, flicker-free. The window remains a normal managed window
+  (taskbar button, Alt-Tab) but looks frameless: the header is draggable by
+  grabbing it and custom **minimize** and **close** buttons (PNG icons) sit flush
+  in the top-right corner of the header. The corners are the native square corners
+  of Windows (rounded-corner regions were discarded: they clip without
+  anti-aliasing and drop the native shadow).
 - Downloads the game from GitHub Releases: fetches the latest release via the
   GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
   downloads it with a progress bar, extracts it, and saves the installed version.
 - News carousel: fetches `news.json` from the remote GitHub raw URL (falling back
   to a local cache with a 1-hour TTL when offline) and renders the feed as a
-  visual slide carousel. Each slide draws the default background, a semi-transparent
-  overlay, the title/body, arrow buttons, and navigation dots into the image with
-  Pillow, and responds to clicks on the image (left/right arrows or a specific dot)
-  to switch between slides across all 4 feed entries. Navigating now plays a
-  smooth horizontal slide transition (animated with a timer loop): the outgoing
-  slide slides away while the incoming one slides in from the direction of the
-  arrow/dot press, and the text/arrows/dots stay hidden while the slides are in
-  motion, reappearing when the transition ends. The default background is
+  visual slide carousel. Each slide uses the news item's own image when it has one
+  (downloaded at runtime and cached to disk with the same 1-hour TTL, keeping the
+  last known good copy when offline, and cropped with `ImageOps.fit` to fill the
+  slide without distortion) or falls back to the bundled default background. A
+  semi-transparent overlay, the title/body, arrow buttons, and navigation dots are
+  drawn into the image with Pillow, and the slide responds to clicks on the image
+  (left/right arrows or a specific dot) to switch between slides across all 4 feed
+  entries. Sliding a news image in is asynchronous: it never blocks the UI, and if
+  a photo arrives mid-transition it is applied before the motion ends. Navigating
+  plays a smooth horizontal slide transition (animated with a timer loop): the
+  outgoing slide slides away while the incoming one slides in from the direction
+  of the arrow/dot press, and the text/arrows/dots stay hidden while the slides
+  are in motion, reappearing when the transition ends. The default background is
   bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
   carousel falls back to a flat area filled with the theme background color instead
   of failing.
-- About view: an About / Back view in the content area that swaps with the news
-  carousel. It shows the project name, a short description and credits, with a
-  centered Back button that returns to the carousel and restores the active slide.
+- Footer copyright: the footer carries the game's own credit line
+  *© 2026 Javi Escobar Fernández · CS50x Final Project* (`COPYRIGHT_NOTICE`),
+  centered in the free space between the version labels and the action buttons —
+  the same line the game paints at the bottom of its title screen.
+- Project info: instead of a separate About view, the **first news slide**
+  presents the project (what it is, that it is the CS50x final project, and the
+  author) via the first entry of `news.json`.
 - Download progress hero sprite: while a game download/update runs, a hero sprite
   (randomly chosen character, hero_01..08.png) runs from left to right over the
   progress bar as the download advances. The flee poses are cropped from the hero
@@ -189,8 +220,7 @@ A separate launcher app that downloads, updates, and launches the game.
   the download starts and disappears when it completes. The progress bar and sprite
   live in a top footer zone that only appears during the download, so the footer
   shrinks back to a single row of versions/buttons afterwards. The Theme button is
-  disabled during a download (to avoid rebuilding the UI and losing the progress
-  view).
+  disabled during a download so a switch cannot interrupt the transfer.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
