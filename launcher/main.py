@@ -405,26 +405,6 @@ class LauncherApp(ctk.CTk):
 
         # Note: background label is created in _resize_carousel_bg method to avoid that the window has a provisional size
 
-    def _destroy_content(self):
-        """Destroy the widgets inside the content area."""
-        # destroy the widgets inside the content area (children widgets)
-        for child in self._content_frame.winfo_children():
-            child.destroy()
-
-        # reset the carousel background after destroying the carousel
-        self._carousel_bg = None
-
-        # reset the carousel also
-        self._carousel = None
-
-        # reset the animation timer
-        if self._carousel_anim_timer:
-            self.after_cancel(self._carousel_anim_timer)
-            self._carousel_anim_timer = None
-
-        # reset the carousel moving state
-        self._carousel_moving = False
-
     def _build_carousel(self):
         """Area to show news."""
         # create the carousel frame
@@ -837,8 +817,8 @@ class LauncherApp(ctk.CTk):
         # set the carousel background color
         if self._carousel is not None:
             self._carousel.configure(fg_color=theme["panel"])
-        # set the news items background color
-        elif self._news_items:
+        # re-render the current slide with the new theme
+        if self._news_items:
             self._resize_carousel_bg()
         # set the no news label text color
         elif self._lbl_no_news is not None and self._lbl_no_news.winfo_exists():
