@@ -41,7 +41,6 @@ class LauncherApp(ctk.CTk):
         self._carousel_bg = None                          # stores the carousel background image
         self._carousel_moving = False                     # stores whether the carousel is moving
         self._carousel_anim_timer = None                  # stores the carousel animation timer ID
-        self._view = "news"                               # which view is active: "news" or "about"
         self._hero_sprite = None                          # stores the hero sprite for the download animation
         self._hero_frames = []                            # stores the hero animation frames
         self._hero_frame = 0                              # stores the current hero animation frame index
@@ -53,7 +52,6 @@ class LauncherApp(ctk.CTk):
         self._drag_x = 0                                  # stores the grab offset of the header drag (x)
         self._drag_y = 0                                  # stores the grab offset of the header drag (y)
         self._win_btns = []                               # window control buttons (close/minimize)
-        self._about_widgets = None                        # widgets of the About view
         self._lbl_no_news = None                          # "No news available." label
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
 
@@ -258,11 +256,6 @@ class LauncherApp(ctk.CTk):
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
-        # About label
-        self._lbl_about = ctk.CTkLabel(self._header, text="About", font=styles.FONT_BOLD, text_color=styles.THEME()["text_title"], cursor="hand2")
-        self._lbl_about.pack(side="left", padx=(12, 4))
-        self._lbl_about.bind("<Button-1>", lambda e: self._show_about())
-
         # Theme slider
         icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
         icon_img = Image.open(theme_icon_path(icon_name))
@@ -401,7 +394,7 @@ class LauncherApp(ctk.CTk):
         ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
 
     def _build_content(self):
-        """Central area for the news carousel (or About view)."""
+        """Central area for the news carousel."""
 
         # background frame of the content area
         self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
@@ -550,7 +543,7 @@ class LauncherApp(ctk.CTk):
         if self._carousel_moving and self._anim_target == index:
             self._carousel_anim_final_img = self._render_slide(index, True)
         # if it is the active slide, re-render it
-        if (not self._carousel_moving and self._view == "news" and self._carousel is not None and self._carousel_index == index):
+        if (not self._carousel_moving and self._carousel is not None and self._carousel_index == index):
             self._resize_carousel_bg()
 
     def _draw_news_text(self, img, title, body, width, height):
@@ -660,60 +653,6 @@ class LauncherApp(ctk.CTk):
             best = min(range(n), key=lambda i: abs(event.x - self._dot_centers[i][0]))
             direction = "right" if best > self._carousel_index else "left"
             self._animate_to(best, direction)
-
-    def _show_about(self):
-        """Switch the content area to the About view."""
-        self._view = "about"
-        self._destroy_content()
-        self._build_about()
-
-    def _show_news(self):
-        """Switch the content area back to the news carousel."""
-        self._view = "news"
-        self._destroy_content()
-        self._build_carousel()
-        # restore the active slide (self._carousel_index keeps it) with a delay of 0 ms to avoid that the carousel is not fully built
-        if self._news_items:
-            self.after(0, lambda: self._populate_news(self._news_items))
-
-    def _build_about(self):
-        """Build the About view."""
-        # destroy the content frame
-        self._destroy_content()
-        # get content frame to build the About view inside
-        frame = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
-        frame.pack(fill="both", expand=True)  # fill the content frame and expand to fill the available space
-        # title
-        title = ctk.CTkLabel(frame, text=APP_NAME, font=styles.FONT_TITLE, text_color=styles.THEME()["text_title"])
-        title.pack(pady=(40, 8))
-        # body
-        body = ctk.CTkLabel(frame, text="RPG Battle is a turn-based battle game built with Pygame and a desktop launcher built with CustomTkinter. It is the final project of CS50x.",
-                                    font=styles.FONT_BODY, text_color=styles.THEME()["text_body"], wraplength=600, justify="center")
-        body.pack(pady=8)
-        # subtitle: developed by
-        author = ctk.CTkLabel(frame, text="Developed by Javi Escobar Fernández", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
-        author.pack(pady=8)
-        # subtitle: CS50x Final Project
-        project = ctk.CTkLabel(frame, text="CS50x Final Project", font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
-        project.pack(pady=8)
-        # back button
-        back_btn = ctk.CTkButton(
-            frame, text="Back", width=70, height=28,
-            font=styles.FONT_BODY, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
-            command=self._show_news
-        )
-        back_btn.pack(pady=16)
-
-        # store widgets for theme swap
-        self._about_widgets = {
-            "frame": frame,
-            "title": title,
-            "body": body,
-            "author": author,
-            "project": project,
-            "back": back_btn,
-        }
 
     def _render_title_image(self):
         """Render the header title with the game font and return a CTkImage."""
@@ -875,8 +814,6 @@ class LauncherApp(ctk.CTk):
         theme = styles.THEME()
         # set the header background color
         self._header.configure(fg_color=theme["panel"])
-        # set the about label text color
-        self._lbl_about.configure(text_color=theme["text_title"])
         # set the window buttons hover color
         for btn in self._win_btns:
             btn.configure(hover_color=theme["border"])
@@ -896,29 +833,12 @@ class LauncherApp(ctk.CTk):
         # set the carousel background color
         if self._carousel is not None:
             self._carousel.configure(fg_color=theme["panel"])
-        # set the about label text color
-        if self._view == "about":
-            self._recolor_about()
         # set the news items background color
         elif self._news_items:
             self._resize_carousel_bg()
         # set the no news label text color
         elif self._lbl_no_news is not None and self._lbl_no_news.winfo_exists():
             self._lbl_no_news.configure(text_color=theme["text_date"])
-
-    def _recolor_about(self):
-        """Re-color the about widgets in place with the new theme."""
-        theme = styles.THEME()
-        widgets = self._about_widgets
-        # set the about frame background color
-        widgets["frame"].configure(fg_color=theme["bg"])
-        # set the about label text color
-        widgets["title"].configure(text_color=theme["text_title"])
-        # set the about body text color
-        for lbl in (widgets["body"], widgets["author"], widgets["project"]):
-            lbl.configure(text_color=theme["text_body"])
-        # set the about back button color
-        widgets["back"].configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"])
 
     def _recolor_footer(self):
         """Re-color the footer in place with the new theme."""
