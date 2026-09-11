@@ -260,8 +260,8 @@ class LauncherApp(ctk.CTk):
         icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
         icon_img = Image.open(theme_icon_path(icon_name))
         icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
-        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover=False, command=self._on_theme_toggle)
-        self._btn_theme.place(x=4, y=6, anchor="nw")   # top-left, aligned with the window control buttons (y=4)
+        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=self._on_theme_toggle)
+        self._btn_theme.place(x=4, y=6, anchor="nw")   # top-left, icon centers aligned with the window control buttons
 
         # Window controls (frameless): close and minimize, flush in the top-right corner
         self._win_btns = []  # store window control buttons for theme swap (recoloring)
@@ -269,7 +269,7 @@ class LauncherApp(ctk.CTk):
         for i, (name, cmd) in enumerate(((styles.ICONS["close"], self._on_close_click), (styles.ICONS["minimize"], self._on_minimize_click))):
             icon_img = Image.open(theme_icon_path(name))
             icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
-            btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["border"], command=cmd)
+            btn = ctk.CTkButton(self._header, text="", image=icon_img, width=28, height=28, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=cmd)
             btn.place(relx=1.0, anchor="ne", x=-(6 + i * (28 + gap)), y=4)
             self._win_btns.append(btn)
 
@@ -800,12 +800,12 @@ class LauncherApp(ctk.CTk):
         self._header.configure(fg_color=theme["panel"])
         # set the window buttons hover color
         for btn in self._win_btns:
-            btn.configure(hover_color=theme["border"])
+            btn.configure(hover_color=theme["hover_header"])
         # theme button shows the icon of the OTHER theme
         icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
         icon = Image.open(theme_icon_path(icon_name))
         icon = ctk.CTkImage(light_image=icon, dark_image=icon, size=(24, 24))
-        self._btn_theme.configure(image=icon)
+        self._btn_theme.configure(image=icon, hover_color=theme["hover_header"])
         # title re-rendered with the new text color
         self._lbl_title.configure(image=self._render_title_image())
 
