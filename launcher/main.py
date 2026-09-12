@@ -812,7 +812,7 @@ class LauncherApp(ctk.CTk):
         # Check button
         self._btn_check = ctk.CTkButton(
             self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"], hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["uninstall_button"], hover_color=styles.THEME()["uninstall_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
         )
         self._btn_check.pack(side="right", padx=(8, 0))
@@ -933,7 +933,7 @@ class LauncherApp(ctk.CTk):
             return (fg, hover, text, border)
 
         # check button
-        fg, hov, txt, bdr = _colors(self._btn_check.cget("state"), theme["accent"], theme["hover"], theme["button_text"], theme["button_border"])
+        fg, hov, txt, bdr = _colors(self._btn_check.cget("state"), theme["uninstall_button"], theme["uninstall_button_hover"], theme["button_text"], theme["uninstall_button_border"])
         self._btn_check.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
 
         # play button
