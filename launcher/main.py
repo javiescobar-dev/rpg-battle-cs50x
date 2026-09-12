@@ -804,8 +804,7 @@ class LauncherApp(ctk.CTk):
         # Check button
         self._btn_check = ctk.CTkButton(
             self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"], hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
         )
         self._btn_check.pack(side="right", padx=(8, 0))
@@ -813,8 +812,7 @@ class LauncherApp(ctk.CTk):
         # Play button
         self._btn_play = ctk.CTkButton(
             self._row, text="Play", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["play_button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"],
-            hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"], hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
         )
         self._btn_play.pack(side="right", padx=(8, 0))
@@ -822,13 +820,10 @@ class LauncherApp(ctk.CTk):
         # Download / Update button
         self._btn_download = ctk.CTkButton(
             self._row, text="Download", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["panel"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["accent"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"], hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_download_click
         )
-        self._btn_download.pack(side="right")
-        self._btn_download.bind("<Enter>", lambda event: self._on_download_hover(True))
-        self._btn_download.bind("<Leave>", lambda event: self._on_download_hover(False))
+        self._btn_download.pack(side="right", padx=(8, 0))
 
         # Initial state of the Play button (disabled if the game is not installed)
         if not is_game_installed():
@@ -938,7 +933,7 @@ class LauncherApp(ctk.CTk):
         self._btn_play.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
 
         # download button
-        fg, hov, txt, bdr = _colors(self._btn_download.cget("state"), theme["panel"], theme["hover"], theme["accent"], theme["button_border"])
+        fg, hov, txt, bdr = _colors(self._btn_download.cget("state"), theme["accent"], theme["hover"], theme["button_text"], theme["button_border"])
         self._btn_download.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
 
         # footer background color
@@ -1136,20 +1131,6 @@ class LauncherApp(ctk.CTk):
         self._hero_sprite.configure(image=self._hero_frames[self._hero_frame])
         # set the timer to cycle the hero sprite
         self._hero_timer = self.after(100, self._cycle_hero)
-
-
-    def _on_download_hover(self, enter):
-        """Hover effect for the download button."""
-        # if download button is disabled, return
-        if str(self._btn_download.cget("state")) == "disabled":
-            return
-        
-        # mouse enters the button
-        if enter:
-            self._btn_download.configure(text_color=styles.THEME()["button_text"], fg_color=styles.THEME()["accent"])
-        # mouse leaves the button
-        else:
-            self._btn_download.configure(text_color=styles.THEME()["accent"], fg_color=styles.THEME()["panel"])
 
 
 if __name__ == "__main__":
