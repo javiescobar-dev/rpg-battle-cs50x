@@ -55,6 +55,7 @@ class LauncherApp(ctk.CTk):
         self._win_btns = []                               # window control buttons (close/minimize)
         self._lbl_no_news = None                          # "No news available." label
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
+        self._downloading = False                         # stores whether the game is being downloaded
 
         # Build UI
         self._build_main_border()                         # build the main border of the window (custom frame)
@@ -236,8 +237,8 @@ class LauncherApp(ctk.CTk):
             self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
             self._carousel_moving = False                     # unlock clicks
 
-            # re-render the current slide with the new theme (only if the carousel is not moving)
-            if self._carousel_pending_rerender:
+            # re-render the current slide with the new theme (only if the carousel is not moving or is downloading the game)
+            if self._carousel_pending_rerender and not self._downloading:
                 self._carousel_pending_rerender = False
                 self.after_idle(lambda: self._resize_carousel_bg() if self._news_items else None)
 
@@ -909,7 +910,7 @@ class LauncherApp(ctk.CTk):
         if self._carousel is not None:
             self._carousel.configure(fg_color=theme["bg"])
         # re-render the current slide with the new theme (only if the carousel is not moving)
-        if self._news_items and not self._carousel_moving:
+        if self._news_items and not self._carousel_moving and not self._downloading:
             self._carousel_pending_rerender = False
             self._resize_carousel_bg()
         elif self._news_items:
@@ -996,6 +997,11 @@ class LauncherApp(ctk.CTk):
         if not tag:
             return
 
+        if self._downloading:
+            return
+        # set the downloading flag
+        self._downloading = True
+
         # disable buttons and show progress bar
         self._btn_download.configure(state="disabled", text="Downloading...")
         self._btn_play.configure(state="disabled")
@@ -1058,7 +1064,10 @@ class LauncherApp(ctk.CTk):
                 self.after(0, lambda: self._update_sprite(fraction))  # move the hero sprite
 
             # download the game
-            success = update(tag, progress_callback=on_progress)
+            try:
+                success = update(tag, progress_callback=on_progress)
+            except Exception:
+                success = False
 
             # finish download (after GUI is ready)
             def _finish():
@@ -1080,7 +1089,6 @@ class LauncherApp(ctk.CTk):
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
                 self._btn_check.configure(state="normal")
-                self._btn_theme.configure(state="normal")
 
                 # update installed version if successful
                 if success:
@@ -1091,6 +1099,14 @@ class LauncherApp(ctk.CTk):
 
                 # re-color footer
                 self._recolor_footer()
+
+                # reset the downloading flag
+                self._downloading = False
+
+                # re-render the carousel if the theme changed during the download
+                if self._carousel_pending_rerender and self._news_items:
+                    self._carousel_pending_rerender = False
+                    self._resize_carousel_bg()
 
             # call finish (after GUI is ready)
             self.after(0, _finish)
