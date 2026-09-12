@@ -40,6 +40,7 @@ class LauncherApp(ctk.CTk):
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
         self._carousel_moving = False                     # stores whether the carousel is moving
+        self._carousel_pending_rerender = False           # carousel re-render deferred until the slide animation ends
         self._carousel_anim_timer = None                  # stores the carousel animation timer ID
         self._hero_sprite = None                          # stores the hero sprite for the download animation
         self._hero_frames = []                            # stores the hero animation frames
@@ -56,6 +57,7 @@ class LauncherApp(ctk.CTk):
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
 
         # Build UI
+        self._build_main_border()                         # build the main border of the window (custom frame)
         self._build_header()                              # build the top header
         self._build_content()                             # build the content area
         self._build_footer()                              # build the footer
@@ -83,8 +85,6 @@ class LauncherApp(ctk.CTk):
         self.update_idletasks()                   # process any pending geometry updates (now the layout is truly settled)
         self._ensure_client_size()                # make the drawable area exactly the designed size
         self.update_idletasks()                   # process the corrected size
-        # resize after the window is fully shown; a short delay ensures the CTkImage.configure takes effect on the freshly created label
-        self.after(50, self._resize_carousel_bg)  # resize carousel background to fill its frame (after deiconify and final size)
 
     def _startup(self):
         """Load initial data in background."""
@@ -235,6 +235,18 @@ class LauncherApp(ctk.CTk):
             self._carousel_bg.place(relwidth=1, relheight=1, x=0, y=0, anchor="nw")
             self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
             self._carousel_moving = False                     # unlock clicks
+
+            # re-render the current slide with the new theme (only if the carousel is not moving)
+            if self._carousel_pending_rerender:
+                self._carousel_pending_rerender = False
+                self.after_idle(lambda: self._resize_carousel_bg() if self._news_items else None)
+
+            # clean attributes to prevent memory leaks
+            self._anim_old = None
+            self._anim_new = None
+            self._carousel_anim_final_img = None
+            self._anim_target = None
+            self._carousel_anim_timer = None
             return                                            # stop animation
 
         # If the animation is not finished, move a little bit and reprogram
@@ -248,11 +260,22 @@ class LauncherApp(ctk.CTk):
         # schedule next frame
         self._carousel_anim_timer = self.after(20, self._slide_step)   
 
+    def _build_main_border(self):
+        """Build the main border container and the border frame."""
+        # main border is the visible frame around the application
+        self.main_border_container = ctk.CTkFrame(master=self, fg_color=styles.THEME()["border_frame"], corner_radius=0)
+        self.main_border_container.pack(fill="both", expand=True)
+
+        # border frame is the frame that contains the content
+        self.border_frame = ctk.CTkFrame(master=self.main_border_container, fg_color=styles.THEME()["bg"], corner_radius=0)
+        # padx and pady define the thickness of the border (1 px in this case)
+        self.border_frame.pack(fill="both", expand=True, padx=1, pady=1)
+
     def _build_header(self):
         """Top bar with title and placeholder buttons."""
 
         # Top bar frame (full width, fixed height)
-        self._header = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
+        self._header = ctk.CTkFrame(master=self.border_frame, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.HEADER_HEIGHT)
         self._header.pack(side="top", fill="x")
         self._header.pack_propagate(False)
 
@@ -260,8 +283,8 @@ class LauncherApp(ctk.CTk):
         icon_name = styles.ICONS["theme_light"] if styles.CURRENT_THEME == "Dark" else styles.ICONS["theme_dark"]
         icon_img = Image.open(theme_icon_path(icon_name))
         icon_img = ctk.CTkImage(light_image=icon_img, dark_image=icon_img, size=(24, 24))
-        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=self._on_theme_toggle)
-        self._btn_theme.place(x=4, y=6, anchor="nw")   # top-left, icon centers aligned with the window control buttons
+        self._btn_theme = ctk.CTkButton(self._header, text="", image=icon_img, width=24, height=24, corner_radius=0, fg_color="transparent", hover_color=styles.THEME()["hover_header"], command=self._on_theme_toggle)
+        self._btn_theme.place(x=6, y=6, anchor="nw")   # top-left, icon centers aligned with the window control buttons
 
         # Window controls (frameless): close and minimize, flush in the top-right corner
         self._win_btns = []  # store window control buttons for theme swap (recoloring)
@@ -397,7 +420,7 @@ class LauncherApp(ctk.CTk):
         """Central area for the news carousel."""
 
         # background frame of the content area
-        self._content_frame = ctk.CTkFrame(self, fg_color=styles.THEME()["bg"], corner_radius=0)
+        self._content_frame = ctk.CTkFrame(master=self.border_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
         self._content_frame.pack(fill="both", expand=True)
 
         # carousel container (rounded, centered, with margins)
@@ -408,19 +431,32 @@ class LauncherApp(ctk.CTk):
     def _build_carousel(self):
         """Area to show news."""
         # create the carousel frame
-        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["panel"], corner_radius=0)
+        self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
         # pack the carousel frame
         self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
+        # Bind the resize event so we perfectly sync the image size to the frame instantly
+        self._carousel.bind("<Configure>", self._on_carousel_resize)
 
-    def _render_slide(self, index: int, include_ui: bool = True) -> Image:
+    def _on_carousel_resize(self, event):
+        """Handle carousel resize to keep image size perfectly synced."""
+        w, h = event.width, event.height
+        if w < 10 or h < 10:
+            return
+        if getattr(self, "_last_cw", 0) == w and getattr(self, "_last_ch", 0) == h:
+            return
+        self._last_cw = w
+        self._last_ch = h
+        if not self._carousel_moving and self._news_items:
+            self._resize_carousel_bg(width=w, height=h)
+
+    def _render_slide(self, index: int, include_ui: bool = True, width: int = None, height: int = None) -> Image:
         """Render the carousel slide with the given index."""
         # update the carousel frame to get its actual size (only if it is not already done)
         if self._carousel.winfo_width() < 10 or self._carousel.winfo_height() < 10:
             self._carousel.update_idletasks()
-        # carousel width in pixels
-        width = self._carousel.winfo_width()
-        # carousel height in pixels
-        height = self._carousel.winfo_height()
+        # carousel width and height in pixels (use provided if available, else winfo)
+        width = width if width is not None else self._carousel.winfo_width()
+        height = height if height is not None else self._carousel.winfo_height()
         # make sure the size is at least 10x10
         size = (max(width, 10), max(height, 10))
 
@@ -433,7 +469,10 @@ class LauncherApp(ctk.CTk):
         if img_field and img_field not in self._news_images:
             self._ensure_image(index)
 
+
+
         # build the base background
+        is_fallback_img = False  # used to draw thin border lines top and bottom on the image in all cases without duplicate code
         if news_img is not None:
             img = ImageOps.fit(news_img, size).convert("RGBA")     # photo: crop to fill
         else:
@@ -443,13 +482,22 @@ class LauncherApp(ctk.CTk):
             except Exception:
                 # no background image: flat fallback filled with the theme background color
                 img = Image.new("RGBA", size, styles.THEME()["bg"] + "FF")  # flat, no baked UI
-                return img.convert("RGB")
+                is_fallback_img = True
+
+        # draw thin border lines top and bottom on the image
+        draw_border = ImageDraw.Draw(img)
+        draw_border.line([(0, 0), (width, 0)], fill=styles.THEME()["border_frame"], width=1)
+        draw_border.line([(0, height - 1), (width, height - 1)], fill=styles.THEME()["border_frame"], width=1)
+
+        # If exception is true, return the image as RGB (without the bar)
+        if is_fallback_img:
+            return img.convert("RGB")
 
         # draw a semi-transparent bar (title region + body region)
         bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(bar)
         top, bottom = int(height * 0.70), int(height * 0.96)
-        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 90))
+        draw.rectangle([0, top, width, bottom], fill=(8, 8, 16, 135))
 
         # overlay stripe onto background
         img = Image.alpha_composite(img, bar)
@@ -474,15 +522,17 @@ class LauncherApp(ctk.CTk):
         # Create the carousel background label, if exists destroy it first
         if self._carousel_bg is not None:
             self._carousel_bg.destroy()
-        self._carousel_bg = ctk.CTkLabel(self._carousel, image=carousel_img, text="")
-        self._carousel_bg.place(relx=0.5, rely=0.5, relwidth=1.0, relheight=1.0, anchor="center")
+
+        # CustomTkinter requires that absolute width/height go in the constructor, not in place
+        self._carousel_bg = ctk.CTkLabel(self._carousel, image=carousel_img, text="", width=img.width, height=img.height)
+        self._carousel_bg.place(x=0, y=0, anchor="nw")
 
         # bind the carousel click event to the on_carousel_click method
         self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
 
-    def _resize_carousel_bg(self):
+    def _resize_carousel_bg(self, width: int = None, height: int = None):
         """Resize the carousel background to fill its frame (called when layout is stable)."""
-        img = self._render_slide(self._carousel_index)
+        img = self._render_slide(self._carousel_index, width=width, height=height)
         self._display_render(img)
 
     def _ensure_image(self, index: int) -> None:
@@ -595,7 +645,7 @@ class LauncherApp(ctk.CTk):
 
         # semi-transparent squares behind the arrows, drawn on their own layer so alpha_composite blends them with the photo (same look as the text strip)
         hs = 18        # 36×36
-        bar_fill = (8, 8, 16, 90)
+        bar_fill = (8, 8, 16, 135)
         hsb = hs * S
         dl.rectangle([ax * S - hsb, cy * S - hsb, ax * S + hsb, cy * S + hsb], fill=bar_fill)
         dl.rectangle([bx * S - hsb, cy * S - hsb, bx * S + hsb, cy * S + hsb], fill=bar_fill)
@@ -716,7 +766,7 @@ class LauncherApp(ctk.CTk):
         """Build the footer, the bottom bar of the launcher."""
 
         # Footer frame
-        self._footer = ctk.CTkFrame(self, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
+        self._footer = ctk.CTkFrame(master=self.border_frame, fg_color=styles.THEME()["panel"], corner_radius=0, height=styles.FOOTER_HEIGHT)
         self._footer.pack(side="bottom", fill="x")
         self._footer.pack_propagate(False)
 
@@ -846,12 +896,21 @@ class LauncherApp(ctk.CTk):
         theme = styles.THEME()
         # set the content frame background color
         self._content_frame.configure(fg_color=theme["bg"])
+        # set the border_frame background color
+        if hasattr(self, "main_border_container"):
+            self.main_border_container.configure(fg_color=theme["border_frame"])
+        # ensure the underlying border_frame updates its color too so Canvas seams don't show the old theme
+        if hasattr(self, "border_frame"):
+            self.border_frame.configure(fg_color=theme["bg"])
         # set the carousel background color
         if self._carousel is not None:
-            self._carousel.configure(fg_color=theme["panel"])
-        # re-render the current slide with the new theme
-        if self._news_items:
+            self._carousel.configure(fg_color=theme["bg"])
+        # re-render the current slide with the new theme (only if the carousel is not moving)
+        if self._news_items and not self._carousel_moving:
+            self._carousel_pending_rerender = False
             self._resize_carousel_bg()
+        elif self._news_items:
+            self._carousel_pending_rerender = True
         # set the no news label text color
         elif self._lbl_no_news is not None and self._lbl_no_news.winfo_exists():
             self._lbl_no_news.configure(text_color=theme["text_date"])

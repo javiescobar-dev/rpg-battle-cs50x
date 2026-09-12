@@ -194,8 +194,12 @@ A separate launcher app that downloads, updates, and launches the game.
   (downloaded at runtime and cached to disk with the same 1-hour TTL, keeping the
   last known good copy when offline, and cropped with `ImageOps.fit` to fill the
   slide without distortion) or falls back to the bundled default background. A
-  semi-transparent overlay, the title/body, arrow buttons, and navigation dots are
-  drawn into the image with Pillow, and the slide responds to clicks on the image
+semi-transparent overlay, the title/body, chevron arrow buttons, and navigation
+   dots are drawn into the image with Pillow: the chevrons are `‹`/`›` glyphs rendered
+   by the font rasterizer (smooth anti-aliased curves, no external font file), each
+   sitting on a small translucent square in the same dark tone as the overlay, and the
+   whole nav layer is supersampled 4× and downscaled with LANCZOS so every edge
+   renders crisp. The slide responds to clicks on the image
   (left/right arrows or a specific dot) to switch between slides across all 4 feed
   entries. Sliding a news image in is asynchronous: it never blocks the UI, and if
   a photo arrives mid-transition it is applied before the motion ends. Navigating
