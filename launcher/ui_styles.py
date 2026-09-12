@@ -24,6 +24,9 @@ LIGHT = {
     "text_body": "#3A4A5A",
     "text_date": "#7C8EA0",
     "scrollbar": "#C3D4E3",
+    "disabled_fg_color": "#E1E7EE",
+    "disabled_border_color": "#CAD4DE",
+    "disabled_text_color": "#98A6B5"
 }
 
 # Dark theme: dark blue background, neon-like cyan accents
@@ -44,6 +47,9 @@ DARK = {
     "text_body": "#C0C8D0",
     "text_date": "#F0A050",
     "scrollbar": "#2A3A55",
+    "disabled_fg_color": "#333A45",
+    "disabled_border_color": "#3D4755",
+    "disabled_text_color": "#5A6472"
 }
 
 THEMES = {"Light": LIGHT, "Dark": DARK}

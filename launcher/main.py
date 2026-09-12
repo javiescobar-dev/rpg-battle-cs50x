@@ -826,12 +826,15 @@ class LauncherApp(ctk.CTk):
             command=self._on_download_click
         )
         self._btn_download.pack(side="right")
-        self._btn_download.bind("<Enter>", lambda event: self._btn_download.configure(text_color=styles.THEME()["button_text"],fg_color=styles.THEME()["accent"]))
-        self._btn_download.bind("<Leave>", lambda event: self._btn_download.configure(text_color=styles.THEME()["accent"],fg_color=styles.THEME()["panel"]))
+        self._btn_download.bind("<Enter>", lambda event: self._on_download_hover(True))
+        self._btn_download.bind("<Leave>", lambda event: self._on_download_hover(False))
 
         # Initial state of the Play button (disabled if the game is not installed)
         if not is_game_installed():
             self._btn_play.configure(state="disabled")
+
+        # re-color footer
+        self._recolor_footer()
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme by recoloring the existing widgets in place."""
@@ -918,27 +921,42 @@ class LauncherApp(ctk.CTk):
     def _recolor_footer(self):
         """Re-color the footer in place with the new theme."""
         theme = styles.THEME()
-        # set the footer background color
+
+        # helper for button colors
+        def _colors(state, fg, hover, text, border):
+            if str(state) == "disabled":
+                return (theme["disabled_fg_color"], theme["disabled_fg_color"], theme["disabled_text_color"], theme["disabled_border_color"])
+            return (fg, hover, text, border)
+
+        # check button
+        fg, hov, txt, bdr = _colors(self._btn_check.cget("state"), theme["accent"], theme["hover"], theme["button_text"], theme["button_border"])
+        self._btn_check.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+
+        # play button
+        fg, hov, txt, bdr = _colors(self._btn_play.cget("state"), theme["play_button"], theme["play_button_hover"], theme["button_text"], theme["play_button_border"])
+        self._btn_play.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+
+        # download button
+        fg, hov, txt, bdr = _colors(self._btn_download.cget("state"), theme["panel"], theme["hover"], theme["accent"], theme["button_border"])
+        self._btn_download.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+
+        # footer background color
         self._footer.configure(fg_color=theme["panel"])
-        # set the progress bar background color
+        # progress bar background color
         self._progress.configure(fg_color=theme["border"], progress_color=theme["accent"])
-        # set the installed label text color
+        # installed label text color
         self._lbl_installed.configure(text_color=theme["text_body"])
-        # set the latest release label text color
+        # latest release label text color
         self._lbl_latest.configure(text_color=theme["text_body"])
-        # set the copyright label text color
+        # copyright label text color
         self._lbl_copyright.configure(text_color=theme["text_body"])
-        # set the check button color
-        self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"], border_color=theme["button_border"])
-        # set the play button color
-        self._btn_play.configure(fg_color=theme["play_button"], hover_color=theme["play_button_hover"], text_color=theme["button_text"], border_color=theme["play_button_border"])
-        # set the download button color
-        self._btn_download.configure(border_color=theme["button_border"], fg_color=theme["panel"], hover_color=theme["hover"], text_color=theme["accent"])
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
         # default state and text of the check button
         self._btn_check.configure(state="disabled", text="Checking...")
+        # re-color footer
+        self._recolor_footer()
 
         # thread to check the latest remote version
         def _check():
@@ -982,7 +1000,9 @@ class LauncherApp(ctk.CTk):
         self._btn_download.configure(state="disabled", text="Downloading...")
         self._btn_play.configure(state="disabled")
         self._btn_check.configure(state="disabled")
-        self._btn_theme.configure(state="disabled")
+
+        # re-color footer
+        self._recolor_footer()
 
         # show progress bar and set height of top zone
         self._top_zone.configure(height=styles.FOOTER_TOP_HEIGHT)
@@ -1069,11 +1089,15 @@ class LauncherApp(ctk.CTk):
                 else:
                     self._btn_download.configure(text="Retry")
 
+                # re-color footer
+                self._recolor_footer()
+
             # call finish (after GUI is ready)
             self.after(0, _finish)
 
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()
+
 
     def _update_sprite(self, fraction):
         """Update the hero sprite position (runs in a background thread)."""
@@ -1089,9 +1113,27 @@ class LauncherApp(ctk.CTk):
 
 
     def _cycle_hero(self):
+        """Cycle the hero sprite."""
+        # loop every 3 frames (0, 1, 2)
         self._hero_frame = (self._hero_frame + 1) % 3
+        # update the hero sprite
         self._hero_sprite.configure(image=self._hero_frames[self._hero_frame])
+        # set the timer to cycle the hero sprite
         self._hero_timer = self.after(100, self._cycle_hero)
+
+
+    def _on_download_hover(self, enter):
+        """Hover effect for the download button."""
+        # if download button is disabled, return
+        if str(self._btn_download.cget("state")) == "disabled":
+            return
+        
+        # mouse enters the button
+        if enter:
+            self._btn_download.configure(text_color=styles.THEME()["button_text"], fg_color=styles.THEME()["accent"])
+        # mouse leaves the button
+        else:
+            self._btn_download.configure(text_color=styles.THEME()["accent"], fg_color=styles.THEME()["panel"])
 
 
 if __name__ == "__main__":
