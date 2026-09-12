@@ -56,6 +56,8 @@ class LauncherApp(ctk.CTk):
         self._lbl_no_news = None                          # "No news available." label
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
         self._downloading = False                         # stores whether the game is being downloaded
+        self._pending_slide = None                        # slide navigation deferred during download
+        self._pending_slide_dir = "right"                 # slide navigation deferred during download
 
         # Build UI
         self._build_main_border()                         # build the main border of the window (custom frame)
@@ -162,6 +164,12 @@ class LauncherApp(ctk.CTk):
 
         # prevent re-animating to the same slide
         if target_index % n == self._carousel_index:
+            return
+
+        # if the game is downloading, defer the navigation until it finishes
+        if self._downloading:
+            self._pending_slide = target_index % n
+            self._pending_slide_dir = direction
             return
 
         # If there's no previous image, snap directly
@@ -1097,6 +1105,15 @@ class LauncherApp(ctk.CTk):
 
                 # reset the downloading flag
                 self._downloading = False
+
+                # apply the navigation and/or theme change deferred during the download
+                if self._pending_slide is not None:
+                    idx, d = self._pending_slide, self._pending_slide_dir
+                    self._pending_slide = None
+                    self._animate_to(idx, d)
+                elif self._carousel_pending_rerender and self._news_items:
+                    self._carousel_pending_rerender = False
+                    self._resize_carousel_bg()
 
                 # re-render the carousel if the theme changed during the download
                 if self._carousel_pending_rerender and self._news_items:
