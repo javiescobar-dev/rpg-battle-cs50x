@@ -40,6 +40,7 @@ class LauncherApp(ctk.CTk):
         self._carousel_index = 0                          # which news slide is active
         self._carousel_bg = None                          # stores the carousel background image
         self._carousel_moving = False                     # stores whether the carousel is moving
+        self._carousel_pending_rerender = False           # carousel re-render deferred until the slide animation ends
         self._carousel_anim_timer = None                  # stores the carousel animation timer ID
         self._hero_sprite = None                          # stores the hero sprite for the download animation
         self._hero_frames = []                            # stores the hero animation frames
@@ -234,6 +235,18 @@ class LauncherApp(ctk.CTk):
             self._carousel_bg.place(relwidth=1, relheight=1, x=0, y=0, anchor="nw")
             self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
             self._carousel_moving = False                     # unlock clicks
+
+            # re-render the current slide with the new theme (only if the carousel is not moving)
+            if self._carousel_pending_rerender:
+                self._carousel_pending_rerender = False
+                self.after_idle(lambda: self._resize_carousel_bg() if self._news_items else None)
+
+            # clean attributes to prevent memory leaks
+            self._anim_old = None
+            self._anim_new = None
+            self._carousel_anim_final_img = None
+            self._anim_target = None
+            self._carousel_anim_timer = None
             return                                            # stop animation
 
         # If the animation is not finished, move a little bit and reprogram
@@ -417,7 +430,7 @@ class LauncherApp(ctk.CTk):
 
     def _build_carousel(self):
         """Area to show news."""
-        # create the carousel frame (black background masks fractional pixel Canvas gaps)
+        # create the carousel frame
         self._carousel = ctk.CTkFrame(self._content_frame, fg_color=styles.THEME()["bg"], corner_radius=0)
         # pack the carousel frame
         self._carousel.pack(fill="both", expand=True, padx=0, pady=0)
@@ -892,9 +905,12 @@ class LauncherApp(ctk.CTk):
         # set the carousel background color
         if self._carousel is not None:
             self._carousel.configure(fg_color=theme["bg"])
-        # re-render the current slide with the new theme
-        if self._news_items:
+        # re-render the current slide with the new theme (only if the carousel is not moving)
+        if self._news_items and not self._carousel_moving:
+            self._carousel_pending_rerender = False
             self._resize_carousel_bg()
+        elif self._news_items:
+            self._carousel_pending_rerender = True
         # set the no news label text color
         elif self._lbl_no_news is not None and self._lbl_no_news.winfo_exists():
             self._lbl_no_news.configure(text_color=theme["text_date"])
