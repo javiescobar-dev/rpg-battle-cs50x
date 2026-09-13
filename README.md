@@ -231,6 +231,17 @@ semi-transparent overlay, the title/body, chevron arrow buttons, and navigation
   download finishes. News navigation (arrow/dot clicks) mid-download is deferred the
   same way and applied as soon as the download completes, keeping the progress bar
   and the running hero sprite fluid.
+- Diagnostics: every network operation (news fetch, news images, release check,
+  game download) logs to `launcher.log` in the user data directory, with timestamps
+  and the exact failing phase (`fetch release` / `find asset` / `download asset` /
+  `extract`), so the launcher's silent fallbacks (news cache, "Latest: —", Retry)
+  are never a black box when something goes wrong. Network requests also carry a
+  20-second timeout instead of blocking forever on a stalled connection.
+- TLS: certificates are verified against the operating system's trust store (via
+  the `truststore` package) instead of only Python's bundled CA bundle. This keeps
+  full certificate validation while working on machines where antivirus/firewall
+  software intercepts HTTPS with its own locally-trusted CA — the exact case that
+  broke the launcher inside a Windows 11 VM while the browser worked fine.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
