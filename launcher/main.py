@@ -3,6 +3,7 @@
 
 """Main launcher window and UI logic."""
 
+from platform import release
 import ctypes, time, sys, random, logging, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from diag import setup_logging, setup_ssl
@@ -974,19 +975,92 @@ class LauncherApp(ctk.CTk):
         except Exception as e:
             self._lbl_installed.configure(text=f"Error: {e}")
 
+    def _on_uninstall_click(self):
+        """Ask for confirmation before uninstalling."""
+        # don't allow uninstallation if the game is being installed or uninstalled
+        if self._uninstalling or self._downloading:
+            return
+        # only allow uninstallation if the game is installed
+        if not installed_version():
+            return
+        # show the confirmation dialog
+        self._confirm_uninstall()
+
+    def _confirm_uninstall(self) -> None:
+        """Show a themed modal asking for uninstall confirmation."""
+        # don't open two dialogs
+        if getattr(self, "_dlg_uninstall", None) and self._dlg_uninstall.winfo_exists():
+            return
+
+        # create dialog window, set title, geometry, resizable flag, grab and transient mode
+        theme = styles.THEME()
+        dlg = ctk.CTkToplevel(self)
+        dlg.configure(fg_color=theme["bg"])
+        self._dlg_uninstall = dlg
+        dlg.title("Uninstall")
+        dlg.geometry("380x170")
+        dlg.resizable(False, False)
+        dlg.transient(self)
+        dlg.grab_set()
+        # center the dialog over the main window
+        dlg.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - 380) // 2
+        y = self.winfo_y() + (self.winfo_height() - 170) // 2
+        dlg.geometry(f"+{x}+{y}")
+        # message
+        ctk.CTkLabel(dlg, text="Uninstall RPG Battle?\n\nThis removes the game, news cache, images,\nlogs and settings (the next launch returns to Light).",
+                    font=styles.FONT_BODY, text_color=theme["text_body"]).pack(pady=(18, 10))
+        # buttons
+        row = ctk.CTkFrame(dlg, fg_color="transparent")
+        row.pack()
+        ctk.CTkButton(row, text="Cancel", width=100, command=dlg.destroy, fg_color=theme["play_button"], hover_color=theme["play_button_hover"],
+                    text_color=theme["button_text"], corner_radius=0).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(row, text="Uninstall", width=100, fg_color=theme["uninstall_button"], hover_color=theme["uninstall_button_hover"],
+                    text_color=theme["button_text"], corner_radius=0, command=lambda: (dlg.destroy(), self._do_uninstall())).pack(side="left")
+
+    def _do_uninstall(self):
+        """Uninstall the game (runs in a background thread)."""
+        # disable buttons and show progress bar
+        self._uninstalling = True
+        self._btn_uninstall.configure(state="disabled")
+        self._btn_play.configure(state="disabled")
+        self._btn_download.configure(state="disabled")
+        self._recolor_footer()
+
+        # run uninstallation in a background thread
+        def _do():
+            try:
+                logging.shutdown()      # close launcher.log (Windows can't delete open files)
+                uninstall_game()        # delete the whole data dir
+                setup_logging()         # recreate dirs and reopen the log
+                success = True
+            except Exception as e:
+                # log the exception and set success to False
+                logging.warning("uninstall failed: %s", e)
+                success = False
+            # finish uninstallation (restore UI)
+            self.after(0, lambda: self._finish_uninstall(success))
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _finish_uninstall(self, success):
+        """Restore the UI after uninstalling."""
+        # reset uninstalling flag
+        self._uninstalling = False
+        if success:
+            self._lbl_installed.configure(text="Installed: —")
+        # disable uninstall button
+        self._btn_uninstall.configure(state="disabled")
+        self._btn_play.configure(state="disabled")
+        self._btn_download.configure(state="normal", text="Download")
+        # re-color footer
+        self._recolor_footer()
+
     def _on_download_click(self):
         """Download or update the game (runs in a background thread)."""
-        # if latest release is not fetched, return
-        if self._latest_release is None:
+        if self._downloading or self._uninstalling:
             return
 
-        # get tag
-        tag = self._latest_release.get("tag_name")
-        if not tag:
-            return
-
-        if self._downloading:
-            return
         # set the downloading flag
         self._downloading = True
 
@@ -1046,19 +1120,8 @@ class LauncherApp(ctk.CTk):
 
         # thread to download the game
         def _do_update():
-            # progress callback
-            def on_progress(fraction):
-                self.after(0, lambda: self._progress.set(fraction))   # move the progress bar
-                self.after(0, lambda: self._update_sprite(fraction))  # move the hero sprite
-
-            # download the game
-            try:
-                success = update(tag, progress_callback=on_progress)
-            except Exception:
-                success = False
-
             # finish download (after GUI is ready)
-            def _finish():
+            def _finish(success, tag):
                 # hide progress bar
                 self._progress.pack_forget()
                 # hide top zone
@@ -1105,8 +1168,45 @@ class LauncherApp(ctk.CTk):
                     self._carousel_pending_rerender = False
                     self._resize_carousel_bg()
 
+            # resolve the release on demand if the startup check failed
+            release = self._latest_release
+            tag = None
+            if release is None:
+                try:
+                    # fetch release from GitHub
+                    release = fetch_latest_release()
+                    # update latest release and label (in case it's None)
+                    self._latest_release = release
+                    tag = release.get("tag_name")
+                    self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))
+                except Exception as e:
+                    # if release fetch fails, log error and finish
+                    logging.warning("release fetch on demand failed: %s", e)
+
+            # if release or tag is None, finish and return
+            if release is None:
+                self.after(0, lambda: _finish(False, None))
+                return
+
+            tag = release.get("tag_name")
+            if not tag:
+                self.after(0, lambda: _finish(False, None))
+                return
+
+
+            # progress callback
+            def on_progress(fraction):
+                self.after(0, lambda: self._progress.set(fraction))   # move the progress bar
+                self.after(0, lambda: self._update_sprite(fraction))  # move the hero sprite
+
+            # download the game
+            try:
+                success = update(tag, progress_callback=on_progress)
+            except Exception:
+                success = False
+
             # call finish (after GUI is ready)
-            self.after(0, _finish)
+            self.after(0, lambda: _finish(success, tag))
 
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()

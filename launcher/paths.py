@@ -85,9 +85,19 @@ def uninstall_game() -> None:
     """Delete every trace of the game and launcher data (game, cache, log, settings)."""
     # get the base directory (parent of game_dir)
     base = game_dir().parent
-    # if the base directory exists, remove it recursively and ignore errors
-    if base.exists():
-        shutil.rmtree(base, ignore_errors=True)
+
+    # return if base doesn't exist
+    if not base.exists():
+        return
+
+    # try to remove launcher.log if it exists
+    try:
+        (base / "launcher.log").unlink(missing_ok=True)
+    except OSError:
+        pass
+
+    # remove the whole base directory (game, cache, log, settings)
+    shutil.rmtree(base, ignore_errors=True)
 
 
 def _asset_base() -> Path:
