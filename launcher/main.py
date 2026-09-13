@@ -3,9 +3,9 @@
 
 """Main launcher window and UI logic."""
 
-import ctypes, time, sys, random, threading, ui_styles as styles, customtkinter as ctk
+import ctypes, time, sys, random, logging, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-
+from diag import setup_logging
 from ctypes import wintypes
 from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
 from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
@@ -16,6 +16,9 @@ from settings import load_theme, save_theme
 class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # setup logging for diagnostics
+        setup_logging()
 
         # Restore the last saved theme
         styles.CURRENT_THEME = load_theme()
@@ -55,6 +58,9 @@ class LauncherApp(ctk.CTk):
         self._win_btns = []                               # window control buttons (close/minimize)
         self._lbl_no_news = None                          # "No news available." label
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
+        self._downloading = False                         # stores whether the game is being downloaded
+        self._pending_slide = None                        # slide navigation deferred during download
+        self._pending_slide_dir = "right"                 # slide navigation deferred during download
 
         # Build UI
         self._build_main_border()                         # build the main border of the window (custom frame)
@@ -98,11 +104,13 @@ class LauncherApp(ctk.CTk):
             self._latest_release = release
             tag = release.get("tag_name", "?")
             self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))  # Set the latest release tag in background
-        except Exception:
+        except Exception as e:
+            logging.warning("latest release fetch failed: %s", e)  # log the exception
             self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))  # Set the latest release tag to — if fetch fails
 
         # News
         items = get_news()
+        logging.info("loaded %d news items", len(items))  # log the number of news items loaded
         self._news_items = items  # store news items for later use (carousel)
         self.after(0, lambda: self._populate_news(items))
 
@@ -161,6 +169,12 @@ class LauncherApp(ctk.CTk):
 
         # prevent re-animating to the same slide
         if target_index % n == self._carousel_index:
+            return
+
+        # if the game is downloading, defer the navigation until it finishes
+        if self._downloading:
+            self._pending_slide = target_index % n
+            self._pending_slide_dir = direction
             return
 
         # If there's no previous image, snap directly
@@ -236,8 +250,8 @@ class LauncherApp(ctk.CTk):
             self._carousel_bg.bind("<Button-1>", self._on_carousel_click)
             self._carousel_moving = False                     # unlock clicks
 
-            # re-render the current slide with the new theme (only if the carousel is not moving)
-            if self._carousel_pending_rerender:
+            # re-render the current slide with the new theme (only if the carousel is not moving or is downloading the game)
+            if self._carousel_pending_rerender and not self._downloading:
                 self._carousel_pending_rerender = False
                 self.after_idle(lambda: self._resize_carousel_bg() if self._news_items else None)
 
@@ -803,8 +817,7 @@ class LauncherApp(ctk.CTk):
         # Check button
         self._btn_check = ctk.CTkButton(
             self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["uninstall_button"], hover_color=styles.THEME()["uninstall_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_check_click
         )
         self._btn_check.pack(side="right", padx=(8, 0))
@@ -812,8 +825,7 @@ class LauncherApp(ctk.CTk):
         # Play button
         self._btn_play = ctk.CTkButton(
             self._row, text="Play", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["play_button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"],
-            hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["play_button"], hover_color=styles.THEME()["play_button_hover"], text_color=styles.THEME()["button_text"],
             command=self._on_play_click
         )
         self._btn_play.pack(side="right", padx=(8, 0))
@@ -821,17 +833,17 @@ class LauncherApp(ctk.CTk):
         # Download / Update button
         self._btn_download = ctk.CTkButton(
             self._row, text="Download", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
-            font=styles.FONT_BUTTON, fg_color=styles.THEME()["panel"],
-            hover_color=styles.THEME()["hover"], text_color=styles.THEME()["accent"],
+            font=styles.FONT_BUTTON, fg_color=styles.THEME()["accent"], hover_color=styles.THEME()["hover"], text_color=styles.THEME()["button_text"],
             command=self._on_download_click
         )
-        self._btn_download.pack(side="right")
-        self._btn_download.bind("<Enter>", lambda event: self._btn_download.configure(text_color=styles.THEME()["button_text"],fg_color=styles.THEME()["accent"]))
-        self._btn_download.bind("<Leave>", lambda event: self._btn_download.configure(text_color=styles.THEME()["accent"],fg_color=styles.THEME()["panel"]))
+        self._btn_download.pack(side="right", padx=(8, 0))
 
         # Initial state of the Play button (disabled if the game is not installed)
         if not is_game_installed():
             self._btn_play.configure(state="disabled")
+
+        # re-color footer
+        self._recolor_footer()
 
     def _on_theme_toggle(self):
         """Switch Light/Dark theme by recoloring the existing widgets in place."""
@@ -906,7 +918,7 @@ class LauncherApp(ctk.CTk):
         if self._carousel is not None:
             self._carousel.configure(fg_color=theme["bg"])
         # re-render the current slide with the new theme (only if the carousel is not moving)
-        if self._news_items and not self._carousel_moving:
+        if self._news_items and not self._carousel_moving and not self._downloading:
             self._carousel_pending_rerender = False
             self._resize_carousel_bg()
         elif self._news_items:
@@ -918,27 +930,42 @@ class LauncherApp(ctk.CTk):
     def _recolor_footer(self):
         """Re-color the footer in place with the new theme."""
         theme = styles.THEME()
-        # set the footer background color
+
+        # helper for button colors
+        def _colors(state, fg, hover, text, border):
+            if str(state) == "disabled":
+                return (theme["disabled_fg_color"], theme["disabled_fg_color"], theme["disabled_text_color"], theme["disabled_border_color"])
+            return (fg, hover, text, border)
+
+        # check button
+        fg, hov, txt, bdr = _colors(self._btn_check.cget("state"), theme["uninstall_button"], theme["uninstall_button_hover"], theme["button_text"], theme["uninstall_button_border"])
+        self._btn_check.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+
+        # play button
+        fg, hov, txt, bdr = _colors(self._btn_play.cget("state"), theme["play_button"], theme["play_button_hover"], theme["button_text"], theme["play_button_border"])
+        self._btn_play.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+
+        # download button
+        fg, hov, txt, bdr = _colors(self._btn_download.cget("state"), theme["accent"], theme["hover"], theme["button_text"], theme["button_border"])
+        self._btn_download.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+
+        # footer background color
         self._footer.configure(fg_color=theme["panel"])
-        # set the progress bar background color
+        # progress bar background color
         self._progress.configure(fg_color=theme["border"], progress_color=theme["accent"])
-        # set the installed label text color
+        # installed label text color
         self._lbl_installed.configure(text_color=theme["text_body"])
-        # set the latest release label text color
+        # latest release label text color
         self._lbl_latest.configure(text_color=theme["text_body"])
-        # set the copyright label text color
+        # copyright label text color
         self._lbl_copyright.configure(text_color=theme["text_body"])
-        # set the check button color
-        self._btn_check.configure(fg_color=theme["accent"], hover_color=theme["hover"], text_color=theme["button_text"], border_color=theme["button_border"])
-        # set the play button color
-        self._btn_play.configure(fg_color=theme["play_button"], hover_color=theme["play_button_hover"], text_color=theme["button_text"], border_color=theme["play_button_border"])
-        # set the download button color
-        self._btn_download.configure(border_color=theme["button_border"], fg_color=theme["panel"], hover_color=theme["hover"], text_color=theme["accent"])
 
     def _on_check_click(self):
         """Check the latest remote version (runs in a background thread)."""
         # default state and text of the check button
         self._btn_check.configure(state="disabled", text="Checking...")
+        # re-color footer
+        self._recolor_footer()
 
         # thread to check the latest remote version
         def _check():
@@ -949,7 +976,9 @@ class LauncherApp(ctk.CTk):
                 tag = release.get("tag_name", "?")
                 # update the latest remote version label
                 self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))
-            except Exception:
+            except Exception as e:
+                # log the exception
+                logging.warning("manual release check failed: %s", e)
                 # update the latest remote version label
                 self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))
             finally:
@@ -978,11 +1007,18 @@ class LauncherApp(ctk.CTk):
         if not tag:
             return
 
+        if self._downloading:
+            return
+        # set the downloading flag
+        self._downloading = True
+
         # disable buttons and show progress bar
         self._btn_download.configure(state="disabled", text="Downloading...")
         self._btn_play.configure(state="disabled")
         self._btn_check.configure(state="disabled")
-        self._btn_theme.configure(state="disabled")
+
+        # re-color footer
+        self._recolor_footer()
 
         # show progress bar and set height of top zone
         self._top_zone.configure(height=styles.FOOTER_TOP_HEIGHT)
@@ -1038,7 +1074,10 @@ class LauncherApp(ctk.CTk):
                 self.after(0, lambda: self._update_sprite(fraction))  # move the hero sprite
 
             # download the game
-            success = update(tag, progress_callback=on_progress)
+            try:
+                success = update(tag, progress_callback=on_progress)
+            except Exception:
+                success = False
 
             # finish download (after GUI is ready)
             def _finish():
@@ -1060,7 +1099,6 @@ class LauncherApp(ctk.CTk):
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
                 self._btn_check.configure(state="normal")
-                self._btn_theme.configure(state="normal")
 
                 # update installed version if successful
                 if success:
@@ -1069,11 +1107,32 @@ class LauncherApp(ctk.CTk):
                 else:
                     self._btn_download.configure(text="Retry")
 
+                # re-color footer
+                self._recolor_footer()
+
+                # reset the downloading flag
+                self._downloading = False
+
+                # apply the navigation and/or theme change deferred during the download
+                if self._pending_slide is not None:
+                    idx, d = self._pending_slide, self._pending_slide_dir
+                    self._pending_slide = None
+                    self._animate_to(idx, d)
+                elif self._carousel_pending_rerender and self._news_items:
+                    self._carousel_pending_rerender = False
+                    self._resize_carousel_bg()
+
+                # re-render the carousel if the theme changed during the download
+                if self._carousel_pending_rerender and self._news_items:
+                    self._carousel_pending_rerender = False
+                    self._resize_carousel_bg()
+
             # call finish (after GUI is ready)
             self.after(0, _finish)
 
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()
+
 
     def _update_sprite(self, fraction):
         """Update the hero sprite position (runs in a background thread)."""
@@ -1089,8 +1148,12 @@ class LauncherApp(ctk.CTk):
 
 
     def _cycle_hero(self):
+        """Cycle the hero sprite."""
+        # loop every 3 frames (0, 1, 2)
         self._hero_frame = (self._hero_frame + 1) % 3
+        # update the hero sprite
         self._hero_sprite.configure(image=self._hero_frames[self._hero_frame])
+        # set the timer to cycle the hero sprite
         self._hero_timer = self.after(100, self._cycle_hero)
 
 

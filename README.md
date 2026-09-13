@@ -166,9 +166,11 @@ A separate launcher app that downloads, updates, and launches the game.
   The choice is persisted to a local `settings.json`, so the launcher reopens on
   the last selected theme. The button shows the icon of the *other* theme
   (`theme_dark_icon.png` / `theme_light_icon.png`, bundled as assets) and is
-  swapped on each switch. A busy flag plus a short debounce discard rapid
-  repeated clicks, and `ctk.set_appearance_mode` is only called at startup:
-  switching is a full re-color pass, never an appearance-mode or widget rebuild.
+swapped on each switch. A busy flag plus a short debounce discard rapid
+   repeated clicks, and `ctk.set_appearance_mode` is only called at startup:
+   switching is a full re-color pass, never an appearance-mode or widget rebuild.
+   The heavy carousel re-render is deferred while a download runs, so a mid-download
+   switch never stutters the progress animation.
 - Vertical layout (960x600 px) with three horizontal bands: a header, a central
   content area, and a footer (versions, Check/Play/Download buttons, progress bar).
 - Header: a **theme toggle icon** sits in the left corner. The title *RPG Battle
@@ -223,11 +225,18 @@ semi-transparent overlay, the title/body, chevron arrow buttons, and navigation
   sprite sheet and their 3 frames are cycled as an animation; the sprite appears when
   the download starts and disappears when it completes. The progress bar and sprite
   live in a top footer zone that only appears during the download, so the footer
-  shrinks back to a single row of versions/buttons afterwards. The Theme button is
-  disabled during a download so a switch cannot interrupt the transfer.
+  shrinks back to a single row of versions/buttons afterwards. The theme can be
+  switched mid-download without interrupting the transfer: the switch re-colors the
+  header/footer/labels immediately and defers the heavy carousel re-render until the
+  download finishes. News navigation (arrow/dot clicks) mid-download is deferred the
+  same way and applied as soon as the download completes, keeping the progress bar
+  and the running hero sprite fluid.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
+  Disabled controls (Play, Check while checking, Download while installing) render in
+  a theme-aware grey — fill, border and text — that is re-applied on every theme switch
+  and ignores hover.
 - Cross-platform paths via `platformdirs`: game data lives in the OS-specific
   user data directory, not hardcoded paths.
 
