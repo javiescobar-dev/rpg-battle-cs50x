@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from diag import setup_logging, setup_ssl
 from ctypes import wintypes
 from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path, uninstall_game
 from updater import fetch_latest_release, update
 from news import get_news, get_image_path
 from settings import load_theme, save_theme
@@ -60,6 +60,7 @@ class LauncherApp(ctk.CTk):
         self._lbl_no_news = None                          # "No news available." label
         self._wndproc_cb = None                           # stores the subclass callback while the window is alive
         self._downloading = False                         # stores whether the game is being downloaded
+        self._uninstalling = False                        # stores whether the game is being uninstalled
         self._pending_slide = None                        # slide navigation deferred during download
         self._pending_slide_dir = "right"                 # slide navigation deferred during download
 
@@ -815,13 +816,13 @@ class LauncherApp(ctk.CTk):
         self._lbl_copyright = ctk.CTkLabel(self._row, text=COPYRIGHT_NOTICE, font=styles.FONT_DATE, text_color=styles.THEME()["text_body"])
         self._lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Check button
-        self._btn_check = ctk.CTkButton(
-            self._row, text="Check", width=70, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["button_border"],
+        # Uninstall button
+        self._btn_uninstall = ctk.CTkButton(
+            self._row, text="Uninstall", width=90, height=styles.BUTTON_HEIGHT, border_spacing=0, border_width=1, corner_radius=0, border_color=styles.THEME()["uninstall_button_border"],
             font=styles.FONT_BUTTON, fg_color=styles.THEME()["uninstall_button"], hover_color=styles.THEME()["uninstall_button_hover"], text_color=styles.THEME()["button_text"],
-            command=self._on_check_click
+            command=self._on_uninstall_click
         )
-        self._btn_check.pack(side="right", padx=(8, 0))
+        self._btn_uninstall.pack(side="right", padx=(8, 0))
 
         # Play button
         self._btn_play = ctk.CTkButton(
@@ -842,6 +843,10 @@ class LauncherApp(ctk.CTk):
         # Initial state of the Play button (disabled if the game is not installed)
         if not is_game_installed():
             self._btn_play.configure(state="disabled")
+
+        # Initial state of the Uninstall button (disabled if no game version is installed)
+        if not installed_version():
+            self._btn_uninstall.configure(state="disabled")
 
         # re-color footer
         self._recolor_footer()
@@ -938,9 +943,9 @@ class LauncherApp(ctk.CTk):
                 return (theme["disabled_fg_color"], theme["disabled_fg_color"], theme["disabled_text_color"], theme["disabled_border_color"])
             return (fg, hover, text, border)
 
-        # check button
-        fg, hov, txt, bdr = _colors(self._btn_check.cget("state"), theme["uninstall_button"], theme["uninstall_button_hover"], theme["button_text"], theme["uninstall_button_border"])
-        self._btn_check.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
+        # uninstall button
+        fg, hov, txt, bdr = _colors(self._btn_uninstall.cget("state"), theme["uninstall_button"], theme["uninstall_button_hover"], theme["button_text"], theme["uninstall_button_border"])
+        self._btn_uninstall.configure(fg_color=fg, hover_color=hov, text_color=txt, border_color=bdr)
 
         # play button
         fg, hov, txt, bdr = _colors(self._btn_play.cget("state"), theme["play_button"], theme["play_button_hover"], theme["button_text"], theme["play_button_border"])
@@ -960,34 +965,6 @@ class LauncherApp(ctk.CTk):
         self._lbl_latest.configure(text_color=theme["text_body"])
         # copyright label text color
         self._lbl_copyright.configure(text_color=theme["text_body"])
-
-    def _on_check_click(self):
-        """Check the latest remote version (runs in a background thread)."""
-        # default state and text of the check button
-        self._btn_check.configure(state="disabled", text="Checking...")
-        # re-color footer
-        self._recolor_footer()
-
-        # thread to check the latest remote version
-        def _check():
-            try:
-                # fetch the latest release
-                release = fetch_latest_release()
-                self._latest_release = release
-                tag = release.get("tag_name", "?")
-                # update the latest remote version label
-                self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))
-            except Exception as e:
-                # log the exception
-                logging.warning("manual release check failed: %s", e)
-                # update the latest remote version label
-                self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))
-            finally:
-                # restore the check button
-                self.after(0, lambda: self._btn_check.configure(state="normal", text="Check"))
-
-        # start the thread
-        threading.Thread(target=_check, daemon=True).start()
 
     def _on_play_click(self):
         """Launch the game."""
@@ -1016,7 +993,7 @@ class LauncherApp(ctk.CTk):
         # disable buttons and show progress bar
         self._btn_download.configure(state="disabled", text="Downloading...")
         self._btn_play.configure(state="disabled")
-        self._btn_check.configure(state="disabled")
+        self._btn_uninstall.configure(state="disabled")
 
         # re-color footer
         self._recolor_footer()
@@ -1099,7 +1076,7 @@ class LauncherApp(ctk.CTk):
 
                 # restore buttons
                 self._btn_download.configure(state="normal", text="Download")
-                self._btn_check.configure(state="normal")
+                self._btn_uninstall.configure(state="normal" if installed_version() else "disabled")
 
                 # update installed version if successful
                 if success:
