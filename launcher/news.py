@@ -3,7 +3,7 @@
 
 """Handle news fetching and display."""
 
-import urllib, time, json
+import urllib, time, json, logging
 from pathlib import Path
 from paths import game_dir
 from config import NEWS_URL, NEWS_CACHE_TTL, NEWS_BASE_URL
@@ -13,8 +13,8 @@ def fetch_news() -> list[dict]:
     """Fetch news from the remote URL."""
     # request news url
     req = urllib.request.Request(NEWS_URL)
-    # open news url
-    with urllib.request.urlopen(req) as resp:
+    # open news url (with a timeout of 20 seconds in case the network is not available)
+    with urllib.request.urlopen(req, timeout=20) as resp:
         # load json
         data = json.loads(resp.read().decode())
     # return news items
@@ -55,7 +55,9 @@ def get_news() -> list[dict]:
         save_cache(items)
         # return news
         return items
-    except Exception:
+    except Exception as e:
+        # log the exception
+        logging.warning("fetch_news failed: %s", e)
         # return cache
         return load_cache() or []
 
@@ -74,12 +76,14 @@ def get_image_path(image_field: str) -> Path | None:
     # if the file already exists and is recent, do not download it
     if dest.exists() and time.time() - dest.stat().st_mtime <= NEWS_CACHE_TTL:
         return dest
-    # try to download if it is old or doesn't exist
+    # try to download if it is old or doesn't exist (with a timeout of 20 seconds in case the network is not available)
     try:
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             dest.write_bytes(resp.read())
         return dest
-    except Exception:
+    except Exception as e:
+        # log the exception
+        logging.warning("news image download failed (%s): %s", image_field, e)
         # If the network fails but you have an old copy, use it (better than nothing)
         return dest if dest.exists() else None

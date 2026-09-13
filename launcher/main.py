@@ -3,9 +3,9 @@
 
 """Main launcher window and UI logic."""
 
-import ctypes, time, sys, random, threading, ui_styles as styles, customtkinter as ctk
+import ctypes, time, sys, random, logging, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-
+from diag import setup_logging
 from ctypes import wintypes
 from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
 from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
@@ -16,6 +16,9 @@ from settings import load_theme, save_theme
 class LauncherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # setup logging for diagnostics
+        setup_logging()
 
         # Restore the last saved theme
         styles.CURRENT_THEME = load_theme()
@@ -101,11 +104,13 @@ class LauncherApp(ctk.CTk):
             self._latest_release = release
             tag = release.get("tag_name", "?")
             self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))  # Set the latest release tag in background
-        except Exception:
+        except Exception as e:
+            logging.warning("latest release fetch failed: %s", e)  # log the exception
             self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))  # Set the latest release tag to — if fetch fails
 
         # News
         items = get_news()
+        logging.info("loaded %d news items", len(items))  # log the number of news items loaded
         self._news_items = items  # store news items for later use (carousel)
         self.after(0, lambda: self._populate_news(items))
 
@@ -971,7 +976,9 @@ class LauncherApp(ctk.CTk):
                 tag = release.get("tag_name", "?")
                 # update the latest remote version label
                 self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))
-            except Exception:
+            except Exception as e:
+                # log the exception
+                logging.warning("manual release check failed: %s", e)
                 # update the latest remote version label
                 self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))
             finally:

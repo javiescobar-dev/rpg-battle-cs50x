@@ -3,7 +3,7 @@
 
 """Manage game updates."""
 
-import json, platform, urllib.request, zipfile, shutil, tempfile
+import json, platform, urllib.request, zipfile, shutil, tempfile, logging
 from pathlib import Path
 from config import REPO_API_URL, GAME_ASSET_PATTERN
 from paths import game_dir, save_version
@@ -20,8 +20,8 @@ def platform_tag() -> str:
 def fetch_latest_release() -> dict:
     """Fetch the latest release information from the GitHub API."""
     req = urllib.request.Request(REPO_API_URL)
-    # get release info from github api
-    with urllib.request.urlopen(req) as resp:
+    # get release info from github api (with a timeout of 20 seconds in case the network is not available)
+    with urllib.request.urlopen(req, timeout=20) as resp:
         return json.loads(resp.read().decode())
 
 
@@ -45,8 +45,8 @@ def download_asset(asset: dict, dest_dir: Path, progress_callback=None) -> Path:
 
     # request asset url
     req = urllib.request.Request(url)
-    # get total size
-    with urllib.request.urlopen(req) as resp:
+    # get total size (with a timeout of 20 seconds in case the network is not available)
+    with urllib.request.urlopen(req, timeout=20) as resp:
         total = int(resp.headers.get("Content-Length", 0))
         downloaded = 0
         # open destination file
@@ -67,21 +67,27 @@ def download_asset(asset: dict, dest_dir: Path, progress_callback=None) -> Path:
 
 def update(tag: str, progress_callback=None) -> bool:
     """Update the game to the given tag."""
+    _phase = "fetch release"  # used to log the current phase in case of failure
     try:
         # get release info from github api
         release = fetch_latest_release()
+
         # find asset for current platform and tag
+        _phase = "find asset"  # used to log the current phase in case of failure
         asset = find_asset(release, tag)
         if not asset:
+            logging.warning("game asset not found (platform '%s', tag %s)", platform_tag(), tag)
             return False
 
         # set destination directory (game directory)
         dest = game_dir()
         # download the asset to a temporary directory (keeps the zip out of game_dir)
         with tempfile.TemporaryDirectory() as tmp_dl:
+            _phase = "download asset"  # used to log the current phase in case of failure
             zip_path = download_asset(asset, Path(tmp_dl), progress_callback)
 
             # extract zip (overwrite existing game), flattening the outer "game/" folder
+            _phase = "extract zip"  # used to log the current phase in case of failure
             with tempfile.TemporaryDirectory() as tmp:
                 # extract zip to a temporary directory
                 with zipfile.ZipFile(zip_path, "r") as zf:
@@ -100,5 +106,7 @@ def update(tag: str, progress_callback=None) -> bool:
         # save new version
         save_version(tag)
         return True   # update success
-    except Exception:
+    except Exception as e:
+        # log the exception
+        logging.warning("game update failed (%s): %s", _phase, e)
         return False  # update failed
