@@ -5,7 +5,7 @@
 
 import ctypes, time, sys, random, logging, threading, ui_styles as styles, customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from diag import setup_logging
+from diag import setup_logging, setup_ssl
 from ctypes import wintypes
 from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
 from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path
@@ -18,7 +18,8 @@ class LauncherApp(ctk.CTk):
         super().__init__()
 
         # setup logging for diagnostics
-        setup_logging()
+        setup_ssl()                          # verify TLS against the OS trust store
+        setup_logging()                      # setup logging for diagnostics
 
         # Restore the last saved theme
         styles.CURRENT_THEME = load_theme()

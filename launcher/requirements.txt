@@ -4,3 +4,4 @@ customTkinter>=5.4
 platformdirs>=4
 packaging>=24
 Pillow>=10.0
+truststore>=0.8
