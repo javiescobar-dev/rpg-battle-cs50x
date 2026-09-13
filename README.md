@@ -172,7 +172,7 @@ swapped on each switch. A busy flag plus a short debounce discard rapid
    The heavy carousel re-render is deferred while a download runs, so a mid-download
    switch never stutters the progress animation.
 - Vertical layout (960x600 px) with three horizontal bands: a header, a central
-  content area, and a footer (versions, Check/Play/Download buttons, progress bar).
+  content area, and a footer (versions, Play/Download/Uninstall buttons, progress bar).
 - Header: a **theme toggle icon** sits in the left corner. The title *RPG Battle
   Launcher* is rendered with the game's own `finalf.ttf` in uppercase (as on the
   game title screen) and keeps a short hairline underline bar in the title color,
@@ -190,6 +190,9 @@ swapped on each switch. A busy flag plus a short debounce discard rapid
 - Downloads the game from GitHub Releases: fetches the latest release via the
   GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
   downloads it with a progress bar, extracts it, and saves the installed version.
+  The latest release is fetched once at startup; if that check failed (e.g.
+  offline at launch) the Download button re-fetches it on demand before
+  installing, so the launcher needs no manual refresh button.
 - News carousel: fetches `news.json` from the remote GitHub raw URL (falling back
   to a local cache with a 1-hour TTL when offline) and renders the feed as a
   visual slide carousel. Each slide uses the news item's own image when it has one
@@ -245,9 +248,15 @@ semi-transparent overlay, the title/body, chevron arrow buttons, and navigation
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
   disabled when no game is installed and enabled after a successful update.
-  Disabled controls (Play, Check while checking, Download while installing) render in
-  a theme-aware grey — fill, border and text — that is re-applied on every theme switch
-  and ignores hover.
+  Disabled controls (Play, Download while installing, Uninstall when no game is
+  installed) render in a theme-aware grey — fill, border and text — that is
+  re-applied on every theme switch and ignores hover.
+- Uninstall: the footer's **Uninstall** button removes every trace of the game and
+  launcher data with a single action — game folder, `version.txt`, news cache and
+  images, diagnostic log and settings. It asks for confirmation in a themed
+  modal first (the current theme stays active until the launcher closes; only the
+  *next* launch falls back to Light). After uninstalling, Play and Uninstall go
+  grey and Download is ready for a fresh install.
 - Cross-platform paths via `platformdirs`: game data lives in the OS-specific
   user data directory, not hardcoded paths.
 
