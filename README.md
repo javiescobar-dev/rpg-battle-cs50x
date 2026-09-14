@@ -282,6 +282,13 @@ portable bundles (no installer required) across Windows, macOS, and Linux.
   launcher downloads; the launcher (customTkinter) is the app the user runs.
 - **`--onedir` mode for both**: reduces antivirus false positives (one-file
   bundles trip heuristics more often) and starts faster than one-file bundles.
+- **App icon everywhere**: both executables carry the game's own icon
+  (`game/assets/icons/rpg_battle_icon.ico`, embedded at build time through the
+  PyInstaller `icon` option). At runtime the game also paints it on its window
+  (title bar and taskbar) by loading the bundled PNG via
+  `pygame.display.set_icon`, scaled to 32×32; the launcher (frameless, with no
+  visible title bar) applies it to its taskbar/Alt-Tab icon on Windows via
+  `iconbitmap`.
 - **Portable asset paths**: the game resolves its assets through `sys._MEIPASS`
   when frozen (falling back to the repo root in development), so the built
   executable runs from any working directory — it does not depend on where it
