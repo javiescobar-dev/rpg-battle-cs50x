@@ -6,7 +6,7 @@
 import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_NAME_TITLE, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y,
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_NAME_TITLE, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, ICON_PATH,
     HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
     RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, OVERLAY_END, FONT_END_SIZE, POTION_SPRITE_PATH,
     FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE, COLOR_TEXT_FOOTER, FONT_FOOTER_SIZE
@@ -67,6 +67,13 @@ def main():
 
     # set the window title
     pygame.display.set_caption("RPG Battle")
+
+    # Set game icon
+    try:
+        icon = pygame.image.load(ICON_PATH)
+        pygame.display.set_icon(pygame.transform.smoothscale(icon, (32, 32)))
+    except pygame.error:
+        pass
 
     # create a clock to manage the frame rate (limit game to 60 FPS and return the time since the last frame in seconds)
     clock = pygame.time.Clock()

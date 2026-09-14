@@ -15,13 +15,13 @@
         {
             "title": "New spell animations",
             "body": "Spells now feature glowing effects, particles and projectiles that bring every combat to life.",
-            "image": "",
+            "image": "news/images/news_03.png",
             "date": "2026-07-20"
         },
         {
             "title": "Fight epic battles",
             "body": "Real sprites, four battle backgrounds and thrilling turn-based encounters inspired by the classics of the genre.",
-            "image": "",
+            "image": "news/images/news_04.png",
             "date": "2026-06-15"
         }
     ]

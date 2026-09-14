@@ -20,7 +20,9 @@ a = Analysis(
         (os.path.join(launcher_dir, "..", "game", "assets", "ui", "*.png"),
         os.path.join("assets", "ui")),
         (os.path.join(launcher_dir, "..", "game", "assets", "fonts", "finalf.ttf"),
-        os.path.join("assets", "fonts"))
+        os.path.join("assets", "fonts")),
+        (os.path.join(launcher_dir, "..", "game", "assets", "icons", "rpg_battle_icon.ico"),
+        os.path.join("assets", "icons"))
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -41,6 +43,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,                      # --windowed
+    icon=os.path.join(launcher_dir, "..", "game", "assets", "icons", "rpg_battle_icon.ico")
 )
 
 coll = COLLECT(

@@ -247,16 +247,29 @@ semi-transparent overlay, the title/body, chevron arrow buttons, and navigation
   broke the launcher inside a Windows 11 VM while the browser worked fine.
 - Version management: tracks the installed game version in `version.txt` inside
   the platform-specific data directory (`platformdirs`). The Play button is
-  disabled when no game is installed and enabled after a successful update.
+  disabled when no game is installed and enabled after a successful update
+  (in a development checkout it also enables when the repository `game/` folder
+  exists, and `launch_game()` then falls back to `python -m game.main`).
   Disabled controls (Play, Download while installing, Uninstall when no game is
   installed) render in a theme-aware grey — fill, border and text — that is
   re-applied on every theme switch and ignores hover.
+- Download button states: the Download button shows the relation between the
+  installed and the latest version. When they match it is disabled and reads
+  **Up to date**; when a newer release exists it reads **Update**; and when
+  nothing is installed (or the latest version is unknown, e.g. offline at
+  launch) it reads **Download** and re-fetches the release on demand before
+  installing. The state is refreshed at startup and after every download or
+  uninstall, so it never goes stale.
 - Uninstall: the footer's **Uninstall** button removes every trace of the game and
   launcher data with a single action — game folder, `version.txt`, news cache and
   images, diagnostic log and settings. It asks for confirmation in a themed
   modal first (the current theme stays active until the launcher closes; only the
-  *next* launch falls back to Light). After uninstalling, Play and Uninstall go
-  grey and Download is ready for a fresh install.
+  *next* launch falls back to Light). The dialog body keeps the current palette
+  and its title bar follows the live theme: the theme toggle keeps CTk's
+  `AppearanceModeTracker` in sync, so a dialog opened after a mid-session theme
+  switch paints its title bar with the active theme instead of the startup one.
+  After uninstalling, Play and Uninstall go grey and Download is ready for a
+  fresh install.
 - Cross-platform paths via `platformdirs`: game data lives in the OS-specific
   user data directory, not hardcoded paths.
 
@@ -269,6 +282,13 @@ portable bundles (no installer required) across Windows, macOS, and Linux.
   launcher downloads; the launcher (customTkinter) is the app the user runs.
 - **`--onedir` mode for both**: reduces antivirus false positives (one-file
   bundles trip heuristics more often) and starts faster than one-file bundles.
+- **App icon everywhere**: both executables carry the game's own icon
+  (`game/assets/icons/rpg_battle_icon.ico`, embedded at build time through the
+  PyInstaller `icon` option). At runtime the game also paints it on its window
+  (title bar and taskbar) by loading the bundled PNG via
+  `pygame.display.set_icon`, scaled to 32×32; the launcher (frameless, with no
+  visible title bar) applies it to its taskbar/Alt-Tab icon on Windows via
+  `iconbitmap`.
 - **Portable asset paths**: the game resolves its assets through `sys._MEIPASS`
   when frozen (falling back to the repo root in development), so the built
   executable runs from any working directory — it does not depend on where it

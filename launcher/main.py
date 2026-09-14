@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from diag import setup_logging, setup_ssl
 from ctypes import wintypes
 from config import APP_NAME, APP_TITLE, COPYRIGHT_NOTICE
-from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path, uninstall_game
+from paths import installed_version, is_game_installed, launch_game, launcher_background_path, font_path, launcher_hero_path, title_font_path, theme_icon_path, uninstall_game, launcher_icon_path
 from updater import fetch_latest_release, update
 from news import get_news, get_image_path
 from settings import load_theme, save_theme
@@ -37,6 +37,14 @@ class LauncherApp(ctk.CTk):
         ctk.set_widget_scaling(1.0)                       # set widget scaling
         self.title(APP_NAME)                              # set window title
         self.geometry(f"{styles.WINDOW_WIDTH}x{styles.WINDOW_HEIGHT}")  # set window size
+
+        # Set launcher icon
+        if sys.platform == "win32":
+            try:
+                self.iconbitmap(launcher_icon_path())
+            except Exception:
+                pass
+
         self.configure(fg_color=styles.THEME()["bg"])     # set window background color
         self.configure(bg=styles.THEME()["bg"])
         # internal state

@@ -308,3 +308,6 @@ SFX = {
     "cursor":       f"{SFX_DIR}/cursor.wav",
     "confirm":      f"{SFX_DIR}/confirm.wav",
 }
+
+# Icon
+ICON_PATH = f"{ASSET_BASE}/game/assets/icons/rpg_battle_icon.png"
