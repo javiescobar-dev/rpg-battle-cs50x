@@ -18,7 +18,8 @@ a = Analysis(
         (os.path.join(game_dir, "assets", "sfx"),         os.path.join("game", "assets", "sfx")),
         (os.path.join(game_dir, "assets", "sprites", "hero"),  os.path.join("game", "assets", "sprites", "hero")),
         (os.path.join(game_dir, "assets", "sprites", "enemy"), os.path.join("game", "assets", "sprites", "enemy")),
-        (os.path.join(game_dir, "assets", "sprites", "items"), os.path.join("game", "assets", "sprites", "items"))
+        (os.path.join(game_dir, "assets", "sprites", "items"), os.path.join("game", "assets", "sprites", "items")),
+        (os.path.join(game_dir, "assets", "icons"),       os.path.join("game", "assets", "icons"))
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -39,6 +40,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=os.path.join(game_dir, "assets", "icons", "rpg_battle_icon.ico")
 )
 
 coll = COLLECT(
