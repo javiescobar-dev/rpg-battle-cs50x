@@ -873,6 +873,7 @@ class LauncherApp(ctk.CTk):
 
             # persist the theme for next launch
             save_theme(styles.CURRENT_THEME)
+            ctk.AppearanceModeTracker.appearance_mode = 1 if styles.CURRENT_THEME == "Dark" else 0
 
             # apply the new theme
             self._apply_theme()
@@ -1009,23 +1010,6 @@ class LauncherApp(ctk.CTk):
         x = self.winfo_x() + (self.winfo_width() - 380) // 2
         y = self.winfo_y() + (self.winfo_height() - 170) // 2
         dlg.geometry(f"+{x}+{y}")
-
-        # apply custom title bar colors for Windows
-        if sys.platform == "win32":
-            try:
-                # get the window handle
-                hwnd = ctypes.windll.user32.GetParent(dlg.winfo_id())
-                # dark mode for title bar
-                dark = 1 if styles.CURRENT_THEME == "Dark" else 0
-                dark_mode = ctypes.c_int(dark)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(dark_mode), ctypes.sizeof(dark_mode))
-                # title bar color
-                rgb = int(styles.THEME()["bg"][1:], 16)
-                bgr = ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | (rgb >> 16)
-                caption = ctypes.c_int(bgr)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(caption), ctypes.sizeof(caption))
-            except Exception as e:
-                logging.error(f"Failed to set title bar colors: {e}")
 
         # message
         ctk.CTkLabel(dlg, text="Uninstall RPG Battle?\n\nThis removes the game, news cache, images,\nlogs and settings (the next launch returns to Light).",
