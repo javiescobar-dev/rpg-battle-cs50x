@@ -4,7 +4,7 @@
 """Path configuration and helpers for the launcher."""
 
 from pathlib import Path
-import platformdirs, subprocess, sys, os
+import platformdirs, subprocess, sys, os, shutil
 
 def game_dir() -> Path:
     """Return the installation directory for the game."""
@@ -81,6 +81,25 @@ def launch_game() -> None:
             raise RuntimeError(f"Failed to launch game: {e}")
 
 
+def uninstall_game() -> None:
+    """Delete every trace of the game and launcher data (game, cache, log, settings)."""
+    # get the base directory (parent of game_dir)
+    base = game_dir().parent
+
+    # return if base doesn't exist
+    if not base.exists():
+        return
+
+    # try to remove launcher.log if it exists
+    try:
+        (base / "launcher.log").unlink(missing_ok=True)
+    except OSError:
+        pass
+
+    # remove the whole base directory (game, cache, log, settings)
+    shutil.rmtree(base, ignore_errors=True)
+
+
 def _asset_base() -> Path:
     """Base folder for bundled (in-memory) or development assets."""
     # in a frozen (PyInstaller) build, assets live in sys._MEIPASS
@@ -94,6 +113,14 @@ def launcher_background_path() -> Path:
     """Return the path to the default carousel background."""
     # return path to default carousel background
     return _asset_base() / "backgrounds" / "rpg_battle_background_title.png"
+
+
+def game_dir() -> Path:
+    """Return the installation directory for the game."""
+    base = Path(platformdirs.user_data_dir("rpg-battle"))    # e.g. C:\Users\your_user\AppData\Local\rpg-battle
+    game = base / "game"                                     # <base>/game
+    game.mkdir(parents=True, exist_ok=True)                  # creates the tree if missing
+    return game
 
 
 def font_path(bold: bool) -> Path | None:
