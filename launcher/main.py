@@ -107,6 +107,7 @@ class LauncherApp(ctk.CTk):
             self._latest_release = release
             tag = release.get("tag_name", "?")
             self.after(0, lambda: self._lbl_latest.configure(text=f"Latest: {tag}"))  # Set the latest release tag in background
+            self.after(0, lambda: self._refresh_download_state(tag))
         except Exception as e:
             logging.warning("latest release fetch failed: %s", e)  # log the exception
             self.after(0, lambda: self._lbl_latest.configure(text="Latest: —"))  # Set the latest release tag to — if fetch fails
@@ -1002,11 +1003,30 @@ class LauncherApp(ctk.CTk):
         dlg.resizable(False, False)
         dlg.transient(self)
         dlg.grab_set()
+
         # center the dialog over the main window
         dlg.update_idletasks()
         x = self.winfo_x() + (self.winfo_width() - 380) // 2
         y = self.winfo_y() + (self.winfo_height() - 170) // 2
         dlg.geometry(f"+{x}+{y}")
+
+        # apply custom title bar colors for Windows
+        if sys.platform == "win32":
+            try:
+                # get the window handle
+                hwnd = ctypes.windll.user32.GetParent(dlg.winfo_id())
+                # dark mode for title bar
+                dark = 1 if styles.CURRENT_THEME == "Dark" else 0
+                dark_mode = ctypes.c_int(dark)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(dark_mode), ctypes.sizeof(dark_mode))
+                # title bar color
+                rgb = int(styles.THEME()["bg"][1:], 16)
+                bgr = ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | (rgb >> 16)
+                caption = ctypes.c_int(bgr)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(caption), ctypes.sizeof(caption))
+            except Exception as e:
+                logging.error(f"Failed to set title bar colors: {e}")
+
         # message
         ctk.CTkLabel(dlg, text="Uninstall RPG Battle?\n\nThis removes the game, news cache, images,\nlogs and settings (the next launch returns to Light).",
                     font=styles.FONT_BODY, text_color=theme["text_body"]).pack(pady=(18, 10))
@@ -1052,9 +1072,8 @@ class LauncherApp(ctk.CTk):
         # disable uninstall button
         self._btn_uninstall.configure(state="disabled")
         self._btn_play.configure(state="disabled")
-        self._btn_download.configure(state="normal", text="Download")
-        # re-color footer
-        self._recolor_footer()
+        # update download button and recolor footer
+        self._refresh_download_state(None)
 
     def _on_download_click(self):
         """Download or update the game (runs in a background thread)."""
@@ -1145,11 +1164,12 @@ class LauncherApp(ctk.CTk):
                 if success:
                     self._lbl_installed.configure(text=f"Installed: {tag}")
                     self._btn_play.configure(state="normal")
+                    # update download button state and re-color footer
+                    self._refresh_download_state(tag)
                 else:
                     self._btn_download.configure(text="Retry")
-
-                # re-color footer
-                self._recolor_footer()
+                    # re-color footer
+                    self._recolor_footer()
 
                 # reset the downloading flag
                 self._downloading = False
@@ -1211,6 +1231,16 @@ class LauncherApp(ctk.CTk):
         # start the thread
         threading.Thread(target=_do_update, daemon=True).start()
 
+    def _refresh_download_state(self, tag):
+        """Set the Download/Update/Up to date state of the download button."""
+        installed = installed_version()
+        if installed and tag and installed == tag:
+            self._btn_download.configure(state="disabled", text="Up to date")
+        elif installed and tag:
+            self._btn_download.configure(state="normal", text="Update")
+        else:
+            self._btn_download.configure(state="normal", text="Download")
+        self._recolor_footer()
 
     def _update_sprite(self, fraction):
         """Update the hero sprite position (runs in a background thread)."""
@@ -1223,7 +1253,6 @@ class LauncherApp(ctk.CTk):
         travel = self._footer.winfo_width() - 32 - self._hero_sprite.winfo_width()
         x = 16 + fraction * travel  # 0.0 -> left, 1.0 -> right
         self._hero_sprite.place(x=x)  # move (and it was already fixed when created)
-
 
     def _cycle_hero(self):
         """Cycle the hero sprite."""
