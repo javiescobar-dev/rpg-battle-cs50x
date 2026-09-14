@@ -155,3 +155,8 @@ def theme_icon_path(name: str) -> Path:
 def launcher_hero_path(index: int) -> Path:
     """Return the path to a hero sprite frame (1-8) for the download animation."""
     return _asset_base() / "sprites" / "hero" / f"hero_{index:02d}.png"
+
+
+def launcher_icon_path() -> Path:
+    """Return the path to the launcher icon."""
+    return _asset_base() / "icons" / "rpg_battle_icon.ico"
