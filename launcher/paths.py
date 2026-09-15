@@ -115,14 +115,6 @@ def launcher_background_path() -> Path:
     return _asset_base() / "backgrounds" / "rpg_battle_background_title.png"
 
 
-def game_dir() -> Path:
-    """Return the installation directory for the game."""
-    base = Path(platformdirs.user_data_dir("rpg-battle"))    # e.g. C:\Users\your_user\AppData\Local\rpg-battle
-    game = base / "game"                                     # <base>/game
-    game.mkdir(parents=True, exist_ok=True)                  # creates the tree if missing
-    return game
-
-
 def font_path(bold: bool) -> Path | None:
     """Return an existing font path for a heading (bold) or body (regular), or None."""
     # set a list of font paths to check for each OS
