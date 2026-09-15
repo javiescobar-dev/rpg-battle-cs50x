@@ -45,7 +45,8 @@ the Phase 1 engine (unchanged battle logic).
   `format_event` messages with word wrapping.
 - Main menu (Play / Statistics / Quit) with a single cursor shared by keyboard
   (arrow keys + Enter, number shortcuts 1-3) and mouse (hover moves the cursor,
-  click confirms). A copyright footer is displayed at the bottom of the screen.
+  click confirms). The title is accented by a hairline underline, and a
+  copyright footer is displayed at the bottom of the screen.
 - Suikoden II-style two-level battle menu: Attack / Skill / Potion / Flee, where
   choosing Skill swaps the panel for the rune submenu Fireball / Guard / Heal / Back.
   Same navigation as the main menu (arrows + Enter, keys 1-4, mouse).
@@ -55,7 +56,9 @@ the Phase 1 engine (unchanged battle logic).
   recorded to the score history. The end screen shows the result with a flavor line
   (e.g. "Hero vs Enemy - 5 turns") plus the global summary, and a statistics screen
   shows the same summary from the main menu; both return to the menu on any key or
-  click.
+  click. Both screens render the summary inside a wide semi-transparent panel whose
+  layout is defined in `config.py`, so long values (like "Most Common Enemy") never
+  overflow.
 - Battle animations driven by the EventPlayer: events play one at a time as
   animations. AttackAnimation plays a diagonal lunge toward the target (stopping
   30px short), an impact flash (drawn on a translucent SRCALPHA overlay), a recoil

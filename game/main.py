@@ -7,9 +7,11 @@ import pygame, random
 from game.battle import Battle, format_event
 from game.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, COLOR_BG, COLOR_TEXT, FONT_NAME, FONT_NAME_TITLE, FONT_TITLE_SIZE, FONT_MENU_SIZE, HERO_X, ENEMY_X, HERO_Y, ENEMY_Y, ICON_PATH,
-    HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT,
+    HERO_SCALE, ENEMY_SCALE, HERO_CARD_RECT, LOG_RECT, MENU_RECT, FONT_HUD_SIZE, FONT_LOG_SIZE, RESULT_VICTORY, RESULT_DEFEAT, MAIN_MENU_WIDTH, MAIN_MENU_OFFSET, MAIN_MENU_PADDING,
     RESULT_FLED, BATTLE_BACKGROUNDS, HEROES, ENEMIES, SFX, CHOSE_DELAY, TITLE_BG_PATH, OVERLAY_END, FONT_END_SIZE, POTION_SPRITE_PATH,
-    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE, COLOR_TEXT_FOOTER, FONT_FOOTER_SIZE
+    FADE_DURATION, COLOR_ACCENT, COLOR_BORDER, PANEL_BORDER, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN, COLOR_TEXT_TITLE, COLOR_TEXT_FOOTER, FONT_FOOTER_SIZE,
+    TITLE_Y, HINT_BOTTOM, SUMMARY_LABEL_X, SUMMARY_VALUE_X, END_PANEL_W, END_PANEL_H, END_PANEL_ALPHA, END_FLAVOR_Y, END_SUMMARY_Y, STATS_PANEL_Y, END_PANEL_Y,
+    STATS_PANEL_W, STATS_PANEL_H, STATS_PANEL_ALPHA, STATS_LINE_Y, STATS_LINE_INSET, STATS_SUMMARY_Y, TITLE_UNDERLINE_GAP, TITLE_UNDERLINE_THICK, TITLE_UNDERLINE_PAD,
 )
 from game.entities import make_hero, make_enemy
 from game.ui import CharacterSprite, LogPanel, Menu, EventPlayer, draw_hud, draw_enemy_name
@@ -32,10 +34,10 @@ SKILL_OPTIONS  = ["Fireball", "Guard", "Heal", "Back"]
 # ----------------------------------------------------------------------
 def make_main_menu(font):
     """Create the main menu widget, centered on screen."""
-    width = 300
-    height = 3 * (font.get_height() + 8) + 16  # 3 options + padding
+    width = MAIN_MENU_WIDTH
+    height = 3 * (font.get_height() + 8) + MAIN_MENU_PADDING  # 3 options + padding
     # create rect for menu, centered horizontally and with a little offset vertically
-    rect = ((SCREEN_WIDTH - width) // 2, (SCREEN_HEIGHT - height) // 2 + 60, width, height)
+    rect = ((SCREEN_WIDTH - width) // 2, (SCREEN_HEIGHT - height) // 2 + MAIN_MENU_OFFSET, width, height)
     # create menu widget
     return Menu(rect, ["Play", "Statistics", "Quit"], font, PANEL_BORDER_MAIN, COLOR_ACCENT_MAIN, COLOR_TEXT_MAIN)
 
@@ -45,7 +47,14 @@ def draw_menu_screen(screen, title_font, menu, font_footer):
     # render the title
     title = title_font.render("RPG BATTLE", True, COLOR_TEXT_TITLE)
     # draw the title
-    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
+    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, TITLE_Y))
+    # underline bar (hairline, like the launcher title)
+    bw = title.get_width() // 2 + TITLE_UNDERLINE_PAD
+    by = TITLE_Y + title.get_height() + TITLE_UNDERLINE_GAP
+    pygame.draw.line(screen, COLOR_TEXT_TITLE,
+                     (SCREEN_WIDTH // 2 - bw, by),
+                     (SCREEN_WIDTH // 2 + bw, by),
+                     TITLE_UNDERLINE_THICK)
     # draw the menu
     menu.draw(screen)
     # draw footer text
@@ -409,7 +418,7 @@ def draw_hint(screen, font):
     """Draw hint"""
     text = font.render("Press any key or click to continue...", True, COLOR_TEXT)
     text_rect = text.get_rect()
-    text_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
+    text_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - HINT_BOTTOM)
     screen.blit(text, text_rect)
 
 
@@ -481,45 +490,45 @@ def draw_end_screen(screen, font_end, menu_font, battle, stats):
     }[battle.result]
     # render the result
     title = font_end.render(result_text, True, title_color)
-    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
+    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, TITLE_Y))
     # render the flavor line
     flavor = f"{battle.hero.name} vs {battle.enemy.name} - {battle.turns} turns"
     text = menu_font.render(flavor, True, COLOR_TEXT)
-    screen.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 170))
+    screen.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, END_FLAVOR_Y))
     # semi-transparent panel
-    panel_w, panel_h = 500, 280
+    panel_w, panel_h = END_PANEL_W, END_PANEL_H
     panel_x = (SCREEN_WIDTH - panel_w) // 2
-    panel_y = 220
+    panel_y = END_PANEL_Y
     panel = pygame.Surface((panel_w, panel_h))
-    panel.fill((0, 0, 0))
-    panel.set_alpha(80)
+    panel.fill(PANEL_BORDER)
+    panel.set_alpha(END_PANEL_ALPHA)
     screen.blit(panel, (panel_x, panel_y))
     # draw summary and hint
-    draw_summary_and_hint(screen, menu_font, stats, y=250, x_label=panel_x + 50, x_value=panel_x + 340)
+    draw_summary_and_hint(screen, menu_font, stats, y=END_SUMMARY_Y, x_label=panel_x + SUMMARY_LABEL_X, x_value=panel_x + SUMMARY_VALUE_X)
 
 def draw_stats_screen(screen, title_font, menu_font, stats):
     """Draw the global statistics screen."""
     screen.fill(COLOR_BG)
 
     # draw semi-transparent background panel
-    panel_w, panel_h = 500, 360
+    panel_w, panel_h = STATS_PANEL_W, STATS_PANEL_H
     panel_x = (SCREEN_WIDTH - panel_w) // 2
-    panel_y = 60
+    panel_y = STATS_PANEL_Y
     panel = pygame.Surface((panel_w, panel_h))
     panel.fill(PANEL_BORDER)
-    panel.set_alpha(80)
+    panel.set_alpha(STATS_PANEL_ALPHA)
     screen.blit(panel, (panel_x, panel_y))
 
     # render the title
     title = title_font.render("Statistics", True, COLOR_TEXT)
-    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, 90))
+    screen.blit(title, ((SCREEN_WIDTH - title.get_width()) // 2, TITLE_Y))
 
     # draw horizontal line
-    line_y = 160
-    pygame.draw.line(screen, COLOR_BORDER, (panel_x + 30, line_y), (panel_x + panel_w - 30, line_y), 1)
+    line_y = STATS_LINE_Y
+    pygame.draw.line(screen, COLOR_BORDER, (panel_x + STATS_LINE_INSET, line_y), (panel_x + panel_w - STATS_LINE_INSET, line_y), 1)
 
     # draw summary and hint
-    draw_summary_and_hint(screen, menu_font, stats, y=200, x_label=panel_x + 50, x_value=panel_x + 340)
+    draw_summary_and_hint(screen, menu_font, stats, y=STATS_SUMMARY_Y, x_label=panel_x + SUMMARY_LABEL_X, x_value=panel_x + SUMMARY_VALUE_X)
 
 
 if __name__ == "__main__":
