@@ -156,8 +156,8 @@ A separate launcher app that downloads, updates, and launches the game.
 
 - Blue palette coherent with the in-game title screen: accent cyan
   `#50C8F0` on a pale background in light mode, and a dark navy background with
-  gold accents in dark mode (a neon-cyan contrast pass is the pending part of the
-  visual polish).
+  gold accents in dark mode (a neon-cyan contrast pass on the dark accents was
+  tested and discarded — the original gold/orange look is the final one).
 - **Light/Dark themes**: a theme icon in the header toggles between the two
   palettes by recoloring the existing widgets in place — no UI rebuild, no
   flicker. Each zone gets its own re-color pass (`_recolor_header`,

@@ -2,7 +2,7 @@
     "items": [
         {
             "title": "Welcome to RPG Battle!",
-            "body": "RPG Battle is the CS50x final project: a Suikoden II-inspired turn-based battle game built with Pygame and a launcher built with CustomTkinter. Developed by Javi Escobar Fernández.",
+            "body": "RPG Battle is the CS50x final project: a Final Fantasy and Suikoden II-inspired turn-based battle game built with Pygame and a launcher built with CustomTkinter.",
             "image": "news/images/news_01.png",
             "date": "2026-09-11"
         },
