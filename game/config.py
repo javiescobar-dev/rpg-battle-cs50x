@@ -212,6 +212,41 @@ HERO_CARD_RECT = (SCREEN_WIDTH - CARD_WIDTH - 20, 20, CARD_WIDTH, CARD_HEIGHT)
 # Bar dimensions
 BAR_HEIGHT = 12   # height of the HP/MP bars
 
+# Main Menu
+MAIN_MENU_WIDTH   = 300
+MAIN_MENU_OFFSET  = 60
+MAIN_MENU_PADDING = 16
+
+# Result / statistics screens
+TITLE_Y            = 90    # screen title vertical position (menu, result, stats)
+HINT_BOTTOM        = 50    # hint distance from the bottom of the screen
+
+# Summary table (shared by result and stats screens)
+SUMMARY_LABEL_X    = 50    # label column left offset (from panel x)
+SUMMARY_VALUE_X    = 380   # value column left offset (from panel x)
+
+# End screen
+END_PANEL_W        = 600
+END_PANEL_H        = 280
+END_PANEL_Y        = 220
+END_PANEL_ALPHA    = 80
+END_FLAVOR_Y       = 170
+END_SUMMARY_Y      = 250
+
+# Stats screen
+STATS_PANEL_W      = 600
+STATS_PANEL_H      = 360
+STATS_PANEL_Y      = 60
+STATS_PANEL_ALPHA  = 80
+STATS_LINE_Y       = 160
+STATS_LINE_INSET   = 30
+STATS_SUMMARY_Y    = 200
+
+# Title underline (main menu)
+TITLE_UNDERLINE_GAP   = 2   # px below the title text
+TITLE_UNDERLINE_THICK = 4   # hairline, like the launcher
+TITLE_UNDERLINE_PAD   = 8   # extra width per side
+
 # Battle menu and log
 MENU_RECT = (40, 450, 300, 180)    # (x, y, width, height) menu panel
 LOG_RECT  = (360, 450, 560, 180)   # (x, y, width, height) battle log panel
