@@ -170,8 +170,8 @@ El código fuente del juego está en `game/`:
   `scores.json` (fecha, resultado, turnos) y calcula el resumen de
   estadísticas.
 - `game/ui.py` - toda la parte visual del juego: sprites de personajes,
-  paneles de batalla, el log, los menús, y las animaciones por eventos
-  (ataque, hechizos, hechizo de vida, guard y poción).
+  paneles de batalla, el log, los menús y las animaciones por eventos
+  (ataque, hechizos, sanación, guard y poción).
 - `game/assets.py` - carga de recursos: hojas de sprites, fondos, efectos de
   sonido, fuentes y el icono.
 - `game/main.py` - el bucle principal y la máquina de estados

@@ -1,329 +1,275 @@
-# RPG Battle — CS50x Final Project
+# RPG Battle - CS50x Final Project
 
-Turn-based RPG battle game built with Pygame, paired with a customTkinter
-launcher that downloads the game from GitHub Releases and displays a news
-feed. Features Suikoden II-style combat animations, real sprite graphics,
-and a polished battle UI. Final project for CS50x 2026.
+#### Video Demo: <demo video URL (pending recording)>
 
-## Features
+#### Repository: <https://github.com/javiescobar-dev/rpg-battle-cs50x>
 
-> Documented incrementally as each feature is implemented.
+#### Description
 
-### Turn-based battle engine (Phase 1 — console logic)
+RPG Battle is a turn-based combat game in the style of Suikoden II built with
+Python and Pygame, accompanied by a desktop launcher in customTkinter that
+downloads, updates and launches the game from GitHub *releases*. The idea comes
+from emulating CS50x's first exercise, the Week 0 project in Scratch, which was
+precisely an RPG battle, and to complement it I decided to include a launcher
+that eases distribution, keeps it updated and shows news and new versions. The
+project is also a way to practice designing a complete Python program: game
+logic decoupled from the graphics, a state machine, event-driven animations,
+data persistence and a distribution pipeline (PyInstaller builds and CI with
+GitHub Actions).
 
-Playable in the terminal with `python -m game.main`.
+Opening the game shows a main menu with the options Play, Statistics and Quit.
+Every battle is turn-based: the hero chooses to attack, use a skill (Fireball,
+Guard or Heal), take a potion or flee, and the enemy acts with a weighted AI.
+Each combat randomly picks a hero, an enemy and a scene, and its result is saved
+to a JSON file (`scores.json`) that is later loaded in the end-of-battle and
+statistics screens. The launcher shows the project news in an image carousel,
+and lets you install, update or uninstall the game with one click.
 
-- Hero vs Enemy turn-based combat: physical attack, three mana-consuming
-  rune skills (Spell, Guard, Heal) inspired by Suikoden II, potions, and a
-  speed-based flee mechanic.
-- Damage formula with defense reduction, a random range and 10% critical hits.
-- Guard reduces the next incoming hit and is consumed on contact; battle logs
-  report the actual damage dealt (after mitigation).
-- Weighted enemy AI (attack / spell / guard) that falls back to attack when out
-  of mana.
-- Persistent score history stored in `game/scores.json` (ignored by git): each
-  battle records date, result, turns, hero HP left/max and enemy name; a
-  statistics view shows wins/losses/flees and the most common enemy.
-- Main menu loop: play a battle, view statistics, or quit.
+## The game
 
-### Pygame UI (Phase 2)
+**The combat.** Each turn the hero chooses between attacking physically,
+casting one of the three maná-consuming skills (Fireball, Guard and Heal),
+taking a potion to recover health or trying to flee; fleeing is resolved
+according to relative speed. The enemy decides its action with a weighted AI
+between attack, spell and guard, falling back to attack when it runs out of
+maná. Damage is computed with a formula that reduces the target's defense,
+applies a random range and has a 10% chance of a critical hit; guard reduces
+the next incoming action and is consumed on contact, and the combat log reports
+the actual, already-mitigated damage.
 
-Launched with `python -m game.main`. A Suikoden II-style battle screen on top of
-the Phase 1 engine (unchanged battle logic).
+**The battle scene.** The combat is presented on a field with depth in the
+Suikoden II style: the enemy sits at the top left with a slightly smaller scale
+(0.95, a bit farther away) and the hero at the bottom right closer to the
+camera (1.1), with a dynamic scale change that sells the depth during the
+movements. The hero's fixed card (portrait, name and HP/MP bars) occupies the
+top-right corner; the enemy's values stay hidden to keep the tension, showing
+only its name above it. A log panel with the latest combat lines scrolls
+through the events with line wrapping.
 
-- 960x640 window at 60 FPS with structured battle events: the engine log now
-  stores dicts (attack / spell / guard / heal / potion / mana/potion failures /
-  flee / defeated) and a `format_event()` renders the same messages as Phase 1,
-  keeping the visual log and the semantics identical.
-- Suikoden II-style field with depth, centered on the screen: the enemy stands
-  upper-left and slightly further away (0.95 scale) while the hero stands
-  lower-right, closer to the camera (1.1 scale); the enemy is tuned to read
-  slightly larger than the hero when their distances to the camera equalize.
-  The hero's status is shown in a fixed framed card at the top-right (name +
-  HP/MP bars); the enemy's HP/MP stay hidden for combat tension, with only a
-  name plate above the enemy. A scrolling combat log panel shows the last six
-  `format_event` messages with word wrapping.
-- Main menu (Play / Statistics / Quit) with a single cursor shared by keyboard
-  (arrow keys + Enter, number shortcuts 1-3) and mouse (hover moves the cursor,
-  click confirms). The title is accented by a hairline underline, and a
-  copyright footer is displayed at the bottom of the screen.
-- Suikoden II-style two-level battle menu: Attack / Skill / Potion / Flee, where
-  choosing Skill swaps the panel for the rune submenu Fireball / Guard / Heal / Back.
-  Same navigation as the main menu (arrows + Enter, keys 1-4, mouse).
-- The game flow is driven by a state machine (menu / battle / animation / end /
-  stats): Play starts a battle, choosing an action resolves the turn instantly and
-  the new engine events are queued to an EventPlayer, and a finished battle is
-  recorded to the score history. The end screen shows the result with a flavor line
-  (e.g. "Hero vs Enemy - 5 turns") plus the global summary, and a statistics screen
-  shows the same summary from the main menu; both return to the menu on any key or
-  click. Both screens render the summary inside a wide semi-transparent panel whose
-  layout is defined in `config.py`, so long values (like "Most Common Enemy") never
-  overflow.
-- Battle animations driven by the EventPlayer: events play one at a time as
-  animations. AttackAnimation plays a diagonal lunge toward the target (stopping
-  30px short), an impact flash (drawn on a translucent SRCALPHA overlay), a recoil
-  (the defender is knocked back along the line of the blow) and a rising, fading
-  damage number; on the way back the attacker hops in an arc — a backward leap
-  that keeps its eyes on the target — while its apparent scale shifts to sell the
-  depth (the hero shrinks as it moves away from the camera, the enemy grows as it
-  comes closer). SpellAnimation is a ranged variant: a glowing projectile flies
-  from the caster to the target, then a flash and the damage number appear on
-  impact (the caster stays still, no lunge or recoil). Projectile color is
-  orange for hero spells and purple for enemy spells. Heal plays a swirling
-  tornado of green particles rising from the feet to envelop the character, guard
-  draws a thick arc shield that tilts diagonally toward the enemy (3D depth), and
-  potion floats an animated potion sprite above the head; each also shows a short
-  floating message. Flee and failure events show only the message. Numbers are
-  colored by type: yellow for damage, red and larger with a "!" for critical hits,
-  green +N for heal/potion, light blue for guard and whitish for failures. The
-  combat log streams live, one line per event, as each animation starts, and the
-  game only returns to the battle menu or ends after the last animation finishes.
-- Polished combat feel: floating numbers and messages are pre-rendered with a
-  black outline and stay fully opaque until halfway through their rise, then fade
-  out. The hero's HP/MP card updates progressively rather than all at once: every
-  event carries an HP/MP snapshot, the mana cost is shown as the skill starts
-  (including guard and heal), the defender's HP drops exactly at the moment of
-  impact, and heals/potions raise HP as their animation plays.
+**Navigation.** The main menu (Play, Statistics, Quit) and the two-level battle
+menu (Attack / Skill / Potion / Flee, with the Fireball / Guard / Heal / Back
+skill submenu) share a single cursor: it moves with the keyboard (arrows +
+Enter, with number shortcuts) or with the mouse (hover moves it and click
+confirms).
 
-### Polished graphics (Phase 3)
+**Animations.** The engine does not draw anything: it generates events that an
+`EventPlayer` plays back one by one. The physical attack is a diagonal lunge
+that stops before the target, with an impact flash, a defender knockback and
+the damage number rising and fading; on the way back, the attacker jumps
+backwards while keeping its eyes on the target and its scale changes to
+reinforce the depth. Spells fire a bright projectile with a trail, a pulse and
+explosion rings on impact (orange for the hero, purple for the enemy). Healing
+raises a tornado of green particles that wraps around the character, guard
+draws an arc shield with three layers tilted diagonally toward the opponent and
+the potion makes the animated sprite of a bottle float over the head. Numbers
+and messages are colored by type: yellow for damage, red and big with "!" for
+criticals, green for heals and potions, light blue for guard and whitish for
+misses. The combat log advances live, one line per event, and the game only
+returns to the menu or ends when the last animation is finished.
 
-Sprites and asset pipeline replacing the Phase 2 placeholders.
+**Resources.** The characters use pixel-art sprite sheets (Pixel Champions II)
+of 864×576 pixels. On load, every sheet is cut into 96×96 cells and stored in a
+per-pose dictionary with 3 frames each (18 poses, plus a `run` pose derived from
+`flee` by flipping it horizontally); launching an action plays the stored
+animation for that pose. There are 8 heroes and 5 enemies, and every battle also
+picks one of 4 pixel-art backgrounds at random (castle, forest, cave, harbor).
+Several WAV sound effects are associated with the actions and sound at the
+specific phases (lunge, launch, impact), with cursor blips in the menus; they
+were obtained with a license from itch.io (Leohpaz), just like the sprite
+sheets (Pixel Champions II). The title and end screens use backgrounds with a
+dark overlay for contrast with the text and a fade-to-black transition between
+screens; the end title is painted at 64 px with a color that reflects the
+outcome (gold on victory, red on defeat), and the statistics are shown in an
+aligned table with accent-colored values inside a semi-transparent panel whose
+layout is defined in `config.py`.
 
-- Pixel Champions II sprite sheets (864x576 px, 96x96 px frames) loaded via
-  `assets.py`: each character PNG is split into 18 animation poses of 3 frames
-  (idle, lunge, defend, use_magic, potion, hit, defeated, flee, victory, and
-  more). A 19th pose, `run`, is derived from `flee` flipped horizontally.
-- `CharacterSprite` draws the current animation frame with
-  `pygame.transform.smoothscale`, applying a base scale (1.1 hero, 0.95 enemy)
-  and a dynamic `scale_factor` for depth during lunges, all centered on the
-  character's world position with offset support for movement animations. A
-  `flip_x` flag mirrors the sprite so the enemy faces the hero.
-- `set_idle_pose()` checks the character's HP on every animation reset: below
-  20% the sprite shows the `caution` pose instead of `idle`.
-- Sprite poses are driven per phase inside `AttackAnimation` and
-  `SpellAnimation`: the attacker runs (`run`), strikes (`lunge`), then returns
-  to idle/caution; the defender briefly shows `hit` on impact. Each transition
-  fires once via dedicated flags (`_pose_lunge_done`, `_pose_recover_done`,
-  `_pose_recoil_done`).
-- Sprite loading is integrated into the battle startup: `start_battle()` loads
-  hero and enemy sprite sheets once and passes them to the sprite constructors;
-  the main loop advances sprite frame timers during the animation state.
-  Anchoring helpers on `CharacterSprite` (`feet_y`, `head_y`, `frame_height`)
-  let effects attach to the real body bounds of any character.
-- Custom status-effect animations run as their message floats:
-  - Heal: a dense tornado of green/white particles that spins and rises from the
-    character's feet, driven by a `HealParticle` class with per-particle phase,
-    orbit and rising speed, glows over a pulsing radial green aura (a pre-rendered
-    gradient whose alpha breathes with a sine wave, centered on the chest).
-  - Guard: a thick concentric arc shield (radius 70, 3 layers) that is rotated
-    toward the enemy on a diagonal to convey 3D depth, with an oscillating
-    translucent blue alpha.
-  - Potion: the character's sprite already raises its arms (`potion` pose), and a
-    16x16 potion sprite from `assets/sprites/items/green_potion.png` is scaled up,
-    cycled through 3 glow frames, and floats up and fades above the head.
-  The potion sprite is loaded in `start_battle()` (not at import time, since
-  `convert_alpha()` needs an initialized display) and passed to `EventPlayer`.
-- Battle backgrounds: four AI-generated pixel art scenes (castle, forest, cave,
-  port) in Suikoden II style, loaded via `load_background()` and drawn before
-  sprites.
-- Random asset selection each battle: 8 heroes, 5 enemies, and 4 backgrounds
-  are defined as tuple lists `(path, name)` in `config.py`; `start_battle()`
-  picks one of each via `random.choice()`.
-- Sound effects: 14 WAV files mapped by action in a `SFX` dict, loaded with
-  caching via `load_sound()`. Battle sounds trigger at event start or at
-  specific animation phases (lunge, cast, impact). Menu navigation plays
-  cursor blips on option change and a confirm sound on selection, with a
-  short delay before executing the chosen battle action.
-- Title and end screens display background images with a dark semi-transparent
-  overlay for text readability. A fade-through-black transition plays when
-  starting a battle or viewing results. The end screen title is rendered at
-  64 px with a color that matches the battle outcome (gold for victory, red
-  for defeat). Battle statistics are shown as a left-aligned table with
-  labels and accent-colored values inside a semi-transparent panel.
-- Menus and the combat log use semi-transparent dark backgrounds with a
-  black border. The hero status card shows a cropped portrait from the
-  character's idle sprite alongside name and HP/MP bars. Battle input is
-  locked during the action delay to prevent duplicate confirmations.
-  Clicking outside a menu no longer triggers a confirm sound.
-- Spell projectiles (Fireball and Shadow Bolt) feature a trailing
-  afterimage, a pulsating glow, decorative particles that fly backward
-  during travel, and an impact explosion with two expanding color-shifting
-  rings. Each spell uses a three-color particle palette (yellow-orange-red
-  for Fireball, purple-green for Shadow Bolt) with continuous emission
-  during flight and a radial burst on impact. The projectile core glows
-  in a brighter, differentiated color through a three-layer radial gradient.
+## The launcher
 
-### customTkinter launcher (Phase 4 & 6 — redesigned)
+**Role.** It is the user's entry point: it downloads, updates, launches and
+uninstalls the game directly from the GitHub *Releases* and shows the project
+news in a carousel.
 
-A separate launcher app that downloads, updates, and launches the game.
+**Window.** It is a window without a native frame (the title bar is hidden with
+a *hidden titlebar* technique that keeps the native Windows shadow and
+animations), organized in three horizontal bands: a header with the title
+rendered with the same font as the game and its underline bar, a central area
+with the carousel and a footer with the installed version, the buttons (Play,
+Download/Update, Uninstall) and the progress bar. Minimize and close are custom
+buttons with Flaticon icons (close, minimize and theme toggle), and the header
+is draggable. The executable icon is shared by the game and the launcher and was
+generated with AI.
 
-- Blue palette coherent with the in-game title screen: accent cyan
-  `#50C8F0` on a pale background in light mode, and a dark navy background with
-  gold accents in dark mode (a neon-cyan contrast pass on the dark accents was
-  tested and discarded — the original gold/orange look is the final one).
-- **Light/Dark themes**: a theme icon in the header toggles between the two
-  palettes by recoloring the existing widgets in place — no UI rebuild, no
-  flicker. Each zone gets its own re-color pass (`_recolor_header`,
-  `_recolor_content`, `_recolor_footer`) and the carousel
-  slide is re-rendered so its baked-in arrows and dots pick up the new accent.
-  The choice is persisted to a local `settings.json`, so the launcher reopens on
-  the last selected theme. The button shows the icon of the *other* theme
-  (`theme_dark_icon.png` / `theme_light_icon.png`, bundled as assets) and is
-swapped on each switch. A busy flag plus a short debounce discard rapid
-   repeated clicks, and `ctk.set_appearance_mode` is only called at startup:
-   switching is a full re-color pass, never an appearance-mode or widget rebuild.
-   The heavy carousel re-render is deferred while a download runs, so a mid-download
-   switch never stutters the progress animation.
-- Vertical layout (960x600 px) with three horizontal bands: a header, a central
-  content area, and a footer (versions, Play/Download/Uninstall buttons, progress bar).
-- Header: a **theme toggle icon** sits in the left corner. The title *RPG Battle
-  Launcher* is rendered with the game's own `finalf.ttf` in uppercase (as on the
-  game title screen) and keeps a short hairline underline bar in the title color,
-  wider than the text; it stays perfectly centered with `place` no matter what
-  sits on the left.
-- Frameless window: the native title bar is hidden with a *hidden-titlebar*
-  technique (the window is subclassed and returns `0` for `WM_NCCALCSIZE`) so the
-  caption styles stay intact and the native minimize/restore animation and window
-  shadow keep working, flicker-free. The window remains a normal managed window
-  (taskbar button, Alt-Tab) but looks frameless: the header is draggable by
-  grabbing it and custom **minimize** and **close** buttons (PNG icons) sit flush
-  in the top-right corner of the header. The corners are the native square corners
-  of Windows (rounded-corner regions were discarded: they clip without
-  anti-aliasing and drop the native shadow).
-- Downloads the game from GitHub Releases: fetches the latest release via the
-  GitHub API, selects the platform-specific zip asset (Windows / macOS / Linux),
-  downloads it with a progress bar, extracts it, and saves the installed version.
-  The latest release is fetched once at startup; if that check failed (e.g.
-  offline at launch) the Download button re-fetches it on demand before
-  installing, so the launcher needs no manual refresh button.
-- News carousel: fetches `news.json` from the remote GitHub raw URL (falling back
-  to a local cache with a 1-hour TTL when offline) and renders the feed as a
-  visual slide carousel. Each slide uses the news item's own image when it has one
-  (downloaded at runtime and cached to disk with the same 1-hour TTL, keeping the
-  last known good copy when offline, and cropped with `ImageOps.fit` to fill the
-  slide without distortion) or falls back to the bundled default background. A
-semi-transparent overlay, the title/body, chevron arrow buttons, and navigation
-   dots are drawn into the image with Pillow: the chevrons are `‹`/`›` glyphs rendered
-   by the font rasterizer (smooth anti-aliased curves, no external font file), each
-   sitting on a small translucent square in the same dark tone as the overlay, and the
-   whole nav layer is supersampled 4× and downscaled with LANCZOS so every edge
-   renders crisp. The slide responds to clicks on the image
-  (left/right arrows or a specific dot) to switch between slides across all 4 feed
-  entries. Sliding a news image in is asynchronous: it never blocks the UI, and if
-  a photo arrives mid-transition it is applied before the motion ends. Navigating
-  plays a smooth horizontal slide transition (animated with a timer loop): the
-  outgoing slide slides away while the incoming one slides in from the direction
-  of the arrow/dot press, and the text/arrows/dots stay hidden while the slides
-  are in motion, reappearing when the transition ends. The default background is
-  bundled with the launcher (PyInstaller `datas`), and if it is ever missing the
-  carousel falls back to a flat area filled with the theme background color instead
-  of failing.
-- Footer copyright: the footer carries the game's own credit line
-  *© 2026 Javi Escobar Fernández · CS50x Final Project* (`COPYRIGHT_NOTICE`),
-  centered in the free space between the version labels and the action buttons —
-  the same line the game paints at the bottom of its title screen.
-- Project info: instead of a separate About view, the **first news slide**
-  presents the project (what it is, that it is the CS50x final project, and the
-  author) via the first entry of `news.json`.
-- Download progress hero sprite: while a game download/update runs, a hero sprite
-  (randomly chosen character, hero_01..08.png) runs from left to right over the
-  progress bar as the download advances. The flee poses are cropped from the hero
-  sprite sheet and their 3 frames are cycled as an animation; the sprite appears when
-  the download starts and disappears when it completes. The progress bar and sprite
-  live in a top footer zone that only appears during the download, so the footer
-  shrinks back to a single row of versions/buttons afterwards. The theme can be
-  switched mid-download without interrupting the transfer: the switch re-colors the
-  header/footer/labels immediately and defers the heavy carousel re-render until the
-  download finishes. News navigation (arrow/dot clicks) mid-download is deferred the
-  same way and applied as soon as the download completes, keeping the progress bar
-  and the running hero sprite fluid.
-- Diagnostics: every network operation (news fetch, news images, release check,
-  game download) logs to `launcher.log` in the user data directory, with timestamps
-  and the exact failing phase (`fetch release` / `find asset` / `download asset` /
-  `extract`), so the launcher's silent fallbacks (news cache, "Latest: —", Retry)
-  are never a black box when something goes wrong. Network requests also carry a
-  20-second timeout instead of blocking forever on a stalled connection.
-- TLS: certificates are verified against the operating system's trust store (via
-  the `truststore` package) instead of only Python's bundled CA bundle. This keeps
-  full certificate validation while working on machines where antivirus/firewall
-  software intercepts HTTPS with its own locally-trusted CA — the exact case that
-  broke the launcher inside a Windows 11 VM while the browser worked fine.
-- Version management: tracks the installed game version in `version.txt` inside
-  the platform-specific data directory (`platformdirs`). The Play button is
-  disabled when no game is installed and enabled after a successful update
-  (in a development checkout it also enables when the repository `game/` folder
-  exists, and `launch_game()` then falls back to `python -m game.main`).
-  Disabled controls (Play, Download while installing, Uninstall when no game is
-  installed) render in a theme-aware grey — fill, border and text — that is
-  re-applied on every theme switch and ignores hover.
-- Download button states: the Download button shows the relation between the
-  installed and the latest version. When they match it is disabled and reads
-  **Up to date**; when a newer release exists it reads **Update**; and when
-  nothing is installed (or the latest version is unknown, e.g. offline at
-  launch) it reads **Download** and re-fetches the release on demand before
-  installing. The state is refreshed at startup and after every download or
-  uninstall, so it never goes stale.
-- Uninstall: the footer's **Uninstall** button removes every trace of the game and
-  launcher data with a single action — game folder, `version.txt`, news cache and
-  images, diagnostic log and settings. It asks for confirmation in a themed
-  modal first (the current theme stays active until the launcher closes; only the
-  *next* launch falls back to Light). The dialog body keeps the current palette
-  and its title bar follows the live theme: the theme toggle keeps CTk's
-  `AppearanceModeTracker` in sync, so a dialog opened after a mid-session theme
-  switch paints its title bar with the active theme instead of the startup one.
-  After uninstalling, Play and Uninstall go grey and Download is ready for a
-  fresh install.
-- Cross-platform paths via `platformdirs`: game data lives in the OS-specific
-  user data directory, not hardcoded paths.
+**Themes.** It has a light and a dark theme, switchable from the sun/moon icon
+button on the top-left corner. The light theme uses a white background with
+cyan accents and the dark one a charcoal background with golden accents; both
+outline the main window and the carousel with black borders for a stylish touch.
+The change is a hot recolor of the widgets, without rebuilding the interface or
+flashing, and the selected theme is saved to a JSON file (`settings.json`), so
+that opening the launcher keeps the last chosen theme.
 
-### Build & distribution (Phase 5)
+**News carousel.** It loads `news.json` from GitHub (both the description and
+the image paths) with a one-hour local cache (and the last known copy if
+offline). For each news item it reads its title, body and image path, and
+draws everything together (image cropped without distortion to fill the frame,
+overlay, text, arrows and navigation dots) into a single composite image. The
+interaction is therefore a click handler over that image: depending on the zone
+you press, one action or another runs, like going to the previous or next news
+item with the arrows or jumping to the item of a specific dot. This design was
+chosen because customTkinter cannot overlay widgets with transparency on top of
+images; everything is solved by painting. The slide change is animated with a
+sliding transition.
 
-Two standalone desktop apps are packaged with PyInstaller and distributed as
-portable bundles (no installer required) across Windows, macOS, and Linux.
+**Download and versioning.** On startup it queries the latest GitHub release
+and compares it with the locally installed version to configure the button:
+"Download" if nothing is installed, "Update" if a newer version exists and "Up
+to date" (disabled) if it is already current. From the release it picks the zip
+of the operating system it runs on (`rpg-battle-<platform>-<version>.zip`),
+downloads it to a temporary folder and extracts it into the user data directory
+that corresponds to that operating system. During the download it shows a
+progress bar with a hero sprite running on it, using the same animation and
+technique as the game (specifically the Flee pose, running toward the right in
+the same direction the bar advances), with a random hero in each download;
+while it downloads or uninstalls, the footer buttons are disabled and when it
+finishes they are enabled again according to the result (Play and Uninstall when
+there is a game installed, and the download button is updated). When done it
+saves the installed version and enables Play. "Uninstall" cleans the game, the
+versions, the caches, the log and the settings in a single action, with a
+confirmation first.
 
-- **Two independent builds**: the game (pygame-ce) is built as a zip that the
-  launcher downloads; the launcher (customTkinter) is the app the user runs.
-- **`--onedir` mode for both**: reduces antivirus false positives (one-file
-  bundles trip heuristics more often) and starts faster than one-file bundles.
-- **App icon everywhere**: both executables carry the game's own icon
-  (`game/assets/icons/rpg_battle_icon.ico`, embedded at build time through the
-  PyInstaller `icon` option). At runtime the game also paints it on its window
-  (title bar and taskbar) by loading the bundled PNG via
-  `pygame.display.set_icon`, scaled to 32×32; the launcher (frameless, with no
-  visible title bar) applies it to its taskbar/Alt-Tab icon on Windows via
-  `iconbitmap`.
-- **Portable asset paths**: the game resolves its assets through `sys._MEIPASS`
-  when frozen (falling back to the repo root in development), so the built
-  executable runs from any working directory — it does not depend on where it
-  is launched from.
-- **GitHub Actions CI** (`.github/workflows/build.yml`): three jobs
-  (`build-game`, `build-launcher`, `release`) on a Windows/macOS/Linux matrix with
-  Python 3.14. Triggered on `v*` tags or manually. Both builds are zipped with the
-  native tool of each runner (`Compress-Archive` on Windows, `zip` on Unix) using
-  the tag in the filename — `rpg-battle-{platform}-{tag}.zip` (game) and
-  `rpg-battle-launcher-{platform}-{tag}.zip` (launcher), matching
-  `launcher/config.py`'s `GAME_ASSET_PATTERN`. The OS name is lowercased
-  with the portable `tr` command (not Bash 4+'s `${var,,}`, which macOS's Bash 3.2
-  does not support). A manual run (no tag)
-  falls back to a `dev` suffix. The `release` job waits for both builds, downloads
-  all artifacts, and publishes them as a draft GitHub Release.
-  Builds are restricted to the `release` branch: each job aborts unless the pushed
-  tag is contained in `origin/release`, and the `release` branch is web-protected
-  (only the owner can push), so builds only run from tags created there.
-- **PyInstaller `.spec` files** in `build/` (`game.spec`, `launcher.spec`) produce
-  `--onedir` bundles for both apps. The launcher spec resolves its bare imports via
-  `pathex` and excludes pygame; the game spec bundles its assets and excludes Tk.
-  Both `.spec` files use `os.path.join` so their relative paths resolve correctly on
-  every OS, and are versioned (kept out of `build/*`'s ignore rule).
-- **Persistent data**: the game score history (`scores.json`) and the launcher's
-  news cache are written to the platform-specific user data directory via
-  `platformdirs`, never into the read-only bundle folder.
+**Reliability.** Every network operation logs in `launcher.log` the exact phase
+that fails (release query, asset lookup, download, extraction) with a 20-second
+timeout. TLS verification uses `truststore` to validate against the system
+certificate store, which avoids the typical failures in corporate networks or
+virtual machines where antivirus software intercepts HTTPS; this verification
+was added precisely because, while testing the launcher in a Windows 11 virtual
+machine, the validation of the system certificates failed. Data paths use
+`platformdirs` (the user data directory of each operating system), never the
+executable's folder.
 
-## Repository structure
+## File structure
 
-- `game/` — the Pygame battle game (`python -m game.main`).
-- `game/assets/` — sprites, backgrounds, sound effects, and fonts.
-- `launcher/` — the customTkinter launcher (config, paths, updater, news, UI).
-- `build/` — PyInstaller `.spec` files for the game and the launcher.
-- `news/` — the JSON news feed consumed by the launcher.
-- `.github/workflows/build.yml` — multi-OS CI build and release workflow.
+The game source code lives in `game/`:
+
+- `game/config.py` - all the constants and the game balance: screen size,
+  colors, fonts, HP/MP values, damages, hero/enemy/background lists, asset
+  paths and screen layout.
+- `game/entities.py` - the `Entity` class (name, stats, HP/MP, defense, etc.),
+  the `Hero` and `Enemy` characters, and the enemy AI decision logic.
+- `game/battle.py` - the turn-based combat engine, pure Python without Pygame:
+  the damage formula (defense, random range and critical), the actions
+  (attack, spell, guard, potion, flee) and the generation of events that feed
+  the log.
+- `game/score.py` - results history: saves every battle to `scores.json`
+  (date, outcome, turns) and computes the statistics summary.
+- `game/ui.py` - the whole visual side of the game: character sprites, battle
+  panels, the log, the menus and the event-driven animations (attack, spells,
+  heal, guard and potion).
+- `game/assets.py` - resource loading: sprite sheets, backgrounds, sound
+  effects, fonts and the icon.
+- `game/main.py` - the main loop and the state machine (MENU / STATS / BATTLE /
+  ANIM / END), together with the drawing of each screen.
+
+The launcher lives in `launcher/`:
+
+- `launcher/config.py` - application constants (name, canonical URLs for
+  releases and news).
+- `launcher/paths.py` - cross-platform data paths, version management, the
+  installation check and the game startup.
+- `launcher/updater.py` - queries the latest GitHub *release*, downloads the
+  platform zip with a progress bar and installs it.
+- `launcher/news.py` - fetches, caches and processes the `news.json` news feed.
+- `launcher/ui_styles.py` - color palettes of the light and dark themes.
+- `launcher/settings.py` - local settings persistence (`settings.json`).
+- `launcher/diag.py` - diagnostic logging and TLS verification with
+  `truststore`.
+- `launcher/main.py` - the main window (background, carousel, themes, buttons).
+
+Other files:
+
+- `build/game.spec` and `build/launcher.spec` - PyInstaller configurations to
+  package both programs.
+- `.github/workflows/build.yml` - CI that builds the game and the launcher on
+  Windows, macOS and Linux and publishes a GitHub *release* per tag.
+- `news/news.json` - the news feed consumed by the launcher.
+
+## Design decisions
+
+- **Engine separated from the interface.** `battle.py` does not import Pygame:
+  the combat logic can be run and tested in the console (in fact Phase 1 was
+  playable in the terminal). This keeps the mechanics clean and independent of
+  the presentation.
+- **Events instead of coupling the simulation to the animation.** The engine
+  does not animate anything: it generates a list of events (attack, damage,
+  heal, flee…) that an `EventPlayer` plays back one by one as animations. The
+  battle only advances when the current animation finishes, which controls the
+  pacing and avoids inconsistent states.
+- **Animations based on simple physics.** Trails, projectiles and particles are
+  computed with vectors and per-frame phasing instead of predefined sprites,
+  which allows smooth effects (trail, bounce, healing swirl) without relying on
+  giant animation sheets.
+- **Pygame-ce instead of Pygame.** The *community edition* was chosen, the
+  maintained fork that is up to date and works well with modern Python.
+- **customTkinter for the launcher.** `tkinter` allows a lightweight program
+  without heavy dependencies; `customtkinter` brings light/dark themes and
+  modern widgets. Switching theme is a simple hot color change, which avoids
+  rebuilding the interface and flashing.
+- **Distribution through *Releases*.** The launcher knows no private servers:
+  it consumes the public GitHub API (`latest release`) to download the correct
+  binary. The whole cycle is safe and automated: it is built in GitHub Actions,
+  the `release` branch is protected (only the owner can publish), a `v*` tag
+  triggers the build and the release is born as a *Draft* to review before
+  publishing it.
+- **Silent failures that are not.** Every network path writes a log with the
+  exact phase that fails and timeouts are capped; the news and image caches
+  survive disconnection. This way the launcher works offline and problems are
+  diagnosed without guessing.
+- **Persistence in the user data directory.** Games and caches are saved with
+  `platformdirs` to the path each operating system corresponds to, instead of
+  next to the executable (which may be read-only).
+- **`--onedir` packaging with CI.** `PyInstaller` in folder mode reduces
+  antivirus false positives and starts faster; GitHub Actions builds the three
+  platforms and publishes the releases, and asset paths resolve with
+  `sys._MEIPASS`, so the executable works from any folder.
+- **Real pixel-art sprites.** Instead of geometric shapes, the characters use
+  sprite sheets (Pixel Champions II) scaled with `smoothscale` and a dynamic
+  factor for the depth effect. The result looks far more attractive than the
+  placeholders without complicating the asset loading too much.
+- **The launcher as a separate application.** The game is packaged as a
+  portable zip the launcher downloads; the launcher is the only piece the user
+  opens and it takes care of installing, updating and launching the game.
+  Separating the two applications allows distributing game updates without
+  recompiling the launcher and keeps each binary small.
+- **Resource attribution.** The sprites come from Pixel Champions II and the
+  sound effects from Leohpaz, both from itch.io with a license; the header
+  icons (close, minimize, theme) are from Flaticon; the executable icon and the
+  pixel-art backgrounds were generated with the help of AI. The use of the AI
+  tool that accompanied the development is cited in the header of every source
+  file, as the course policy requires.
+
+## Running and building
+
+In development:
+
+```bash
+python -m game.main
+```
+
+The launcher only needs to run in Python mode if a `game/` folder exists (it
+uses `python -m game.main` automatically); in production it is built with
+PyInstaller from `build/game.spec` and `build/launcher.spec`.
+
+The game and the launcher are designed to build and run cross-platform
+(Windows, Linux and macOS). GitHub Actions builds, per operating system, one
+game executable and one launcher executable, 6 executables in total, and each
+one is compressed into a separate zip for distribution. The process is as
+follows: first I move the changes from the `dev` branch to the `release` branch
+through a safe pull request; then I push a `v*` tag with the new version, which
+triggers the workflow. When it finishes building and compressing, it generates
+a new *Draft* release, which I review manually and publish safely.
+
+## Note
+
+The English README submitted to CS50x was written with the help of an AI
+assistant for the translation, since English is not my native language and it
+is not yet at the level I would like; the AI usage notice is also cited in the
+header of every source file, as the course policy requires.
