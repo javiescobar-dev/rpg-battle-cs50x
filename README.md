@@ -1,6 +1,6 @@
 # RPG Battle - CS50x Final Project
 
-#### Video Demo: <demo video URL (pending recording)>
+#### Video Demo: <https://www.youtube.com/watch?v=rJMPMRhvqEQ>
 
 #### Repository: <https://github.com/javiescobar-dev/rpg-battle-cs50x>
 
